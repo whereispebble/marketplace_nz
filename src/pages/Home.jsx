@@ -111,7 +111,7 @@ export default function Home() {
       
       {/* Hero */}
 <div style={{
-  backgroundImage: `linear-gradient(135deg, rgba(249,228,238,0.85) 0%, rgba(232,244,251,0.85) 100%), url(${heroBg})`,
+  backgroundImage: `linear-gradient(135deg, rgba(249,228,238,0.50) 0%, rgba(232,244,251,0.50) 100%), url(${heroBg})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   padding: 'clamp(2rem, 5vw, 4rem) 1.5rem',

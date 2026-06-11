@@ -9,31 +9,39 @@ export default function Navbar() {
       borderBottom: '2px solid #F5C6D8',
       padding: '0 2rem',
       height: '64px',
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
       alignItems: 'center',
-      justifyContent: 'space-between',
       position: 'sticky',
       top: 0,
       zIndex: 100,
       boxShadow: '0 2px 12px rgba(245,198,216,0.2)',
     }}>
 
-      {/* Logo */}
-              <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-          <img
-            src={logo}
-            alt="Kiwimart"
-            style={{
-              height: 'clamp(36px, 10vw, 65px)',
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0px 4px 8px rgba(245, 198, 216, 0.8))',
-            }}
-          />
-        </Link>
-      {/* Search */}
-      <div style={{ flex: 1, maxWidth: '500px', margin: '0 2rem', position: 'relative' }}>
-        <FiSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#c084a0' }} />
+      {/* Logo — izquierda */}
+      <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+        <img
+          src={logo}
+          alt="Kiwimart"
+          style={{
+            height: 'clamp(36px, 10vw, 65px)',
+            width: 'auto',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0px 4px 8px rgba(245, 198, 216, 0.8))',
+          }}
+        />
+      </Link>
+
+      {/* Search — centro */}
+      <div style={{ position: 'relative', width: 'clamp(200px, 35vw, 500px)' }}>
+        <FiSearch style={{
+          position: 'absolute',
+          left: '14px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          color: '#c084a0',
+          zIndex: 1,
+        }} />
         <input
           type="text"
           placeholder="Search for anything..."
@@ -55,8 +63,8 @@ export default function Navbar() {
         />
       </div>
 
-      {/* Icons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Icons — derecha */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
         <NavIcon to="/favorites" icon={<FiHeart />} label="Favorites" />
         <NavIcon to="/chats" icon={<FiMessageCircle />} label="Chats" />
         <NavIcon to="/profile" icon={<FiUser />} label="Profile" />
