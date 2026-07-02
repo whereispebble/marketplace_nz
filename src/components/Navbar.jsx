@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom'
 import { FiHeart, FiMessageCircle, FiPlus, FiSearch, FiUser } from 'react-icons/fi'
-import logo from '../assets/logo.png'
+import logo from '../assets/swapy-logo.svg'
 
 export default function Navbar({ search = '', onSearchChange, compact = false, title }) {
   return (
     <nav className="topbar">
-      <Link to="/" className="brand" aria-label="Kiwimart home">
-        <img src={logo} alt="Kiwimart" />
+      <Link to="/" className="brand" aria-label="Swapy home">
+        <img src={logo} alt="Swapy" />
         <span className="brand-text">
-          <strong>Kiwimart</strong>
-          <span>Local marketplace</span>
+          <strong>Swapy</strong>
+          <span>Campervans and motorhomes</span>
         </span>
       </Link>
 
@@ -22,7 +22,7 @@ export default function Navbar({ search = '', onSearchChange, compact = false, t
           <FiSearch />
           <input
             type="search"
-            placeholder="Search products, brands or categories"
+            placeholder="Search model, region, WOF or self-contained"
             value={search}
             onChange={event => onSearchChange?.(event.target.value)}
           />
@@ -35,7 +35,7 @@ export default function Navbar({ search = '', onSearchChange, compact = false, t
         <NavIcon to="/profile" label="Profile" icon={<FiUser />} />
         <Link to="/new-product" className="btn btn-primary">
           <FiPlus />
-          <span className="sell-label">Sell</span>
+          <span className="sell-label">List vehicle</span>
         </Link>
       </div>
     </nav>

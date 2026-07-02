@@ -4,12 +4,9 @@ import { FiHeart } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import ProductCard from '../components/ProductCard'
+import { MOCK_VEHICLES } from '../data/mockVehicles'
 
-const MOCK_FAVORITES = [
-  { id: 1, title: 'iPhone 13 Pro 256GB', price: 650, condition: 'Good', location: 'Madrid', image: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=900&q=80' },
-  { id: 2, title: 'Nike Air Max 90', price: 80, condition: 'New', location: 'Barcelona', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80' },
-  { id: 3, title: 'MacBook Air M1', price: 900, condition: 'Good', location: 'Madrid', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80' },
-]
+const MOCK_FAVORITES = MOCK_VEHICLES.slice(0, 3)
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState(MOCK_FAVORITES)
@@ -37,21 +34,21 @@ export default function Favorites() {
       <main className="container page-section">
         <div className="section-header">
           <div>
-            <h1 className="page-title">Favorites</h1>
-            <p className="section-subtitle">{favorites.length} saved products ready when you come back.</p>
+            <h1 className="page-title">Saved vehicles</h1>
+            <p className="section-subtitle">{favorites.length} vehicles saved for comparing WOF, mileage, sleeps and price.</p>
           </div>
           <span className="badge badge-accent"><FiHeart />{favorites.length}</span>
         </div>
 
         {loading ? (
-          <div className="loading-state"><div><div className="spinner" />Loading favorites...</div></div>
+          <div className="loading-state"><div><div className="spinner" />Loading saved vehicles...</div></div>
         ) : favorites.length === 0 ? (
           <div className="empty-state panel">
             <div>
               <FiHeart size={44} />
-              <h2>No favorites yet</h2>
-              <p>Save products you love and compare them later.</p>
-              <Link to="/" className="btn btn-primary">Browse products</Link>
+              <h2>No saved vehicles yet</h2>
+              <p>Save campervans and motorhomes to compare them later.</p>
+              <Link to="/" className="btn btn-primary">Browse vehicles</Link>
             </div>
           </div>
         ) : (

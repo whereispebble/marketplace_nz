@@ -3,23 +3,23 @@ import { Link, useNavigate } from 'react-router-dom'
 import { FiEdit3, FiLogOut, FiMapPin, FiPackage, FiStar } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
+import { MOCK_VEHICLES } from '../data/mockVehicles'
 
 const MOCK_PROFILE = {
   username: 'Alex M.',
   email: 'alex@email.com',
-  location: 'Madrid',
-  phone: '+34 612 345 678',
-  bio: 'Passionate about tech and vintage finds. Always looking for great deals.',
+  location: 'Auckland',
+  phone: '+64 21 123 4567',
+  bio: 'Weekend traveller and campervan seller focused on tidy, road-ready NZ vehicles with clear WOF and self-contained details.',
   rating: 4.8,
   total_sales: 23,
   joined: '2022',
 }
 
-const MOCK_LISTINGS = [
-  { id: 1, title: 'iPhone 13 Pro', price: 650, condition: 'Good', status: 'available', image: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=300&q=80' },
-  { id: 2, title: 'Nike Air Max 90', price: 80, condition: 'New', status: 'available', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80' },
-  { id: 3, title: 'MacBook Air M1', price: 900, condition: 'Good', status: 'sold', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=300&q=80' },
-]
+const MOCK_LISTINGS = MOCK_VEHICLES.slice(0, 3).map((vehicle, index) => ({
+  ...vehicle,
+  status: index === 2 ? 'sold' : 'available',
+}))
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -99,13 +99,13 @@ export default function Profile() {
 
           <div className="stats-grid">
             <div className="stat-box"><strong><FiStar /> {profile.rating || '-'}</strong><span>Rating</span></div>
-            <div className="stat-box"><strong>{profile.total_sales || 0}</strong><span>Sales</span></div>
+            <div className="stat-box"><strong>{profile.total_sales || 0}</strong><span>Listings</span></div>
             <div className="stat-box"><strong>{profile.joined || '-'}</strong><span>Joined</span></div>
           </div>
         </section>
 
         <div className="tabs" style={{ margin: '22px 0' }}>
-          {['listings', 'favorites', 'reviews'].map(tab => (
+          {['listings', 'saved', 'reviews'].map(tab => (
             <button key={tab} className={`chip ${activeTab === tab ? 'is-active' : ''}`} type="button" onClick={() => setActiveTab(tab)}>
               {tab}
             </button>
@@ -115,13 +115,13 @@ export default function Profile() {
         {activeTab === 'listings' && (
           <div className="profile-layout">
             {listings.length === 0 ? (
-              <div className="empty-state panel"><div><FiPackage size={42} /><h2>No listings yet</h2><Link to="/new-product" className="btn btn-primary">Post your first product</Link></div></div>
+              <div className="empty-state panel"><div><FiPackage size={42} /><h2>No listings yet</h2><Link to="/new-product" className="btn btn-primary">List a vehicle</Link></div></div>
             ) : listings.map(item => (
               <article className="panel panel-pad listing-row" key={item.id}>
                 <img src={item.image || 'https://placehold.co/300x240/f1ede5/171717?text=Item'} alt={item.title} />
                 <div>
                   <strong>{item.title}</strong>
-                  <p className="section-subtitle" style={{ marginTop: 4 }}>{item.condition} · {Number(item.price || 0).toLocaleString('es-ES')} EUR</p>
+                  <p className="section-subtitle" style={{ marginTop: 4 }}>{item.condition} · NZ${Number(item.price || 0).toLocaleString('en-NZ')}</p>
                 </div>
                 <span className={`badge ${item.status === 'available' ? 'badge-mint' : ''}`}>{item.status === 'available' ? 'Active' : 'Sold'}</span>
               </article>
@@ -129,7 +129,7 @@ export default function Profile() {
           </div>
         )}
 
-        {activeTab === 'favorites' && <Empty title="No favorites yet" action="Browse products" to="/" />}
+        {activeTab === 'saved' && <Empty title="No saved vehicles yet" action="Browse vehicles" to="/" />}
         {activeTab === 'reviews' && <Empty title="No reviews yet" />}
       </main>
     </div>

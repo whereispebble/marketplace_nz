@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiArrowRight, FiCheckCircle } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
-import logo from '../assets/logo.png'
+import logo from '../assets/swapy-logo.svg'
 
 export default function Register() {
   const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' })
@@ -32,7 +32,7 @@ export default function Register() {
       <main className="form-shell">
         <section className="panel panel-pad auth-card" style={{ textAlign: 'center' }}>
           <FiCheckCircle size={54} color="var(--mint)" />
-          <h1 className="section-title" style={{ marginTop: 16 }}>You're in</h1>
+          <h1 className="section-title" style={{ marginTop: 16 }}>Account created</h1>
           <p className="section-subtitle">Check your email to confirm your account.</p>
           <Link to="/login" className="btn btn-primary" style={{ marginTop: 18 }}>Go to login</Link>
         </section>
@@ -45,10 +45,10 @@ export default function Register() {
       <section className="panel panel-pad auth-card">
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
-            <img src={logo} alt="Kiwimart" />
+            <img src={logo} alt="Swapy" />
           </Link>
           <h1 className="section-title" style={{ marginTop: 18 }}>Create account</h1>
-          <p className="section-subtitle">Start saving favorites, chatting and publishing products.</p>
+          <p className="section-subtitle">Save campervans, message sellers and list your NZ vehicle.</p>
         </div>
 
         {error && <div className="alert">{error}</div>}

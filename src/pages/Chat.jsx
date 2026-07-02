@@ -3,19 +3,20 @@ import { Link } from 'react-router-dom'
 import { FiArrowRight, FiSend } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
+import { MOCK_VEHICLES } from '../data/mockVehicles'
 
 const MOCK_CHATS = [
-  { id: 1, product: { title: 'iPhone 13 Pro', image: 'https://images.unsplash.com/photo-1591337676887-a217a6970a8a?auto=format&fit=crop&w=200&q=80' }, other_user: 'Maria G.', last_message: 'Is it still available?', last_message_at: '10:30', unread: 2 },
-  { id: 2, product: { title: 'Nike Air Max', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=200&q=80' }, other_user: 'Carlos R.', last_message: 'Can you do 70 EUR?', last_message_at: 'Yesterday', unread: 0 },
-  { id: 3, product: { title: 'MacBook Air', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=200&q=80' }, other_user: 'Sofia L.', last_message: 'Thanks!', last_message_at: 'Mon', unread: 0 },
+  { id: 1, product: MOCK_VEHICLES[0], other_user: 'Maria G.', last_message: 'Is it still available to view this weekend?', last_message_at: '10:30', unread: 2 },
+  { id: 2, product: MOCK_VEHICLES[2], other_user: 'Carlos R.', last_message: 'Does it include current WOF and self-contained cert?', last_message_at: 'Yesterday', unread: 0 },
+  { id: 3, product: MOCK_VEHICLES[4], other_user: 'Sofia L.', last_message: 'Thanks, it looks right for our South Island trip.', last_message_at: 'Mon', unread: 0 },
 ]
 
 const MOCK_MESSAGES = [
-  { id: 1, sender_id: 'other', content: 'Hi! Is the iPhone still available?', created_at: '10:28' },
-  { id: 2, sender_id: 'me', content: 'Yes it is. It matches the listing and includes the original box.', created_at: '10:29' },
-  { id: 3, sender_id: 'other', content: 'Great. Would you accept 600 EUR?', created_at: '10:30' },
-  { id: 4, sender_id: 'me', content: 'The lowest I can go is 630 EUR. It is in excellent condition.', created_at: '10:31' },
-  { id: 5, sender_id: 'other', content: 'Deal. When can we meet?', created_at: '10:32' },
+  { id: 1, sender_id: 'other', content: 'Hi, is the Hiace still available?', created_at: '10:28' },
+  { id: 2, sender_id: 'me', content: 'Yes, it is. WOF is current and it is certified self-contained.', created_at: '10:29' },
+  { id: 3, sender_id: 'other', content: 'Great. Can I view it in Auckland this weekend?', created_at: '10:30' },
+  { id: 4, sender_id: 'me', content: 'Sure. Saturday morning works, and I can show you the WOF, service history and layout.', created_at: '10:31' },
+  { id: 5, sender_id: 'other', content: 'Perfect, I am interested.', created_at: '10:32' },
 ]
 
 export default function Chat() {
@@ -64,7 +65,7 @@ export default function Chat() {
           <aside className="panel chat-list">
             <div className="panel-pad" style={{ borderBottom: '1px solid var(--line)' }}>
               <h1 className="section-title" style={{ fontSize: '1.35rem' }}>Inbox</h1>
-              <p className="section-subtitle">Keep deals moving with clear conversations.</p>
+              <p className="section-subtitle">Ask about WOF, mileage, self-contained status and viewing times.</p>
             </div>
 
             <div style={{ overflowY: 'auto' }}>
@@ -98,7 +99,7 @@ export default function Chat() {
                   <strong>{selectedChat.other_user}</strong>
                   <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
                 </div>
-                <Link to="/product/1" className="btn btn-secondary" style={{ marginLeft: 'auto' }}>View listing<FiArrowRight /></Link>
+                <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary" style={{ marginLeft: 'auto' }}>View listing<FiArrowRight /></Link>
               </div>
             )}
 
