@@ -7,10 +7,6 @@ export default function Navbar({ search = '', onSearchChange, compact = false, t
     <nav className="topbar">
       <Link to="/" className="brand" aria-label="Swapy home">
         <img src={logo} alt="Swapy" />
-        <span className="brand-text">
-          <strong>Swapy</strong>
-          <span>Campervans and motorhomes</span>
-        </span>
       </Link>
 
       {title ? (

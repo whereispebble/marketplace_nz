@@ -4,13 +4,40 @@ import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
 import heroVideo from '../assets/hero-video-nz-optimized.mp4'
-import { MOCK_VEHICLES, VEHICLE_TYPES } from '../data/mockVehicles'
+import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
 
-const NZ_BOUNDS = {
-  minLat: -47.8,
-  maxLat: -34.2,
-  minLng: 165.2,
-  maxLng: 179.8,
+let leafletPromise
+
+function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L)
+  if (leafletPromise) return leafletPromise
+
+  leafletPromise = new Promise((resolve, reject) => {
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    const existingScript = document.getElementById('leaflet-js')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(window.L), { once: true })
+      existingScript.addEventListener('error', reject, { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = 'leaflet-js'
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.async = true
+    script.onload = () => resolve(window.L)
+    script.onerror = reject
+    document.body.appendChild(script)
+  })
+
+  return leafletPromise
 }
 
 const SEARCH_SYNONYMS = {
@@ -84,6 +111,7 @@ function parsePriceCeiling(value) {
 function vehicleSearchText(vehicle) {
   return [
     vehicle.title,
+    vehicle.make,
     vehicle.model,
     vehicle.vehicleType,
     vehicle.location,
@@ -96,13 +124,8 @@ function vehicleSearchText(vehicle) {
   ].join(' ')
 }
 
-function mapPosition(vehicle) {
-  const left = ((vehicle.lng - NZ_BOUNDS.minLng) / (NZ_BOUNDS.maxLng - NZ_BOUNDS.minLng)) * 100
-  const top = (1 - ((vehicle.lat - NZ_BOUNDS.minLat) / (NZ_BOUNDS.maxLat - NZ_BOUNDS.minLat))) * 100
-  return {
-    left: `${Math.min(92, Math.max(8, left))}%`,
-    top: `${Math.min(88, Math.max(8, top))}%`,
-  }
+function vehicleMake(vehicle) {
+  return vehicle.make || vehicle.model?.split(' ')[0] || ''
 }
 
 export default function Home() {
@@ -110,6 +133,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [vehicleType, setVehicleType] = useState('all')
+  const [make, setMake] = useState('')
   const [model, setModel] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [sortBy, setSortBy] = useState('recent')
@@ -128,15 +152,29 @@ export default function Home() {
     return () => { ignore = true }
   }, [])
 
-  const models = useMemo(() => {
-    return [...new Set(vehicles.map(vehicle => vehicle.model).filter(Boolean))].sort()
+  const makes = useMemo(() => {
+    const catalogMakes = NZ_VEHICLE_CATALOG.map(item => item.make)
+    const listedMakes = vehicles.map(vehicleMake).filter(Boolean)
+    return [...new Set([...catalogMakes, ...listedMakes])].sort()
   }, [vehicles])
+
+  const models = useMemo(() => {
+    const selectedCatalog = NZ_VEHICLE_CATALOG.find(item => normalise(item.make) === normalise(make))
+    const catalogModels = (selectedCatalog ? selectedCatalog.models : NZ_VEHICLE_CATALOG.flatMap(item => item.models))
+      .map(modelName => selectedCatalog ? `${selectedCatalog.make} ${modelName}` : modelName)
+    const listedModels = vehicles
+      .filter(vehicle => !make || fuzzyIncludes(vehicleMake(vehicle), make))
+      .map(vehicle => vehicle.model)
+      .filter(Boolean)
+    return [...new Set([...catalogModels, ...listedModels])].sort()
+  }, [make, vehicles])
 
   const filtered = useMemo(() => {
     const priceCeiling = parsePriceCeiling(maxPrice)
 
     return vehicles
       .filter(vehicle => vehicleType === 'all' || vehicle.vehicleType === vehicleType || vehicle.category === vehicleType)
+      .filter(vehicle => fuzzyIncludes(vehicleMake(vehicle), make))
       .filter(vehicle => fuzzyIncludes(`${vehicle.model} ${vehicle.title}`, model))
       .filter(vehicle => priceCeiling === null || Number(vehicle.price || 0) <= priceCeiling)
       .filter(vehicle => fuzzyIncludes(vehicleSearchText(vehicle), search))
@@ -146,11 +184,12 @@ export default function Home() {
         if (sortBy === 'mileage_asc') return a.mileage - b.mileage
         return 0
       })
-  }, [vehicles, search, vehicleType, model, maxPrice, sortBy])
+  }, [vehicles, search, vehicleType, make, model, maxPrice, sortBy])
 
   const clearFilters = () => {
     setSearch('')
     setVehicleType('all')
+    setMake('')
     setModel('')
     setMaxPrice('')
   }
@@ -164,9 +203,8 @@ export default function Home() {
           <source src={heroVideo} type="video/mp4" />
         </video>
         <div className="hero-inner">
-          <span className="eyebrow">New Zealand campervans, motorhomes and road-trip vehicles</span>
-          <h1>Find the right van for Aotearoa.</h1>
-          <p>Browse campervans and motorhomes with the details that matter in NZ: WOF, mileage, seat belts, sleeps, self-contained status and location.</p>
+          <h1>Selling cars, campervans and motorhomes made easy.</h1>
+          <p>Buy and sell road-trip vehicles across New Zealand with the details that matter: make, model, WOF, mileage, seat belts, sleeps, self-contained status and location.</p>
 
           <div className="hero-search">
             <input
@@ -197,6 +235,23 @@ export default function Home() {
               <select className="field" value={vehicleType} onChange={event => setVehicleType(event.target.value)}>
                 {VEHICLE_TYPES.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
               </select>
+            </label>
+
+            <label className="field-group">
+              <span>Make</span>
+              <input
+                className="field"
+                list="make-options"
+                placeholder="Any make"
+                value={make}
+                onChange={event => {
+                  setMake(event.target.value)
+                  setModel('')
+                }}
+              />
+              <datalist id="make-options">
+                {makes.map(vehicleMakeName => <option key={vehicleMakeName} value={vehicleMakeName} />)}
+              </datalist>
             </label>
 
             <label className="field-group">
@@ -286,110 +341,92 @@ export default function Home() {
 }
 
 function VehicleMap({ vehicles }) {
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const dragRef = useRef(null)
+  const mapRef = useRef(null)
+  const leafletMapRef = useRef(null)
+  const markerLayerRef = useRef(null)
+  const [mapError, setMapError] = useState('')
+  const [mapReady, setMapReady] = useState(false)
 
-  const clampZoom = value => Math.min(2.8, Math.max(0.85, value))
+  useEffect(() => {
+    let ignore = false
 
-  const zoomBy = amount => {
-    setZoom(current => clampZoom(Number((current + amount).toFixed(2))))
-  }
+    async function setupMap() {
+      try {
+        const L = await loadLeaflet()
+        if (ignore || !mapRef.current || leafletMapRef.current) return
 
-  const resetMap = () => {
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
-  }
+        const map = L.map(mapRef.current, {
+          center: [-41.2, 172.8],
+          zoom: 5,
+          minZoom: 5,
+          maxZoom: 19,
+          scrollWheelZoom: true,
+          zoomControl: true,
+        })
 
-  const handleWheel = event => {
-    event.preventDefault()
-    setZoom(current => clampZoom(Number((current + (event.deltaY > 0 ? -0.12 : 0.12)).toFixed(2))))
-  }
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map)
 
-  const handlePointerDown = event => {
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      panX: pan.x,
-      panY: pan.y,
+        markerLayerRef.current = L.layerGroup().addTo(map)
+        leafletMapRef.current = map
+        setMapReady(true)
+        setTimeout(() => map.invalidateSize(), 120)
+      } catch {
+        if (!ignore) setMapError('Map service could not load. Check your connection and try again.')
+      }
     }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
 
-  const handlePointerMove = event => {
-    if (!dragRef.current) return
-    const nextX = dragRef.current.panX + event.clientX - dragRef.current.startX
-    const nextY = dragRef.current.panY + event.clientY - dragRef.current.startY
-    setPan({ x: nextX, y: nextY })
-  }
+    setupMap()
 
-  const handlePointerUp = event => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null
+    return () => {
+      ignore = true
+      leafletMapRef.current?.remove()
+      leafletMapRef.current = null
+      markerLayerRef.current = null
+      setMapReady(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const L = window.L
+    const map = leafletMapRef.current
+    const layer = markerLayerRef.current
+    if (!mapReady || !L || !map || !layer) return
+
+    layer.clearLayers()
+    const bounds = []
+
+    vehicles.forEach(vehicle => {
+      if (!vehicle.lat || !vehicle.lng) return
+      const marker = L.marker([vehicle.lat, vehicle.lng], {
+        icon: L.divIcon({
+          className: 'swapy-map-marker',
+          html: `<span>NZ${Math.round(Number(vehicle.price || 0) / 1000)}k</span>`,
+          iconSize: [62, 38],
+          iconAnchor: [31, 38],
+        }),
+      }).addTo(layer)
+
+      marker.bindPopup(`
+        <strong>${vehicle.title}</strong>
+        <p>${vehicle.location || 'New Zealand'} - ${vehicle.model || ''}</p>
+        <a href="/product/${vehicle.id}">View listing</a>
+      `)
+      bounds.push([vehicle.lat, vehicle.lng])
+    })
+
+    if (bounds.length) {
+      map.fitBounds(bounds, { padding: [34, 34], maxZoom: 8 })
+    }
+  }, [vehicles, mapReady])
 
   return (
     <section className="map-layout">
-      <div className="nz-map panel">
-        <div className="map-controls" aria-label="Map controls">
-          <button type="button" onClick={() => zoomBy(0.2)}>+</button>
-          <button type="button" onClick={() => zoomBy(-0.2)}>-</button>
-          <button type="button" onClick={resetMap}>Reset</button>
-        </div>
-        <div className="map-hint">Drag to move · Scroll to zoom</div>
-        <div
-          className="map-viewport"
-          onWheel={handleWheel}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-        >
-          <div
-            className="map-canvas"
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
-          >
-            <svg className="nz-map-art" viewBox="0 0 1000 1400" aria-hidden="true">
-              <defs>
-                <linearGradient id="land" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="100%" stopColor="#d9f1e6" />
-                </linearGradient>
-                <linearGradient id="ridge" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#8fd7b6" />
-                  <stop offset="100%" stopColor="#14BC7D" />
-                </linearGradient>
-              </defs>
-              <path className="map-sea-line" d="M150 260C260 160 430 120 590 170C770 226 880 380 860 565C845 708 715 790 700 940C684 1100 568 1244 398 1278C255 1307 130 1251 76 1140" />
-              <path className="nz-land" d="M622 154C674 158 730 186 762 230C801 284 797 340 768 387C742 430 710 459 720 508C729 551 779 572 781 624C783 676 734 714 686 700C638 686 618 648 576 657C532 666 505 708 456 696C408 685 393 639 417 601C446 555 422 520 391 486C350 441 338 387 366 337C388 298 431 285 455 248C491 192 546 148 622 154Z" />
-              <path className="nz-land" d="M426 658C486 646 544 684 558 742C571 794 536 832 501 866C459 907 449 954 432 1008C407 1085 346 1154 262 1182C198 1204 126 1195 92 1145C59 1096 82 1037 135 1008C184 981 218 948 231 891C247 816 290 748 348 704C373 685 395 664 426 658Z" />
-              <path className="nz-land small-island" d="M292 1220C326 1212 361 1225 374 1252C387 1278 368 1302 334 1308C302 1314 266 1299 259 1271C253 1248 265 1227 292 1220Z" />
-              <path className="map-ridge" d="M648 230C612 292 590 348 608 412C625 470 638 526 612 594" />
-              <path className="map-ridge" d="M494 718C438 779 389 854 364 942C340 1024 295 1094 224 1148" />
-              <path className="map-road" d="M626 190C684 280 677 385 640 470C608 544 590 608 642 682" />
-              <path className="map-road" d="M454 690C404 750 368 820 344 900C318 987 284 1062 210 1130" />
-              <text className="map-label" x="674" y="246">Auckland</text>
-              <text className="map-label" x="610" y="445">Rotorua</text>
-              <text className="map-label" x="664" y="604">Wellington</text>
-              <text className="map-label" x="390" y="720">Nelson</text>
-              <text className="map-label" x="318" y="978">Christchurch</text>
-              <text className="map-label" x="218" y="1128">Queenstown</text>
-            </svg>
-            {vehicles.map(vehicle => (
-              <a
-                key={vehicle.id}
-                className="map-pin"
-                href={`/product/${vehicle.id}`}
-                style={mapPosition(vehicle)}
-                title={`${vehicle.title} in ${vehicle.location}`}
-              >
-                <span>NZ${Math.round(vehicle.price / 1000)}k</span>
-              </a>
-            ))}
-          </div>
-        </div>
+      <div className="street-map panel">
+        <div className="street-map-canvas" ref={mapRef} aria-label="Interactive New Zealand vehicle map" />
+        {mapError && <div className="map-error">{mapError}</div>}
       </div>
 
       <div className="map-list">
@@ -398,7 +435,7 @@ function VehicleMap({ vehicles }) {
             <img src={vehicle.image} alt={vehicle.title} />
             <div>
               <strong>{vehicle.title}</strong>
-              <p className="section-subtitle">{vehicle.location} · {vehicle.model} · {vehicle.selfContained ? 'Self-contained' : 'Not self-contained'}</p>
+              <p className="section-subtitle">{vehicle.location} - {vehicle.model} - {vehicle.selfContained ? 'Self-contained' : 'Not self-contained'}</p>
             </div>
             <span className="badge badge-accent">NZ${Number(vehicle.price || 0).toLocaleString('en-NZ')}</span>
           </article>

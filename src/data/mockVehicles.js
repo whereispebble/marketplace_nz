@@ -7,10 +7,37 @@ export const VEHICLE_TYPES = [
   { id: 'car', name: 'Cars soon' },
 ]
 
+export const NZ_VEHICLE_CATALOG = [
+  { make: 'Toyota', models: ['Alphard', 'Aqua', 'Camry', 'Corolla', 'Estima', 'Hiace', 'Hilux', 'Land Cruiser', 'LiteAce', 'Prado', 'RAV4', 'TownAce', 'Vitz', 'Yaris'] },
+  { make: 'Nissan', models: ['Caravan', 'Elgrand', 'NV200', 'NV350', 'Navara', 'Serena', 'X-Trail'] },
+  { make: 'Mitsubishi', models: ['Delica', 'L300', 'Outlander', 'Pajero', 'Triton'] },
+  { make: 'Mazda', models: ['Atenza', 'Bongo', 'CX-5', 'Demio', 'MPV', 'Premacy'] },
+  { make: 'Ford', models: ['Everest', 'Ranger', 'Tourneo', 'Transit', 'Transit Custom'] },
+  { make: 'Mercedes-Benz', models: ['Sprinter', 'Vito'] },
+  { make: 'Fiat', models: ['Ducato'] },
+  { make: 'Volkswagen', models: ['Amarok', 'California', 'Crafter', 'Transporter'] },
+  { make: 'Hyundai', models: ['H-1', 'iLoad', 'iMax', 'Santa Fe', 'Staria'] },
+  { make: 'Kia', models: ['Carnival', 'Sorento', 'Sportage'] },
+  { make: 'Honda', models: ['CR-V', 'Fit', 'Freed', 'Odyssey', 'Stepwgn'] },
+  { make: 'Subaru', models: ['Forester', 'Legacy', 'Outback'] },
+  { make: 'Suzuki', models: ['Every', 'Jimny', 'Swift', 'Vitara'] },
+  { make: 'Isuzu', models: ['D-Max', 'Elf', 'Fargo', 'N-Series'] },
+  { make: 'LDV', models: ['Deliver 9', 'G10', 'T60', 'V80'] },
+  { make: 'Renault', models: ['Master', 'Trafic'] },
+  { make: 'Peugeot', models: ['Boxer', 'Expert', 'Partner'] },
+  { make: 'Citroen', models: ['Berlingo', 'Jumper', 'Relay'] },
+  { make: 'Iveco', models: ['Daily'] },
+  { make: 'Holden', models: ['Colorado', 'Commodore', 'Trax'] },
+  { make: 'BMW', models: ['1 Series', '3 Series', '5 Series', 'X1', 'X3', 'X5'] },
+  { make: 'Audi', models: ['A3', 'A4', 'Q3', 'Q5', 'Q7'] },
+  { make: 'Tesla', models: ['Model 3', 'Model Y'] },
+]
+
 export const MOCK_VEHICLES = [
   {
     id: 1,
     title: 'Toyota Hiace Self-Contained Camper',
+    make: 'Toyota',
     model: 'Toyota Hiace',
     vehicleType: 'campervan',
     price: 38500,
@@ -38,6 +65,7 @@ export const MOCK_VEHICLES = [
   {
     id: 2,
     title: 'Mercedes Sprinter Off-Grid Conversion',
+    make: 'Mercedes-Benz',
     model: 'Mercedes Sprinter',
     vehicleType: 'van',
     price: 72900,
@@ -65,6 +93,7 @@ export const MOCK_VEHICLES = [
   {
     id: 3,
     title: 'Fiat Ducato 4 Berth Motorhome',
+    make: 'Fiat',
     model: 'Fiat Ducato',
     vehicleType: 'motorhome',
     price: 89500,
@@ -92,6 +121,7 @@ export const MOCK_VEHICLES = [
   {
     id: 4,
     title: 'Mitsubishi Delica 4x4 Weekender',
+    make: 'Mitsubishi',
     model: 'Mitsubishi Delica',
     vehicleType: '4x4',
     price: 24900,
@@ -118,6 +148,7 @@ export const MOCK_VEHICLES = [
   {
     id: 5,
     title: 'Ford Transit Custom Camper',
+    make: 'Ford',
     model: 'Ford Transit',
     vehicleType: 'campervan',
     price: 46900,
@@ -144,6 +175,7 @@ export const MOCK_VEHICLES = [
   {
     id: 6,
     title: 'Nissan Caravan Budget Camper',
+    make: 'Nissan',
     model: 'Nissan Caravan',
     vehicleType: 'campervan',
     price: 18900,

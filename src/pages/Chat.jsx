@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FiArrowRight, FiSend } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiSend } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import { MOCK_VEHICLES } from '../data/mockVehicles'
@@ -23,6 +23,7 @@ export default function Chat() {
   const [chats] = useState(MOCK_CHATS)
   const [messages, setMessages] = useState(MOCK_MESSAGES)
   const [selectedChat, setSelectedChat] = useState(MOCK_CHATS[0])
+  const [mobileChatOpen, setMobileChatOpen] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [currentUser, setCurrentUser] = useState(null)
   const messagesEndRef = useRef(null)
@@ -61,7 +62,7 @@ export default function Chat() {
       <Navbar compact title="Messages" />
 
       <main className="container page-section">
-        <section className="chat-layout">
+        <section className={`chat-layout ${mobileChatOpen ? 'is-chat-open' : ''}`}>
           <aside className="panel chat-list">
             <div className="panel-pad" style={{ borderBottom: '1px solid var(--line)' }}>
               <h1 className="section-title" style={{ fontSize: '1.35rem' }}>Inbox</h1>
@@ -74,7 +75,10 @@ export default function Chat() {
                   className={`chat-item ${selectedChat?.id === chat.id ? 'is-active' : ''}`}
                   key={chat.id}
                   type="button"
-                  onClick={() => setSelectedChat(chat)}
+                  onClick={() => {
+                    setSelectedChat(chat)
+                    setMobileChatOpen(true)
+                  }}
                 >
                   <img src={chat.product.image} alt="" />
                   <span style={{ minWidth: 0 }}>
@@ -94,6 +98,9 @@ export default function Chat() {
           <section className="panel chat-main">
             {selectedChat && (
               <div className="panel-pad chat-product" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
+                <button className="icon-btn mobile-chat-back" type="button" onClick={() => setMobileChatOpen(false)} aria-label="Back to chats">
+                  <FiArrowLeft />
+                </button>
                 <img src={selectedChat.product.image} alt="" />
                 <div>
                   <strong>{selectedChat.other_user}</strong>

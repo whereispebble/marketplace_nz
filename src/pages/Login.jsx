@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FiArrowRight, FiLock, FiMail } from 'react-icons/fi'
-import { supabase } from '../services/supabase'
+import { FaFacebookF, FaGoogle } from 'react-icons/fa'
+import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
+import { getAuthErrorMessage, supabase } from '../services/supabase'
 import logo from '../assets/swapy-logo.svg'
 
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -15,13 +17,37 @@ export default function Login() {
     if (!email || !password) { setError('Please fill in all fields'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError(getAuthErrorMessage(error))
+        setLoading(false)
+        return
+      }
+    } catch (authError) {
+      setError(getAuthErrorMessage(authError))
       setLoading(false)
       return
     }
     navigate('/')
+  }
+
+  const handleOAuthLogin = async provider => {
+    setLoading(true)
+    setError('')
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      })
+      if (error) {
+        setError(getAuthErrorMessage(error))
+        setLoading(false)
+      }
+    } catch (authError) {
+      setError(getAuthErrorMessage(authError))
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,6 +63,19 @@ export default function Login() {
 
         {error && <div className="alert">{error}</div>}
 
+        <div className="social-auth-grid">
+          <button className="social-auth-btn" type="button" disabled={loading} onClick={() => handleOAuthLogin('google')}>
+            <FaGoogle />
+            Continue with Google
+          </button>
+          <button className="social-auth-btn" type="button" disabled={loading} onClick={() => handleOAuthLogin('facebook')}>
+            <FaFacebookF />
+            Continue with Facebook
+          </button>
+        </div>
+
+        <div className="auth-divider"><span>or sign in with email</span></div>
+
         <div className="form-grid">
           <label className="field-group">
             <span>Email</span>
@@ -44,14 +83,24 @@ export default function Login() {
           </label>
           <label className="field-group">
             <span>Password</span>
-            <input
-              className="field"
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={event => setPassword(event.target.value)}
-              onKeyDown={event => event.key === 'Enter' && handleLogin()}
-            />
+            <div className="password-field">
+              <input
+                className="field"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                onKeyDown={event => event.key === 'Enter' && handleLogin()}
+              />
+              <button
+                className="password-toggle"
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword(current => !current)}
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
           </label>
           <button className="btn btn-primary btn-full" type="button" disabled={loading} onClick={handleLogin}>
             {loading ? 'Signing in...' : 'Sign in'}
