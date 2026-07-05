@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FiArrowRight, FiGrid, FiMap, FiSearch } from 'react-icons/fi'
+import { Link } from 'react-router-dom'
+import { FiArrowLeft, FiArrowRight, FiGrid, FiMap, FiSearch } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
@@ -7,6 +8,7 @@ import heroVideo from '../assets/hero-video-nz-optimized.mp4'
 import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
 
 let leafletPromise
+const PAGE_SIZE = 50
 
 function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L)
@@ -128,6 +130,12 @@ function vehicleMake(vehicle) {
   return vehicle.make || vehicle.model?.split(' ')[0] || ''
 }
 
+function mergeVehiclesWithMocks(products = []) {
+  const realProducts = products.filter(Boolean)
+  const realIds = new Set(realProducts.map(product => String(product.id)))
+  return [...realProducts, ...MOCK_VEHICLES.filter(vehicle => !realIds.has(String(vehicle.id)))]
+}
+
 export default function Home() {
   const [vehicles, setVehicles] = useState(MOCK_VEHICLES)
   const [loading, setLoading] = useState(false)
@@ -138,13 +146,14 @@ export default function Home() {
   const [maxPrice, setMaxPrice] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [viewMode, setViewMode] = useState('grid')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     let ignore = false
 
     async function loadVehicles() {
       const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-      if (!ignore && !error && data?.length) setVehicles(data)
+      if (!ignore && !error && data?.length) setVehicles(mergeVehiclesWithMocks(data))
       if (!ignore) setLoading(false)
     }
 
@@ -186,20 +195,45 @@ export default function Home() {
       })
   }, [vehicles, search, vehicleType, make, model, maxPrice, sortBy])
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const activePage = Math.min(currentPage, totalPages)
+  const pageStart = (activePage - 1) * PAGE_SIZE
+  const pageVehicles = filtered.slice(pageStart, pageStart + PAGE_SIZE)
+  const firstVisible = filtered.length ? pageStart + 1 : 0
+  const lastVisible = Math.min(pageStart + PAGE_SIZE, filtered.length)
+
+  const handleFilterChange = setter => value => {
+    setter(value)
+    setCurrentPage(1)
+  }
+
+  const handleSearchChange = handleFilterChange(setSearch)
+  const handleVehicleTypeChange = handleFilterChange(setVehicleType)
+  const handleModelChange = handleFilterChange(setModel)
+  const handleMaxPriceChange = handleFilterChange(setMaxPrice)
+  const handleSortChange = handleFilterChange(setSortBy)
+
+  const handleMakeChange = value => {
+    setMake(value)
+    setModel('')
+    setCurrentPage(1)
+  }
+
   const clearFilters = () => {
     setSearch('')
     setVehicleType('all')
     setMake('')
     setModel('')
     setMaxPrice('')
+    setCurrentPage(1)
   }
 
   return (
     <div className="app-shell">
-      <Navbar search={search} onSearchChange={setSearch} />
+      <Navbar search={search} onSearchChange={handleSearchChange} />
 
       <header className="hero">
-        <video className="hero-video" autoPlay muted loop playsInline preload="metadata" aria-hidden="true">
+        <video className="hero-video" autoPlay muted loop playsInline preload="auto" aria-hidden="true">
           <source src={heroVideo} type="video/mp4" />
         </video>
         <div className="hero-inner">
@@ -211,7 +245,7 @@ export default function Home() {
               type="search"
               placeholder="Try: Hiace self contained Auckland, Sprinter, Chch motorhome..."
               value={search}
-              onChange={event => setSearch(event.target.value)}
+              onChange={event => handleSearchChange(event.target.value)}
             />
             <button className="btn btn-primary" type="button">
               <FiSearch />
@@ -232,7 +266,7 @@ export default function Home() {
           <div className="filter-grid">
             <label className="field-group">
               <span>Vehicle type</span>
-              <select className="field" value={vehicleType} onChange={event => setVehicleType(event.target.value)}>
+              <select className="field" value={vehicleType} onChange={event => handleVehicleTypeChange(event.target.value)}>
                 {VEHICLE_TYPES.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
               </select>
             </label>
@@ -244,10 +278,7 @@ export default function Home() {
                 list="make-options"
                 placeholder="Any make"
                 value={make}
-                onChange={event => {
-                  setMake(event.target.value)
-                  setModel('')
-                }}
+                onChange={event => handleMakeChange(event.target.value)}
               />
               <datalist id="make-options">
                 {makes.map(vehicleMakeName => <option key={vehicleMakeName} value={vehicleMakeName} />)}
@@ -261,7 +292,7 @@ export default function Home() {
                 list="model-options"
                 placeholder="Any model"
                 value={model}
-                onChange={event => setModel(event.target.value)}
+                onChange={event => handleModelChange(event.target.value)}
               />
               <datalist id="model-options">
                 {models.map(vehicleModel => <option key={vehicleModel} value={vehicleModel} />)}
@@ -276,7 +307,7 @@ export default function Home() {
                 list="max-price-options"
                 placeholder="Any price"
                 value={maxPrice}
-                onChange={event => setMaxPrice(event.target.value)}
+                onChange={event => handleMaxPriceChange(event.target.value)}
               />
               <datalist id="max-price-options">
                 <option value="25000" label="Up to NZ$25k" />
@@ -288,7 +319,7 @@ export default function Home() {
 
             <label className="field-group">
               <span>Sort</span>
-              <select className="field" value={sortBy} onChange={event => setSortBy(event.target.value)}>
+              <select className="field" value={sortBy} onChange={event => handleSortChange(event.target.value)}>
                 <option value="recent">Most recent</option>
                 <option value="price_asc">Price: low to high</option>
                 <option value="price_desc">Price: high to low</option>
@@ -301,7 +332,9 @@ export default function Home() {
         <div className="section-header">
           <div>
             <h2 className="section-title">{filtered.length} vehicles available</h2>
-            <p className="section-subtitle">Search handles typos and related terms like RV, self-contained, Chch or camper.</p>
+            <p className="section-subtitle">
+              Showing {firstVisible}-{lastVisible} of {filtered.length}. Search handles typos and related terms like RV, self-contained, Chch or camper.
+            </p>
           </div>
           <div className="segmented-control" aria-label="View mode">
             <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
@@ -329,14 +362,57 @@ export default function Home() {
             </div>
           </div>
         ) : viewMode === 'map' ? (
-          <VehicleMap vehicles={filtered} />
+          <>
+            <VehicleMap vehicles={pageVehicles} />
+            <PaginationBar
+              currentPage={activePage}
+              totalPages={totalPages}
+              firstVisible={firstVisible}
+              lastVisible={lastVisible}
+              totalItems={filtered.length}
+              onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+              onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+            />
+          </>
         ) : (
-          <div className="products-grid">
-            {filtered.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
-          </div>
+          <>
+            <div className="products-grid">
+              {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
+            </div>
+            <PaginationBar
+              currentPage={activePage}
+              totalPages={totalPages}
+              firstVisible={firstVisible}
+              lastVisible={lastVisible}
+              totalItems={filtered.length}
+              onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+              onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+            />
+          </>
         )}
       </main>
     </div>
+  )
+}
+
+function PaginationBar({ currentPage, totalPages, firstVisible, lastVisible, totalItems, onPrevious, onNext }) {
+  if (totalItems <= PAGE_SIZE) return null
+
+  return (
+    <nav className="pagination-bar" aria-label="Product pages">
+      <button className="btn btn-secondary" type="button" disabled={currentPage === 1} onClick={onPrevious}>
+        <FiArrowLeft />
+        Previous
+      </button>
+      <span>
+        {firstVisible}-{lastVisible} of {totalItems}
+        <strong> Page {currentPage} of {totalPages}</strong>
+      </span>
+      <button className="btn btn-primary" type="button" disabled={currentPage === totalPages} onClick={onNext}>
+        Next
+        <FiArrowRight />
+      </button>
+    </nav>
   )
 }
 
@@ -431,14 +507,14 @@ function VehicleMap({ vehicles }) {
 
       <div className="map-list">
         {vehicles.map(vehicle => (
-          <article className="panel panel-pad map-listing" key={vehicle.id}>
+          <Link className="panel panel-pad map-listing" key={vehicle.id} to={`/product/${vehicle.id}`}>
             <img src={vehicle.image} alt={vehicle.title} />
             <div>
               <strong>{vehicle.title}</strong>
               <p className="section-subtitle">{vehicle.location} - {vehicle.model} - {vehicle.selfContained ? 'Self-contained' : 'Not self-contained'}</p>
             </div>
-            <span className="badge badge-accent">NZ${Number(vehicle.price || 0).toLocaleString('en-NZ')}</span>
-          </article>
+            <span className="badge badge-accent map-price-badge">NZ${Number(vehicle.price || 0).toLocaleString('en-NZ')}</span>
+          </Link>
         ))}
       </div>
     </section>

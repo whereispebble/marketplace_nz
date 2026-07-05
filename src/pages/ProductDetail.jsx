@@ -12,6 +12,8 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0)
   const [liked, setLiked] = useState(false)
   const [loading, setLoading] = useState(false)
+  const sellerId = product.seller_id || product.seller?.id || 'seller'
+  const sellerName = product.seller?.name || 'Private seller'
 
   useEffect(() => {
     let ignore = false
@@ -60,6 +62,8 @@ export default function ProductDetail() {
                     className={`thumb ${selectedImage === index ? 'is-active' : ''}`}
                     key={image}
                     type="button"
+                    aria-label={`Show vehicle photo ${index + 1}`}
+                    aria-pressed={selectedImage === index}
                     onClick={() => setSelectedImage(index)}
                   >
                     <img src={image} alt="" />
@@ -100,8 +104,18 @@ export default function ProductDetail() {
                 <Spec label="Certification" value={product.selfContained ? 'Self-contained' : 'No'} icon={<FiShield />} />
               </div>
 
-              <button className="btn btn-primary btn-full" type="button" style={{ marginTop: 18 }}><FiMessageCircle />Contact seller</button>
-              <button className="btn btn-secondary btn-full" type="button" style={{ marginTop: 10 }} onClick={() => setLiked(!liked)}>
+              <Link className="btn btn-primary btn-full" to={`/chats/${sellerId}`} style={{ marginTop: 18 }} aria-label={`Contact ${sellerName} about ${product.title}`}>
+                <FiMessageCircle />
+                Contact seller
+              </Link>
+              <button
+                className="btn btn-secondary btn-full"
+                type="button"
+                style={{ marginTop: 10 }}
+                aria-pressed={liked}
+                aria-label={liked ? `Remove ${product.title} from saved vehicles` : `Save ${product.title}`}
+                onClick={() => setLiked(!liked)}
+              >
                 <FiHeart fill={liked ? 'currentColor' : 'none'} />
                 {liked ? 'Saved' : 'Save vehicle'}
               </button>
@@ -109,13 +123,13 @@ export default function ProductDetail() {
 
             <section className="panel panel-pad">
               <h2 className="section-title" style={{ fontSize: '1.2rem', marginBottom: 16 }}>Seller</h2>
-              <div className="seller-row">
-                <div className="avatar">{product.seller?.name?.[0] || 'U'}</div>
+              <Link className="seller-row seller-link" to={`/profile/${sellerId}`} aria-label={`View ${sellerName} profile`}>
+                <div className="avatar">{sellerName?.[0] || 'U'}</div>
                 <div>
-                  <strong>{product.seller?.name || 'Private seller'}</strong>
+                  <strong>{sellerName}</strong>
                   <span className="muted-row" style={{ display: 'flex', marginTop: 4 }}><FiStar />{product.seller?.rating || 'New seller'} rating</span>
                 </div>
-              </div>
+              </Link>
               <div className="stats-grid" style={{ marginTop: 16 }}>
                 <div className="stat-box"><strong>{product.seller?.sales || 0}</strong><span>Sales</span></div>
                 <div className="stat-box"><strong>{product.seller?.rating || '-'}</strong><span>Rating</span></div>

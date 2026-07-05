@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiEdit3, FiLogOut, FiMapPin, FiPackage, FiStar } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
@@ -23,8 +23,17 @@ const MOCK_LISTINGS = MOCK_VEHICLES.slice(0, 3).map((vehicle, index) => ({
 
 export default function Profile() {
   const navigate = useNavigate()
+  const { sellerId } = useParams()
+  const isPublicProfile = Boolean(sellerId)
+  const sellerVehicle = useMemo(() => (
+    MOCK_VEHICLES.find(vehicle => String(vehicle.seller?.id) === String(sellerId))
+  ), [sellerId])
   const [profile, setProfile] = useState(MOCK_PROFILE)
-  const [listings, setListings] = useState(MOCK_LISTINGS)
+  const [listings, setListings] = useState(() => (
+    sellerId
+      ? MOCK_VEHICLES.filter(vehicle => String(vehicle.seller?.id) === String(sellerId)).map(vehicle => ({ ...vehicle, status: 'available' }))
+      : MOCK_LISTINGS
+  ))
   const [activeTab, setActiveTab] = useState('listings')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(MOCK_PROFILE)
@@ -33,6 +42,35 @@ export default function Profile() {
     let ignore = false
 
     async function loadProfile() {
+      if (isPublicProfile) {
+        if (sellerVehicle?.seller) {
+          const sellerListings = MOCK_VEHICLES.filter(vehicle => String(vehicle.seller?.id) === String(sellerId))
+          const seller = sellerVehicle.seller
+          setProfile({
+            username: seller.name,
+            email: '',
+            location: sellerVehicle.location,
+            phone: '',
+            bio: `${seller.name} listings on Swapy, focused on clear vehicle details, WOF status and New Zealand-ready handovers.`,
+            rating: seller.rating,
+            total_sales: seller.sales,
+            joined: seller.joined,
+          })
+          setForm({
+            username: seller.name,
+            email: '',
+            location: sellerVehicle.location,
+            phone: '',
+            bio: `${seller.name} listings on Swapy, focused on clear vehicle details, WOF status and New Zealand-ready handovers.`,
+            rating: seller.rating,
+            total_sales: seller.sales,
+            joined: seller.joined,
+          })
+          setListings(sellerListings.map(vehicle => ({ ...vehicle, status: 'available' })))
+        }
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -43,7 +81,7 @@ export default function Profile() {
 
     loadProfile()
     return () => { ignore = true }
-  }, [])
+  }, [isPublicProfile, sellerId, sellerVehicle])
 
   const handleSave = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -84,7 +122,7 @@ export default function Profile() {
                 </>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!isPublicProfile && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {editing ? (
                 <>
                   <button className="btn btn-primary" type="button" onClick={handleSave}>Save</button>
@@ -94,7 +132,7 @@ export default function Profile() {
                 <button className="btn btn-secondary" type="button" onClick={() => setEditing(true)}><FiEdit3 />Edit</button>
               )}
               <button className="btn btn-ghost" type="button" onClick={handleLogout}><FiLogOut />Log out</button>
-            </div>
+            </div>}
           </div>
 
           <div className="stats-grid">
@@ -117,14 +155,14 @@ export default function Profile() {
             {listings.length === 0 ? (
               <div className="empty-state panel"><div><FiPackage size={42} /><h2>No listings yet</h2><Link to="/new-product" className="btn btn-primary">List a vehicle</Link></div></div>
             ) : listings.map(item => (
-              <article className="panel panel-pad listing-row" key={item.id}>
+              <Link className="panel panel-pad listing-row listing-link" key={item.id} to={`/product/${item.id}`}>
                 <img src={item.image || 'https://placehold.co/300x240/f1ede5/171717?text=Item'} alt={item.title} />
                 <div>
                   <strong>{item.title}</strong>
                   <p className="section-subtitle" style={{ marginTop: 4 }}>{item.condition} · NZ${Number(item.price || 0).toLocaleString('en-NZ')}</p>
                 </div>
                 <span className={`badge ${item.status === 'available' ? 'badge-mint' : ''}`}>{item.status === 'available' ? 'Active' : 'Sold'}</span>
-              </article>
+              </Link>
             ))}
           </div>
         )}

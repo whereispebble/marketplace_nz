@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiSend } from 'react-icons/fi'
+import { Link, useParams } from 'react-router-dom'
+import { FiArrowLeft, FiArrowRight, FiCheck, FiSend, FiTag, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import { MOCK_VEHICLES } from '../data/mockVehicles'
 
-const MOCK_CHATS = [
-  { id: 1, product: MOCK_VEHICLES[0], other_user: 'Maria G.', last_message: 'Is it still available to view this weekend?', last_message_at: '10:30', unread: 2 },
-  { id: 2, product: MOCK_VEHICLES[2], other_user: 'Carlos R.', last_message: 'Does it include current WOF and self-contained cert?', last_message_at: 'Yesterday', unread: 0 },
-  { id: 3, product: MOCK_VEHICLES[4], other_user: 'Sofia L.', last_message: 'Thanks, it looks right for our South Island trip.', last_message_at: 'Mon', unread: 0 },
-]
+const MOCK_CHATS = MOCK_VEHICLES.map((vehicle, index) => ({
+  id: index + 1,
+  sellerId: vehicle.seller?.id,
+  product: vehicle,
+  other_user: vehicle.seller?.name || 'Seller',
+  last_message: index === 0
+    ? 'Is it still available to view this weekend?'
+    : 'Hi, I am interested in this listing.',
+  last_message_at: index === 0 ? '10:30' : 'New',
+  unread: index === 0 ? 2 : 0,
+}))
 
 const MOCK_MESSAGES = [
   { id: 1, sender_id: 'other', content: 'Hi, is the Hiace still available?', created_at: '10:28' },
@@ -19,14 +25,31 @@ const MOCK_MESSAGES = [
   { id: 5, sender_id: 'other', content: 'Perfect, I am interested.', created_at: '10:32' },
 ]
 
+function formatPrice(value) {
+  return `NZ$${Number(value || 0).toLocaleString('en-NZ')}`
+}
+
 export default function Chat() {
+  const { chatId } = useParams()
+  const initialChat = MOCK_CHATS.find(chat => (
+    String(chat.id) === String(chatId)
+    || String(chat.sellerId) === String(chatId)
+    || String(chat.product.id) === String(chatId)
+  )) || MOCK_CHATS[0]
   const [chats] = useState(MOCK_CHATS)
   const [messages, setMessages] = useState(MOCK_MESSAGES)
-  const [selectedChat, setSelectedChat] = useState(MOCK_CHATS[0])
-  const [mobileChatOpen, setMobileChatOpen] = useState(false)
+  const [selectedChatId, setSelectedChatId] = useState(initialChat.id)
+  const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId))
   const [newMessage, setNewMessage] = useState('')
+  const [offerAmount, setOfferAmount] = useState('')
+  const [offers, setOffers] = useState({})
   const [currentUser, setCurrentUser] = useState(null)
-  const messagesEndRef = useRef(null)
+  const messagesRef = useRef(null)
+  const selectedChat = chats.find(chat => chat.id === selectedChatId) || initialChat
+  const selectedOffer = offers[selectedChat.id]
+  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat.product.price
+  const sellerUserId = selectedChat.product.user_id || selectedChat.product.seller_id || selectedChat.sellerId
+  const isSeller = Boolean(currentUser?.id && sellerUserId && String(currentUser.id) === String(sellerUserId))
 
   useEffect(() => {
     let ignore = false
@@ -39,12 +62,16 @@ export default function Chat() {
     loadCurrentUser()
     return () => { ignore = true }
   }, [])
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  useEffect(() => {
+    if (!messagesRef.current) return
+    messagesRef.current.scrollTop = messagesRef.current.scrollHeight
+  }, [messages, selectedChat])
 
   const handleSend = async () => {
     if (!newMessage.trim()) return
     const msg = {
-      id: Date.now(),
+      id: messages.length + 1,
       sender_id: 'me',
       content: newMessage,
       created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -57,9 +84,35 @@ export default function Chat() {
     }
   }
 
+  const handleMakeOffer = () => {
+    const amount = Number(String(offerAmount).replace(/[^0-9.]/g, ''))
+    if (!Number.isFinite(amount) || amount <= 0) return
+
+    setOffers(current => ({
+      ...current,
+      [selectedChat.id]: {
+        amount,
+        status: 'pending',
+        createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    }))
+    setOfferAmount('')
+  }
+
+  const handleOfferDecision = status => {
+    setOffers(current => ({
+      ...current,
+      [selectedChat.id]: {
+        ...current[selectedChat.id],
+        status,
+        decidedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    }))
+  }
+
   return (
     <div className="app-shell">
-      <Navbar compact title="Messages" />
+      <Navbar compact />
 
       <main className="container page-section">
         <section className={`chat-layout ${mobileChatOpen ? 'is-chat-open' : ''}`}>
@@ -76,7 +129,7 @@ export default function Chat() {
                   key={chat.id}
                   type="button"
                   onClick={() => {
-                    setSelectedChat(chat)
+                    setSelectedChatId(chat.id)
                     setMobileChatOpen(true)
                   }}
                 >
@@ -105,12 +158,34 @@ export default function Chat() {
                 <div>
                   <strong>{selectedChat.other_user}</strong>
                   <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
+                  <p className="chat-price-line">
+                    {selectedOffer?.status === 'accepted' ? 'Agreed price' : 'Listing price'}: <strong>{formatPrice(agreedPrice)}</strong>
+                  </p>
                 </div>
-                <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary" style={{ marginLeft: 'auto' }}>View listing<FiArrowRight /></Link>
+                <div className="chat-product-actions">
+                  <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary">View listing<FiArrowRight /></Link>
+                  {!isSeller && (
+                    <div className="offer-inline">
+                      <input
+                        className="field"
+                        inputMode="numeric"
+                        placeholder="Offer amount"
+                        value={offerAmount}
+                        disabled={selectedOffer?.status === 'pending'}
+                        onChange={event => setOfferAmount(event.target.value)}
+                        onKeyDown={event => event.key === 'Enter' && handleMakeOffer()}
+                      />
+                      <button className="btn btn-primary" type="button" disabled={selectedOffer?.status === 'pending'} onClick={handleMakeOffer}>
+                        <FiTag />
+                        {selectedOffer?.status === 'pending' ? 'Pending' : 'Make an offer'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="messages">
+            <div className="messages" ref={messagesRef}>
               {messages.map(message => (
                 <div className={`message ${message.sender_id === 'me' ? 'is-me' : ''}`} key={message.id}>
                   <div className="bubble">
@@ -119,7 +194,36 @@ export default function Chat() {
                   </div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
+
+              {selectedOffer && (
+                <div className="message is-me">
+                  <div className={`offer-card offer-${selectedOffer.status}`}>
+                    <div className="offer-card-head">
+                      <FiTag />
+                      <div>
+                        <strong>{formatPrice(selectedOffer.amount)}</strong>
+                        <span>{selectedOffer.status === 'pending' ? 'Offer sent' : `Offer ${selectedOffer.status}`}</span>
+                      </div>
+                    </div>
+                    {selectedOffer.status === 'pending' && isSeller && (
+                      <div className="seller-offer-actions" aria-label="Seller offer controls">
+                        <span>Seller response</span>
+                        <button className="btn btn-primary" type="button" onClick={() => handleOfferDecision('accepted')}>
+                          <FiCheck />
+                          Accept
+                        </button>
+                        <button className="btn btn-secondary" type="button" onClick={() => handleOfferDecision('declined')}>
+                          <FiX />
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                    {selectedOffer.status === 'pending' && !isSeller && <p>Pending seller response.</p>}
+                    {selectedOffer.status === 'accepted' && <p>This agreed price is visible only in this conversation.</p>}
+                    {selectedOffer.status === 'declined' && <p>The listing price remains {formatPrice(selectedChat.product.price)} for this buyer.</p>}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="chat-compose">

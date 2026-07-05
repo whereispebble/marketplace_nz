@@ -53,6 +53,9 @@ export const supabase = hasSupabaseConfig
 
 export function getAuthErrorMessage(error) {
   const message = String(error?.message || error || '')
+  if (message.toLowerCase().includes('email rate limit')) {
+    return 'Supabase has temporarily limited confirmation emails. Wait a few minutes, use Google/Facebook sign up, or configure a custom SMTP provider in Supabase Auth.'
+  }
   if (message.toLowerCase().includes('failed to fetch') || message.toLowerCase().includes('fetch')) {
     return connectionErrorMessage
   }

@@ -4,7 +4,7 @@ import logo from '../assets/swapy-logo.svg'
 
 export default function Navbar({ search = '', onSearchChange, compact = false, title }) {
   return (
-    <nav className="topbar">
+    <nav className={`topbar ${compact && !title ? 'topbar-compact' : ''}`}>
       <Link to="/" className="brand" aria-label="Swapy home">
         <img src={logo} alt="Swapy" />
       </Link>
@@ -12,7 +12,7 @@ export default function Navbar({ search = '', onSearchChange, compact = false, t
       {title ? (
         <h2 className="section-title" style={{ fontSize: '1.05rem', justifySelf: 'center' }}>{title}</h2>
       ) : compact ? (
-        <div />
+        null
       ) : (
         <div className="search-pill">
           <FiSearch />

@@ -33,7 +33,7 @@ export const NZ_VEHICLE_CATALOG = [
   { make: 'Tesla', models: ['Model 3', 'Model Y'] },
 ]
 
-export const MOCK_VEHICLES = [
+const FEATURED_MOCK_VEHICLES = [
   {
     id: 1,
     title: 'Toyota Hiace Self-Contained Camper',
@@ -60,7 +60,7 @@ export const MOCK_VEHICLES = [
     ],
     description: 'Reliable NZ-new Hiace camper with certified self-contained setup, rear kitchen, solar, dual battery and a tidy fold-out bed. Great for North Island weekend trips or a full lap of Aotearoa.',
     views: 214,
-    seller: { name: 'Aroha Campers', rating: 4.9, sales: 18, joined: '2023' },
+    seller: { id: 'aroha-campers', name: 'Aroha Campers', rating: 4.9, sales: 18, joined: '2023' },
   },
   {
     id: 2,
@@ -88,7 +88,7 @@ export const MOCK_VEHICLES = [
     ],
     description: 'High-roof Sprinter conversion with diesel heater, fixed bed, 300W solar, lithium battery and mountain-ready storage. Built for South Island seasons.',
     views: 331,
-    seller: { name: 'Southern Van Co.', rating: 4.8, sales: 31, joined: '2021' },
+    seller: { id: 'southern-van-co', name: 'Southern Van Co.', rating: 4.8, sales: 31, joined: '2021' },
   },
   {
     id: 3,
@@ -116,7 +116,7 @@ export const MOCK_VEHICLES = [
     ],
     description: 'Comfortable 4 berth Ducato motorhome with shower, toilet, full kitchen, certified self-contained status and excellent storage for family touring.',
     views: 186,
-    seller: { name: 'Canterbury RV', rating: 4.7, sales: 44, joined: '2020' },
+    seller: { id: 'canterbury-rv', name: 'Canterbury RV', rating: 4.7, sales: 44, joined: '2020' },
   },
   {
     id: 4,
@@ -143,7 +143,7 @@ export const MOCK_VEHICLES = [
     ],
     description: 'Compact 4x4 camper for gravel roads, beaches and ski weekends. Simple bed platform, awning and plenty of gear storage.',
     views: 149,
-    seller: { name: 'Tama R.', rating: 4.6, sales: 6, joined: '2024' },
+    seller: { id: 'tama-r', name: 'Tama R.', rating: 4.6, sales: 6, joined: '2024' },
   },
   {
     id: 5,
@@ -170,7 +170,7 @@ export const MOCK_VEHICLES = [
     ],
     description: 'Easy-driving Transit Custom with certified self-contained layout, removable table, fridge, sink and weekend-friendly storage.',
     views: 121,
-    seller: { name: 'Welly Vans', rating: 4.8, sales: 13, joined: '2022' },
+    seller: { id: 'welly-vans', name: 'Welly Vans', rating: 4.8, sales: 13, joined: '2022' },
   },
   {
     id: 6,
@@ -197,6 +197,128 @@ export const MOCK_VEHICLES = [
     ],
     description: 'Simple and affordable camper setup with bed platform, curtains and camping storage. A practical first van for summer road trips.',
     views: 98,
-    seller: { name: 'Mia K.', rating: 4.5, sales: 3, joined: '2024' },
+    seller: { id: 'mia-k', name: 'Mia K.', rating: 4.5, sales: 3, joined: '2024' },
   },
 ]
+
+const MOCK_LOCATIONS = [
+  { location: 'Auckland', region: 'Auckland', lat: -36.8485, lng: 174.7633 },
+  { location: 'Wellington', region: 'Wellington', lat: -41.2865, lng: 174.7762 },
+  { location: 'Christchurch', region: 'Canterbury', lat: -43.5321, lng: 172.6362 },
+  { location: 'Queenstown', region: 'Otago', lat: -45.0312, lng: 168.6626 },
+  { location: 'Nelson', region: 'Nelson Tasman', lat: -41.2706, lng: 173.2840 },
+  { location: 'Rotorua', region: 'Bay of Plenty', lat: -38.1368, lng: 176.2497 },
+  { location: 'Tauranga', region: 'Bay of Plenty', lat: -37.6878, lng: 176.1651 },
+  { location: 'Hamilton', region: 'Waikato', lat: -37.7870, lng: 175.2793 },
+  { location: 'Dunedin', region: 'Otago', lat: -45.8788, lng: 170.5028 },
+  { location: 'Napier', region: 'Hawke\'s Bay', lat: -39.4928, lng: 176.9120 },
+  { location: 'New Plymouth', region: 'Taranaki', lat: -39.0556, lng: 174.0752 },
+  { location: 'Whangarei', region: 'Northland', lat: -35.7251, lng: 174.3237 },
+  { location: 'Wanaka', region: 'Otago', lat: -44.7032, lng: 169.1321 },
+  { location: 'Invercargill', region: 'Southland', lat: -46.4132, lng: 168.3538 },
+  { location: 'Palmerston North', region: 'Manawatu-Whanganui', lat: -40.3523, lng: 175.6082 },
+  { location: 'Blenheim', region: 'Marlborough', lat: -41.5134, lng: 173.9612 },
+  { location: 'Timaru', region: 'Canterbury', lat: -44.3967, lng: 171.2536 },
+  { location: 'Gisborne', region: 'Gisborne', lat: -38.6623, lng: 178.0176 },
+  { location: 'Taupo', region: 'Waikato', lat: -38.6857, lng: 176.0702 },
+  { location: 'Picton', region: 'Marlborough', lat: -41.2906, lng: 174.0059 },
+  { location: 'Hokitika', region: 'West Coast', lat: -42.7167, lng: 170.9667 },
+  { location: 'Kerikeri', region: 'Northland', lat: -35.2268, lng: 173.9474 },
+  { location: 'Greymouth', region: 'West Coast', lat: -42.4504, lng: 171.2108 },
+  { location: 'Te Anau', region: 'Southland', lat: -45.4144, lng: 167.7181 },
+]
+
+const MOCK_SELLERS = [
+  { id: 'kiwi-road-ready', name: 'Kiwi Road Ready', rating: 4.9, sales: 41, joined: '2020' },
+  { id: 'northland-vans', name: 'Northland Vans', rating: 4.7, sales: 16, joined: '2022' },
+  { id: 'greenstone-campers', name: 'Greenstone Campers', rating: 4.8, sales: 28, joined: '2021' },
+  { id: 'otago-motorhomes', name: 'Otago Motorhomes', rating: 4.9, sales: 37, joined: '2019' },
+  { id: 'bay-weekenders', name: 'Bay Weekenders', rating: 4.6, sales: 12, joined: '2023' },
+  { id: 'waikato-vanworks', name: 'Waikato Vanworks', rating: 4.8, sales: 22, joined: '2021' },
+  { id: 'coastal-rv-nz', name: 'Coastal RV NZ', rating: 4.7, sales: 35, joined: '2020' },
+  { id: 'mainland-conversions', name: 'Mainland Conversions', rating: 4.9, sales: 51, joined: '2018' },
+  { id: 'taranaki-travel-vans', name: 'Taranaki Travel Vans', rating: 4.5, sales: 9, joined: '2024' },
+  { id: 'lake-district-campers', name: 'Lake District Campers', rating: 4.8, sales: 19, joined: '2022' },
+  { id: 'marlborough-motors', name: 'Marlborough Motors', rating: 4.6, sales: 14, joined: '2023' },
+  { id: 'southland-roamers', name: 'Southland Roamers', rating: 4.7, sales: 17, joined: '2022' },
+]
+
+const MOCK_TEMPLATES = [
+  { make: 'Toyota', model: 'Toyota Hiace', vehicleType: 'campervan', title: 'Toyota Hiace Certified Camper', basePrice: 36500, mileage: 152000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'Nissan', model: 'Nissan NV350', vehicleType: 'campervan', title: 'Nissan NV350 Weekend Camper', basePrice: 32900, mileage: 141000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'Ford', model: 'Ford Transit', vehicleType: 'van', title: 'Ford Transit Long Wheelbase Conversion', basePrice: 52500, mileage: 118000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'Mercedes-Benz', model: 'Mercedes Sprinter', vehicleType: 'van', title: 'Mercedes Sprinter Off-Grid Van', basePrice: 76500, mileage: 98000, sleeps: 2, belts: 2, selfContained: true },
+  { make: 'Fiat', model: 'Fiat Ducato', vehicleType: 'motorhome', title: 'Fiat Ducato Family Motorhome', basePrice: 87500, mileage: 84000, sleeps: 4, belts: 4, selfContained: true },
+  { make: 'Mitsubishi', model: 'Mitsubishi Delica', vehicleType: '4x4', title: 'Mitsubishi Delica 4x4 Camper', basePrice: 26800, mileage: 196000, sleeps: 2, belts: 5, selfContained: false },
+  { make: 'Mazda', model: 'Mazda Bongo', vehicleType: 'campervan', title: 'Mazda Bongo Pop-Top Camper', basePrice: 23900, mileage: 178000, sleeps: 2, belts: 4, selfContained: false },
+  { make: 'Volkswagen', model: 'Volkswagen Transporter', vehicleType: 'campervan', title: 'Volkswagen Transporter Surf Camper', basePrice: 48900, mileage: 126000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'LDV', model: 'LDV Deliver 9', vehicleType: 'van', title: 'LDV Deliver 9 Fresh Conversion', basePrice: 58900, mileage: 62000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'Renault', model: 'Renault Master', vehicleType: 'van', title: 'Renault Master High-Roof Camper', basePrice: 64500, mileage: 105000, sleeps: 2, belts: 3, selfContained: true },
+  { make: 'Hyundai', model: 'Hyundai iLoad', vehicleType: 'campervan', title: 'Hyundai iLoad Compact Camper', basePrice: 31800, mileage: 133000, sleeps: 2, belts: 5, selfContained: false },
+  { make: 'Peugeot', model: 'Peugeot Boxer', vehicleType: 'motorhome', title: 'Peugeot Boxer Two-Berth Motorhome', basePrice: 71500, mileage: 91000, sleeps: 2, belts: 2, selfContained: true },
+  { make: 'Iveco', model: 'Iveco Daily', vehicleType: 'motorhome', title: 'Iveco Daily Spacious Motorhome', basePrice: 98500, mileage: 112000, sleeps: 4, belts: 4, selfContained: true },
+  { make: 'Honda', model: 'Honda Stepwgn', vehicleType: 'campervan', title: 'Honda Stepwgn Mini Camper', basePrice: 20900, mileage: 162000, sleeps: 2, belts: 5, selfContained: false },
+  { make: 'Toyota', model: 'Toyota Estima', vehicleType: 'car', title: 'Toyota Estima Road Trip Sleeper', basePrice: 16900, mileage: 151000, sleeps: 2, belts: 7, selfContained: false },
+  { make: 'Subaru', model: 'Subaru Outback', vehicleType: 'car', title: 'Subaru Outback Touring Setup', basePrice: 21900, mileage: 124000, sleeps: 2, belts: 5, selfContained: false },
+]
+
+const MOCK_IMAGE_POOL = [
+  'https://images.unsplash.com/photo-1533591380348-14193f1de18f?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1594495894542-a46cc73e081a?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80',
+]
+
+const MOCK_CONDITIONS = ['WOF current', 'Fresh service', 'Dealer inspected', 'Tidy conversion', 'Adventure ready', 'New tyres fitted', 'Recently certified']
+const MOCK_WOF_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function createGeneratedVehicles() {
+  return Array.from({ length: 72 }, (_, index) => {
+    const template = MOCK_TEMPLATES[index % MOCK_TEMPLATES.length]
+    const place = MOCK_LOCATIONS[index % MOCK_LOCATIONS.length]
+    const seller = MOCK_SELLERS[index % MOCK_SELLERS.length]
+    const image = MOCK_IMAGE_POOL[index % MOCK_IMAGE_POOL.length]
+    const secondaryImage = MOCK_IMAGE_POOL[(index + 3) % MOCK_IMAGE_POOL.length]
+    const year = 2009 + (index % 16)
+    const priceAdjustment = ((index % 9) - 4) * 1700
+    const mileageAdjustment = ((index % 11) - 5) * 8500
+    const price = Math.max(9900, template.basePrice + priceAdjustment)
+    const mileage = Math.max(42000, template.mileage + mileageAdjustment)
+    const suburbOffset = ((index % 7) - 3) * 0.018
+    const roadTripTone = template.selfContained
+      ? 'certified self-contained setup, practical storage and a layout ready for NZ freedom camping rules'
+      : 'simple touring setup, flexible seating and enough storage for weekends away'
+
+    return {
+      id: index + 7,
+      title: `${year} ${template.title}`,
+      make: template.make,
+      model: template.model,
+      vehicleType: template.vehicleType,
+      price,
+      mileage,
+      condition: MOCK_CONDITIONS[index % MOCK_CONDITIONS.length],
+      wof: `Valid until ${MOCK_WOF_MONTHS[index % MOCK_WOF_MONTHS.length]} 2027`,
+      sleeps: template.sleeps,
+      belts: template.belts,
+      selfContained: template.selfContained,
+      location: place.location,
+      region: place.region,
+      lat: Number((place.lat + suburbOffset).toFixed(5)),
+      lng: Number((place.lng - suburbOffset).toFixed(5)),
+      category: template.vehicleType,
+      image,
+      images: [image, secondaryImage, MOCK_IMAGE_POOL[(index + 5) % MOCK_IMAGE_POOL.length]],
+      description: `${year} ${template.model} listed in ${place.location}. Includes ${roadTripTone}. Good option for buyers comparing WOF, mileage, sleeping capacity and location before viewing.`,
+      views: 72 + ((index * 23) % 520),
+      status: index % 13 === 0 ? 'sold' : 'available',
+      seller: { ...seller },
+    }
+  })
+}
+
+export const MOCK_VEHICLES = [...FEATURED_MOCK_VEHICLES, ...createGeneratedVehicles()]

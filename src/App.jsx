@@ -20,6 +20,7 @@ function App() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/new-product" element={<NewProduct />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:sellerId" element={<Profile />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/chats" element={<Chat />} />
         <Route path="/chats/:chatId" element={<Chat />} />
