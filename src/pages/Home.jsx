@@ -4,7 +4,7 @@ import { FiArrowLeft, FiArrowRight, FiGrid, FiMap, FiSearch } from 'react-icons/
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
-import heroVideo from '../assets/hero-video-nz-optimized.mp4'
+import heroVideo from '../assets/hero-empty-road-optimized.mp4'
 import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
 
 let leafletPromise

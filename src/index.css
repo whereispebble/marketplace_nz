@@ -286,6 +286,7 @@ a {
   width: 100vw;
   height: 100vh;
   object-fit: cover;
+  object-position: center center;
 }
 
 .hero::before {
@@ -1710,6 +1711,10 @@ textarea.field {
 
   .hero {
     min-height: 420px;
+  }
+
+  .hero-video {
+    object-position: center 72%;
   }
 
   .hero-inner {
