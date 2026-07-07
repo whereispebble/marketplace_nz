@@ -1,30 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiHeart } from 'react-icons/fi'
-import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import ProductCard from '../components/ProductCard'
-import { MOCK_VEHICLES } from '../data/mockVehicles'
-
-const MOCK_FAVORITES = MOCK_VEHICLES.slice(0, 3)
+import { getFavoriteProducts } from '../services/favorites'
 
 export default function Favorites() {
-  const [favorites, setFavorites] = useState(MOCK_FAVORITES)
-  const [loading, setLoading] = useState(false)
+  const [favorites, setFavorites] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let ignore = false
 
     async function loadFavorites() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('favorites').select('product_id, products(*)').eq('user_id', user.id)
-      if (!ignore && data?.length) setFavorites(data.map(favorite => favorite.products))
+      setLoading(true)
+      const savedProducts = await getFavoriteProducts()
+      if (!ignore) setFavorites(savedProducts)
       if (!ignore) setLoading(false)
     }
 
     loadFavorites()
-    return () => { ignore = true }
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   return (
@@ -53,7 +52,7 @@ export default function Favorites() {
           </div>
         ) : (
           <div className="products-grid">
-            {favorites.map(product => <ProductCard key={product.id} product={product} />)}
+            {favorites.map(product => <ProductCard key={`favorite-${product.id}`} product={product} initiallyLiked />)}
           </div>
         )}
       </main>

@@ -4,7 +4,9 @@ import { FiArrowLeft, FiArrowRight, FiGrid, FiMap, FiSearch } from 'react-icons/
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
-import heroVideo from '../assets/hero-empty-road-optimized.mp4'
+import heroVideoDesktop from '../assets/hero-road-desktop.mp4'
+import heroVideoMobile from '../assets/hero-road-mobile.mp4'
+import heroPoster from '../assets/hero-road-poster.jpg'
 import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
 
 let leafletPromise
@@ -233,8 +235,9 @@ export default function Home() {
       <Navbar search={search} onSearchChange={handleSearchChange} />
 
       <header className="hero">
-        <video className="hero-video" autoPlay muted loop playsInline preload="auto" aria-hidden="true">
-          <source src={heroVideo} type="video/mp4" />
+        <video className="hero-video" autoPlay muted loop playsInline preload="metadata" poster={heroPoster} aria-hidden="true">
+          <source src={heroVideoMobile} media="(max-width: 640px)" type="video/mp4" />
+          <source src={heroVideoDesktop} type="video/mp4" />
         </video>
         <div className="hero-inner">
           <h1>Selling cars, campervans and motorhomes made easy.</h1>

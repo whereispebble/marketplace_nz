@@ -16,8 +16,11 @@ function createMockQuery() {
     order: () => query,
     eq: () => query,
     insert: () => query,
+    upsert: () => query,
     update: () => query,
+    delete: () => query,
     single: async () => result,
+    maybeSingle: async () => result,
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   }
 
