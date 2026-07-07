@@ -4,6 +4,7 @@ import { FiEye, FiHeart, FiMapPin, FiMessageCircle, FiShield, FiStar, FiUsers } 
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import { MOCK_VEHICLES } from '../data/mockVehicles'
+import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -11,6 +12,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(fallbackVehicle)
   const [selectedImage, setSelectedImage] = useState(0)
   const [liked, setLiked] = useState(false)
+  const [savingFavorite, setSavingFavorite] = useState(false)
   const [loading, setLoading] = useState(false)
   const sellerId = product.seller_id || product.seller?.id || 'seller'
   const sellerName = product.seller?.name || 'Private seller'
@@ -27,6 +29,23 @@ export default function ProductDetail() {
     loadProduct()
     return () => { ignore = true }
   }, [id])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadFavoriteState() {
+      const saved = await isFavorite(product)
+      if (!ignore) setLiked(saved)
+    }
+
+    loadFavoriteState()
+    window.addEventListener(FAVORITES_UPDATED_EVENT, loadFavoriteState)
+
+    return () => {
+      ignore = true
+      window.removeEventListener(FAVORITES_UPDATED_EVENT, loadFavoriteState)
+    }
+  }, [product])
 
   const images = useMemo(() => product.images?.length ? product.images : [product.image || fallbackVehicle.images[0]], [fallbackVehicle.images, product])
 
@@ -111,10 +130,16 @@ export default function ProductDetail() {
               <button
                 className="btn btn-secondary btn-full"
                 type="button"
+                disabled={savingFavorite}
                 style={{ marginTop: 10 }}
                 aria-pressed={liked}
                 aria-label={liked ? `Remove ${product.title} from saved vehicles` : `Save ${product.title}`}
-                onClick={() => setLiked(!liked)}
+                onClick={async () => {
+                  setSavingFavorite(true)
+                  const nextLiked = await toggleFavorite(product)
+                  setLiked(nextLiked)
+                  setSavingFavorite(false)
+                }}
               >
                 <FiHeart fill={liked ? 'currentColor' : 'none'} />
                 {liked ? 'Saved' : 'Save vehicle'}
