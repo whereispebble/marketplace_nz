@@ -9,6 +9,7 @@ import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVe
 let leafletPromise
 const PAGE_SIZE = 50
 const SAVED_SEARCHES_KEY = 'swapy:saved-searches'
+const HOME_STATE_KEY = 'swapy:home-state'
 const DEFAULT_FILTERS = {
   search: '',
   vehicleType: 'all',
@@ -220,6 +221,15 @@ function readSavedSearches() {
   }
 }
 
+function readHomeState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(HOME_STATE_KEY) || '{}')
+    return saved && typeof saved === 'object' ? saved : {}
+  } catch {
+    return {}
+  }
+}
+
 function filterVehicles(vehicles, filters) {
   const minPrice = parsePositiveNumber(filters.minPrice)
   const maxPrice = parsePositiveNumber(filters.maxPrice)
@@ -274,28 +284,34 @@ function describeSearch(filters) {
 }
 
 export default function Home() {
+  const restoredHomeState = useMemo(() => readHomeState(), [])
   const [vehicles, setVehicles] = useState(MOCK_VEHICLES)
   const [loading, setLoading] = useState(false)
   const resultsRef = useRef(null)
-  const [search, setSearch] = useState('')
-  const [vehicleType, setVehicleType] = useState('all')
-  const [make, setMake] = useState('')
-  const [model, setModel] = useState('')
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [maxMileage, setMaxMileage] = useState('')
-  const [minSleeps, setMinSleeps] = useState('')
-  const [minBelts, setMinBelts] = useState('')
-  const [selfContainedOnly, setSelfContainedOnly] = useState(false)
-  const [location, setLocation] = useState('')
-  const [radiusKm, setRadiusKm] = useState('')
-  const [amenities, setAmenities] = useState(DEFAULT_FILTERS.amenities)
-  const [sortBy, setSortBy] = useState('recent')
-  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS)
-  const [hasSearched, setHasSearched] = useState(false)
+  const restoredDraft = { ...DEFAULT_FILTERS, ...(restoredHomeState.draftFilters || {}) }
+  const restoredApplied = { ...DEFAULT_FILTERS, ...(restoredHomeState.appliedFilters || {}) }
+  const [search, setSearch] = useState(restoredDraft.search)
+  const [vehicleType, setVehicleType] = useState(restoredDraft.vehicleType)
+  const [make, setMake] = useState(restoredDraft.make)
+  const [model, setModel] = useState(restoredDraft.model)
+  const [minPrice, setMinPrice] = useState(restoredDraft.minPrice)
+  const [maxPrice, setMaxPrice] = useState(restoredDraft.maxPrice)
+  const [maxMileage, setMaxMileage] = useState(restoredDraft.maxMileage)
+  const [minSleeps, setMinSleeps] = useState(restoredDraft.minSleeps)
+  const [minBelts, setMinBelts] = useState(restoredDraft.minBelts)
+  const [selfContainedOnly, setSelfContainedOnly] = useState(restoredDraft.selfContainedOnly)
+  const [location, setLocation] = useState(restoredDraft.location)
+  const [radiusKm, setRadiusKm] = useState(restoredDraft.radiusKm)
+  const [amenities, setAmenities] = useState({ ...DEFAULT_FILTERS.amenities, ...(restoredDraft.amenities || {}) })
+  const [sortBy, setSortBy] = useState(restoredDraft.sortBy)
+  const [appliedFilters, setAppliedFilters] = useState({
+    ...restoredApplied,
+    amenities: { ...DEFAULT_FILTERS.amenities, ...(restoredApplied.amenities || {}) },
+  })
+  const [hasSearched, setHasSearched] = useState(Boolean(restoredHomeState.hasSearched))
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
-  const [viewMode, setViewMode] = useState('grid')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [viewMode, setViewMode] = useState(restoredHomeState.viewMode || 'grid')
+  const [currentPage, setCurrentPage] = useState(restoredHomeState.currentPage || 1)
   const [savedSearches, setSavedSearches] = useState(readSavedSearches)
 
   useEffect(() => {
@@ -369,6 +385,16 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(savedSearches))
   }, [savedSearches])
+
+  useEffect(() => {
+    sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify({
+      draftFilters,
+      appliedFilters,
+      hasSearched,
+      viewMode,
+      currentPage,
+    }))
+  }, [draftFilters, appliedFilters, hasSearched, viewMode, currentPage])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 901px)')

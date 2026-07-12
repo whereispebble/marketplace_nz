@@ -106,6 +106,11 @@ a {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.topbar-compact .search-pill,
+.topbar-compact .mobile-filter-toggle {
+  display: none;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -2303,7 +2308,7 @@ textarea.field {
   }
 
   .topbar-compact {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .brand img {
@@ -2324,6 +2329,10 @@ textarea.field {
   .topbar .search-pill {
     display: block;
     justify-self: stretch;
+  }
+
+  .topbar-compact .search-pill {
+    display: block;
   }
 
   .search-pill svg {
@@ -2350,6 +2359,10 @@ textarea.field {
     cursor: pointer;
   }
 
+  .topbar-compact .mobile-filter-toggle {
+    display: inline-flex;
+  }
+
   .mobile-filter-toggle svg {
     width: 21px;
     height: 21px;
@@ -2374,6 +2387,7 @@ textarea.field {
   }
 
   .mobile-nav-only,
+  .nav-icon.mobile-nav-only,
   .nav-icon,
   .nav-actions .btn-primary {
     display: inline-flex;

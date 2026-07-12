@@ -1,10 +1,37 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { FiHeart, FiHome, FiMessageCircle, FiPlus, FiSearch, FiSliders, FiUser } from 'react-icons/fi'
 import logo from '../assets/swapy-logo.svg'
 
 export default function Navbar({ search = '', onSearchChange, onSearchSubmit, onFilterClick, compact = false, title }) {
+  const navigate = useNavigate()
+  const [localSearch, setLocalSearch] = useState('')
+  const activeSearch = onSearchChange ? search : localSearch
+
   const handleSearchKeyDown = event => {
-    if (event.key === 'Enter') onSearchSubmit?.()
+    if (event.key !== 'Enter') return
+    if (onSearchSubmit) {
+      onSearchSubmit()
+      return
+    }
+    navigate('/')
+  }
+
+  const handleSearchChange = event => {
+    const value = event.target.value
+    if (onSearchChange) {
+      onSearchChange(value)
+      return
+    }
+    setLocalSearch(value)
+  }
+
+  const handleFilterClick = () => {
+    if (onFilterClick) {
+      onFilterClick()
+      return
+    }
+    navigate('/')
   }
 
   return (
@@ -15,23 +42,21 @@ export default function Navbar({ search = '', onSearchChange, onSearchSubmit, on
 
       {title ? (
         <h2 className="section-title" style={{ fontSize: '1.05rem', justifySelf: 'center' }}>{title}</h2>
-      ) : compact ? (
-        null
       ) : (
         <div className="search-pill">
           <FiSearch />
           <input
             type="search"
             placeholder="Search model, region, WOF or self-contained"
-            value={search}
-            onChange={event => onSearchChange?.(event.target.value)}
+            value={activeSearch}
+            onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
           />
         </div>
       )}
 
-      {!title && !compact && (
-        <button className="mobile-filter-toggle" type="button" onClick={onFilterClick} aria-label="Open filters">
+      {!title && (
+        <button className="mobile-filter-toggle" type="button" onClick={handleFilterClick} aria-label="Open filters">
           <FiSliders />
         </button>
       )}
