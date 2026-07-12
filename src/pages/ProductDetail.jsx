@@ -100,6 +100,9 @@ export default function ProductDetail() {
           <aside className="sidebar-stack">
             <section className="panel panel-pad">
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                <span className={`badge ${['active', 'available'].includes(product.status) ? 'badge-mint' : ''}`}>
+                  {formatStatus(product.status)}
+                </span>
                 <span className="badge badge-accent">{product.condition || 'Used'}</span>
                 <span className={`badge ${product.selfContained ? 'badge-mint' : ''}`}>
                   {product.selfContained ? 'Self-contained' : 'Not self-contained'}
@@ -182,4 +185,10 @@ function Spec({ label, value, icon }) {
       <strong>{value}</strong>
     </div>
   )
+}
+
+function formatStatus(status) {
+  if (status === 'available') return 'Active'
+  if (!status) return 'Active'
+  return status.charAt(0).toUpperCase() + status.slice(1)
 }
