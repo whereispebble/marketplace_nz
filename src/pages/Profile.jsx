@@ -161,7 +161,7 @@ export default function Profile() {
                   <strong>{item.title}</strong>
                   <p className="section-subtitle" style={{ marginTop: 4 }}>{item.condition} · NZ${Number(item.price || 0).toLocaleString('en-NZ')}</p>
                 </div>
-                <span className={`badge ${item.status === 'available' ? 'badge-mint' : ''}`}>{item.status === 'available' ? 'Active' : 'Sold'}</span>
+                <span className={`badge ${['active', 'available'].includes(item.status) ? 'badge-mint' : ''}`}>{formatStatus(item.status)}</span>
               </Link>
             ))}
           </div>
@@ -172,6 +172,12 @@ export default function Profile() {
       </main>
     </div>
   )
+}
+
+function formatStatus(status) {
+  if (status === 'available') return 'Active'
+  if (!status) return 'Draft'
+  return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
 function Empty({ title, action, to }) {
