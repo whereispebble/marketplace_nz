@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FiArrowLeft, FiArrowRight, FiBell, FiBookmark, FiGrid, FiMap, FiSearch, FiSliders, FiTrash2 } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiBookmark, FiGrid, FiMap, FiSearch, FiSettings, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
-import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
+import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG } from '../data/mockVehicles'
 
 let leafletPromise
 const PAGE_SIZE = 50
@@ -15,6 +16,9 @@ const DEFAULT_FILTERS = {
   vehicleType: 'all',
   make: '',
   model: '',
+  minYear: '',
+  maxYear: '',
+  transmission: 'all',
   minPrice: '',
   maxPrice: '',
   maxMileage: '',
@@ -136,6 +140,7 @@ function fuzzyIncludes(haystack, query) {
   ))
 }
 
+// eslint-disable-next-line no-unused-vars
 function parsePriceCeiling(value) {
   const cleanValue = normalise(value)
   if (!cleanValue || cleanValue === 'all' || cleanValue === 'any') return null
@@ -145,6 +150,12 @@ function parsePriceCeiling(value) {
   if (!Number.isFinite(numericValue) || numericValue <= 0) return null
 
   return hasK ? numericValue * 1000 : numericValue
+}
+
+function formatCompactCurrency(value) {
+  const amount = Number(value || 0)
+  if (amount >= 1000 && amount % 1000 === 0) return `${amount / 1000}k`
+  return amount.toLocaleString('en-NZ')
 }
 
 function parsePositiveNumber(value) {
@@ -206,10 +217,50 @@ function vehicleMake(vehicle) {
   return vehicle.make || vehicle.model?.split(' ')[0] || ''
 }
 
+// Muchos anuncios guardan el modelo con la marca delante ("Toyota Hiace"); en el
+// desplegable interesa solo "Hiace" para no duplicar entradas del catalogo.
+function stripMakePrefix(model, make) {
+  const cleanModel = String(model || '').trim()
+  const cleanMake = String(make || '').trim()
+  if (!cleanModel || !cleanMake) return cleanModel
+  if (!normalise(cleanModel).startsWith(`${normalise(cleanMake)} `)) return cleanModel
+  return cleanModel.slice(cleanMake.length).trim() || cleanModel
+}
+
+// Los anuncios reales pueden no traer `year`; en ese caso se intenta leer del
+// titulo, donde suele ir por delante ("2014 Toyota Hiace...").
+function vehicleYear(vehicle) {
+  const direct = Number(vehicle.year)
+  if (Number.isFinite(direct) && direct > 1900) return direct
+  const fromTitle = String(vehicle.title || '').match(/\b(19|20)\d{2}\b/)
+  return fromTitle ? Number(fromTitle[0]) : null
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]))
+}
+
 function mergeVehiclesWithMocks(products = []) {
   const realProducts = products.filter(Boolean)
   const realIds = new Set(realProducts.map(product => String(product.id)))
   return [...realProducts, ...MOCK_VEHICLES.filter(vehicle => !realIds.has(String(vehicle.id)))]
+}
+
+// Clave estable para comparar dos conjuntos de filtros sin depender del orden
+// en el que se escribieron las propiedades.
+function filtersKey(filters) {
+  const normalised = {
+    ...DEFAULT_FILTERS,
+    ...(filters || {}),
+    amenities: { ...DEFAULT_FILTERS.amenities, ...(filters?.amenities || {}) },
+  }
+  return JSON.stringify(Object.keys(normalised).sort().map(key => [key, normalised[key]]))
 }
 
 function readSavedSearches() {
@@ -236,6 +287,8 @@ function filterVehicles(vehicles, filters) {
   const maxMileage = parsePositiveNumber(filters.maxMileage)
   const minSleeps = parsePositiveNumber(filters.minSleeps)
   const minBelts = parsePositiveNumber(filters.minBelts)
+  const minYear = parsePositiveNumber(filters.minYear)
+  const maxYear = parsePositiveNumber(filters.maxYear)
   const radiusKm = parsePositiveNumber(filters.radiusKm)
   const origin = filters.location
     ? vehicles.find(vehicle => normalise(vehicle.location) === normalise(filters.location))
@@ -246,12 +299,19 @@ function filterVehicles(vehicles, filters) {
     .filter(vehicle => filters.vehicleType === 'all' || vehicle.vehicleType === filters.vehicleType || vehicle.category === filters.vehicleType)
     .filter(vehicle => fuzzyIncludes(vehicleMake(vehicle), filters.make))
     .filter(vehicle => fuzzyIncludes(`${vehicle.model} ${vehicle.title}`, filters.model))
+    .filter(vehicle => {
+      if (minYear === null && maxYear === null) return true
+      const year = vehicleYear(vehicle)
+      if (year === null) return false
+      return (minYear === null || year >= minYear) && (maxYear === null || year <= maxYear)
+    })
     .filter(vehicle => minPrice === null || Number(vehicle.price || 0) >= minPrice)
     .filter(vehicle => maxPrice === null || Number(vehicle.price || 0) <= maxPrice)
     .filter(vehicle => maxMileage === null || Number(vehicle.mileage || 0) <= maxMileage)
     .filter(vehicle => minSleeps === null || Number(vehicle.sleeps || 0) >= minSleeps)
     .filter(vehicle => minBelts === null || Number(vehicle.belts || 0) >= minBelts)
     .filter(vehicle => !filters.selfContainedOnly || Boolean(vehicle.selfContained))
+    .filter(vehicle => filters.transmission === 'all' || normalise(vehicle.transmission) === normalise(filters.transmission))
     .filter(vehicle => {
       if (!filters.location) return true
       if (origin && radiusKm !== null) {
@@ -270,17 +330,35 @@ function filterVehicles(vehicles, filters) {
     })
 }
 
+// El nombre se construye a partir de los mismos chips que se muestran en la
+// barra de filtros activos, para que refleje todos los criterios y no solo unos
+// pocos.
 function describeSearch(filters) {
-  const parts = [
-    filters.search,
-    filters.vehicleType !== 'all' ? filters.vehicleType : '',
-    filters.make,
-    filters.model,
-    filters.minPrice ? `from NZ$${Number(parsePositiveNumber(filters.minPrice) || 0).toLocaleString('en-NZ')}` : '',
-    filters.maxPrice ? `up to NZ$${Number(parsePriceCeiling(filters.maxPrice) || 0).toLocaleString('en-NZ')}` : '',
-    filters.location,
-  ].filter(Boolean)
-  return parts.join(' - ') || 'All vehicles'
+  const parts = activeFilterChips(filters).map(chip => chip.label)
+  return parts.join(' · ') || 'All vehicles'
+}
+
+function activeFilterChips(filters) {
+  const chips = []
+  if (filters.search) chips.push({ id: 'search', label: filters.search })
+  if (filters.vehicleType !== 'all') chips.push({ id: 'vehicleType', label: filters.vehicleType })
+  if (filters.make) chips.push({ id: 'make', label: filters.make })
+  if (filters.model) chips.push({ id: 'model', label: filters.model })
+  if (filters.minYear && filters.maxYear) chips.push({ id: 'year', label: `${filters.minYear} - ${filters.maxYear}` })
+  else if (filters.minYear) chips.push({ id: 'year', label: `${filters.minYear} or newer` })
+  else if (filters.maxYear) chips.push({ id: 'year', label: `${filters.maxYear} or older` })
+  if (filters.minPrice) chips.push({ id: 'minPrice', label: `From NZ$${Number(parsePositiveNumber(filters.minPrice) || 0).toLocaleString('en-NZ')}` })
+  if (filters.maxPrice) chips.push({ id: 'maxPrice', label: `Under NZ$${formatCompactCurrency(parsePositiveNumber(filters.maxPrice))}` })
+  if (filters.maxMileage) chips.push({ id: 'maxMileage', label: `Under ${Number(parsePositiveNumber(filters.maxMileage) || 0).toLocaleString('en-NZ')} km` })
+  if (filters.minSleeps) chips.push({ id: 'minSleeps', label: `Sleeps ${filters.minSleeps}+` })
+  if (filters.minBelts) chips.push({ id: 'minBelts', label: `${filters.minBelts}+ belts` })
+  if (filters.selfContainedOnly) chips.push({ id: 'selfContainedOnly', label: 'Self-contained' })
+  if (filters.transmission && filters.transmission !== 'all') chips.push({ id: 'transmission', label: filters.transmission })
+  if (filters.location) chips.push({ id: 'location', label: filters.radiusKm ? `${filters.location} + ${filters.radiusKm} km` : filters.location })
+  AMENITY_FILTERS.forEach(amenity => {
+    if (filters.amenities?.[amenity.id]) chips.push({ id: amenity.id, label: amenity.label })
+  })
+  return chips
 }
 
 export default function Home() {
@@ -294,6 +372,9 @@ export default function Home() {
   const [vehicleType, setVehicleType] = useState(restoredDraft.vehicleType)
   const [make, setMake] = useState(restoredDraft.make)
   const [model, setModel] = useState(restoredDraft.model)
+  const [minYear, setMinYear] = useState(restoredDraft.minYear)
+  const [maxYear, setMaxYear] = useState(restoredDraft.maxYear)
+  const [transmission, setTransmission] = useState(restoredDraft.transmission)
   const [minPrice, setMinPrice] = useState(restoredDraft.minPrice)
   const [maxPrice, setMaxPrice] = useState(restoredDraft.maxPrice)
   const [maxMileage, setMaxMileage] = useState(restoredDraft.maxMileage)
@@ -327,25 +408,34 @@ export default function Home() {
     return () => { ignore = true }
   }, [])
 
-  const makes = useMemo(() => {
-    const catalogMakes = NZ_VEHICLE_CATALOG.map(item => item.make)
-    const listedMakes = vehicles.map(vehicleMake).filter(Boolean)
-    return [...new Set([...catalogMakes, ...listedMakes])].sort()
-  }, [vehicles])
-
-  const models = useMemo(() => {
-    const selectedCatalog = NZ_VEHICLE_CATALOG.find(item => normalise(item.make) === normalise(make))
-    const catalogModels = (selectedCatalog ? selectedCatalog.models : NZ_VEHICLE_CATALOG.flatMap(item => item.models))
-      .map(modelName => selectedCatalog ? `${selectedCatalog.make} ${modelName}` : modelName)
-    const listedModels = vehicles
-      .filter(vehicle => !make || fuzzyIncludes(vehicleMake(vehicle), make))
-      .map(vehicle => vehicle.model)
-      .filter(Boolean)
-    return [...new Set([...catalogModels, ...listedModels])].sort()
-  }, [make, vehicles])
-
   const locations = useMemo(() => (
     [...new Set(vehicles.map(vehicle => vehicle.location).filter(Boolean))].sort()
+  ), [vehicles])
+
+  // Catalogo de Trade Me como base, mas cualquier marca que aparezca en los
+  // anuncios y no este en la lista.
+  const makes = useMemo(() => {
+    const fromCatalog = NZ_VEHICLE_CATALOG.map(entry => entry.make)
+    const fromListings = vehicles.map(vehicleMake).filter(Boolean)
+    return [...new Set([...fromCatalog, ...fromListings])].sort((a, b) => a.localeCompare(b))
+  }, [vehicles])
+
+  // Con una marca elegida se muestran solo sus modelos: los del catalogo mas los
+  // que aparezcan en anuncios reales de esa marca. Sin marca, los de anuncios.
+  const models = useMemo(() => {
+    const listingModels = vehicles
+      .filter(vehicle => !make || normalise(vehicleMake(vehicle)) === normalise(make))
+      .map(vehicle => stripMakePrefix(vehicle.model, vehicleMake(vehicle)))
+      .filter(Boolean)
+
+    if (!make) return [...new Set(listingModels)].sort((a, b) => a.localeCompare(b))
+
+    const catalogEntry = NZ_VEHICLE_CATALOG.find(entry => normalise(entry.make) === normalise(make))
+    return [...new Set([...(catalogEntry?.models || []), ...listingModels])].sort((a, b) => a.localeCompare(b))
+  }, [vehicles, make])
+
+  const years = useMemo(() => (
+    [...new Set(vehicles.map(vehicleYear).filter(Boolean))].sort((a, b) => b - a)
   ), [vehicles])
 
   const draftFilters = useMemo(() => ({
@@ -353,6 +443,9 @@ export default function Home() {
     vehicleType,
     make,
     model,
+    minYear,
+    maxYear,
+    transmission,
     minPrice,
     maxPrice,
     maxMileage,
@@ -363,24 +456,29 @@ export default function Home() {
     radiusKm,
     sortBy,
     amenities,
-  }), [search, vehicleType, make, model, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, radiusKm, sortBy, amenities])
+  }), [search, vehicleType, make, model, minYear, maxYear, transmission, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, radiusKm, sortBy, amenities])
 
   const filtered = useMemo(() => (
-    filterVehicles(vehicles, appliedFilters)
-  ), [vehicles, appliedFilters])
-
-  const savedSearchResults = useMemo(() => (
-    savedSearches.map(savedSearch => {
-      const count = filterVehicles(vehicles, savedSearch.filters).length
-      return {
-        ...savedSearch,
-        count,
-        newCount: Math.max(0, count - Number(savedSearch.lastCount || 0)),
-      }
+    filterVehicles(vehicles, {
+      ...appliedFilters,
+      make,
+      model,
+      minYear,
+      maxYear,
+      transmission,
+      minPrice,
+      maxPrice,
+      maxMileage,
+      minSleeps,
+      minBelts,
+      selfContainedOnly,
+      location,
+      radiusKm,
+      amenities,
     })
-  ), [savedSearches, vehicles])
+  ), [vehicles, appliedFilters, make, model, minYear, maxYear, transmission, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, radiusKm, amenities])
 
-  const savedSearchAlerts = savedSearchResults.reduce((total, item) => total + item.newCount, 0)
+  const appliedChips = useMemo(() => activeFilterChips(appliedFilters), [appliedFilters])
 
   useEffect(() => {
     localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(savedSearches))
@@ -396,20 +494,27 @@ export default function Home() {
     }))
   }, [draftFilters, appliedFilters, hasSearched, viewMode, currentPage])
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 901px)')
-    const syncAdvancedFilters = () => setAdvancedFiltersOpen(mediaQuery.matches)
-    syncAdvancedFilters()
-    mediaQuery.addEventListener('change', syncAdvancedFilters)
-    return () => mediaQuery.removeEventListener('change', syncAdvancedFilters)
-  }, [])
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
   const pageStart = (activePage - 1) * PAGE_SIZE
   const pageVehicles = filtered.slice(pageStart, pageStart + PAGE_SIZE)
-  const firstVisible = filtered.length ? pageStart + 1 : 0
-  const lastVisible = Math.min(pageStart + PAGE_SIZE, filtered.length)
+
+  useEffect(() => {
+    if (!advancedFiltersOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setAdvancedFiltersOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [advancedFiltersOpen])
 
   const scrollToResults = () => {
     window.requestAnimationFrame(() => {
@@ -424,11 +529,63 @@ export default function Home() {
     scrollToResults()
   }
 
+  const applyQuickFilter = updates => {
+    if ('maxPrice' in updates) setMaxPrice(updates.maxPrice)
+    if ('selfContainedOnly' in updates) setSelfContainedOnly(updates.selfContainedOnly)
+    if ('vehicleType' in updates) setVehicleType(updates.vehicleType)
+    setAppliedFilters({ ...draftFilters, ...updates })
+    setCurrentPage(1)
+    setHasSearched(true)
+    scrollToResults()
+  }
+
+  const FILTER_RESETTERS = {
+    search: setSearch,
+    vehicleType: () => setVehicleType(DEFAULT_FILTERS.vehicleType),
+    make: setMake,
+    model: setModel,
+    minPrice: setMinPrice,
+    maxPrice: setMaxPrice,
+    maxMileage: setMaxMileage,
+    minSleeps: setMinSleeps,
+    minBelts: setMinBelts,
+    selfContainedOnly: () => setSelfContainedOnly(false),
+  }
+
+  const removeFilter = filterId => {
+    if (filterId === 'location') {
+      setLocation('')
+      setRadiusKm('')
+    } else if (filterId === 'year') {
+      setMinYear('')
+      setMaxYear('')
+    } else if (filterId === 'transmission') {
+      setTransmission('all')
+    } else if (filterId in FILTER_RESETTERS) {
+      FILTER_RESETTERS[filterId](DEFAULT_FILTERS[filterId])
+    } else {
+      setAmenities(current => ({ ...current, [filterId]: false }))
+    }
+
+    setAppliedFilters(current => {
+      if (filterId === 'location') return { ...current, location: '', radiusKm: '' }
+      if (filterId === 'year') return { ...current, minYear: '', maxYear: '' }
+      if (filterId === 'transmission') return { ...current, transmission: 'all' }
+      if (filterId in DEFAULT_FILTERS) return { ...current, [filterId]: DEFAULT_FILTERS[filterId] }
+      return { ...current, amenities: { ...current.amenities, [filterId]: false } }
+    })
+    setCurrentPage(1)
+  }
+
   const showAdvancedFilters = () => {
+    setAdvancedFiltersOpen(true)
+  }
+
+  const applyAdvancedFilters = () => {
     setAppliedFilters(draftFilters)
     setCurrentPage(1)
     setHasSearched(true)
-    setAdvancedFiltersOpen(true)
+    setAdvancedFiltersOpen(false)
     scrollToResults()
   }
 
@@ -439,24 +596,26 @@ export default function Home() {
   const handleFilterChange = setter => value => setter(value)
 
   const handleSearchChange = handleFilterChange(setSearch)
-  const handleVehicleTypeChange = handleFilterChange(setVehicleType)
-  const handleMinPriceChange = handleFilterChange(setMinPrice)
+  // Al cambiar de marca el modelo anterior deja de tener sentido.
+  const handleMakeChange = value => {
+    setMake(value)
+    setModel('')
+  }
+
   const handleModelChange = handleFilterChange(setModel)
+  const handleMinYearChange = handleFilterChange(setMinYear)
+  const handleMaxYearChange = handleFilterChange(setMaxYear)
+  const handleTransmissionChange = handleFilterChange(setTransmission)
+  const handleMinPriceChange = handleFilterChange(setMinPrice)
   const handleMaxPriceChange = handleFilterChange(setMaxPrice)
   const handleMaxMileageChange = handleFilterChange(setMaxMileage)
   const handleMinSleepsChange = handleFilterChange(setMinSleeps)
   const handleMinBeltsChange = handleFilterChange(setMinBelts)
   const handleLocationChange = handleFilterChange(setLocation)
   const handleRadiusChange = handleFilterChange(setRadiusKm)
-  const handleSortChange = handleFilterChange(setSortBy)
 
   const handleAmenityChange = amenityId => {
     setAmenities(current => ({ ...current, [amenityId]: !current[amenityId] }))
-  }
-
-  const handleMakeChange = value => {
-    setMake(value)
-    setModel('')
   }
 
   const clearFilters = () => {
@@ -464,6 +623,9 @@ export default function Home() {
     setVehicleType('all')
     setMake('')
     setModel('')
+    setMinYear('')
+    setMaxYear('')
+    setTransmission('all')
     setMinPrice('')
     setMaxPrice('')
     setMaxMileage('')
@@ -478,360 +640,251 @@ export default function Home() {
     setCurrentPage(1)
   }
 
-  const applySavedSearch = savedSearch => {
-    const nextFilters = {
-      ...DEFAULT_FILTERS,
-      ...savedSearch.filters,
-      amenities: {
-        ...DEFAULT_FILTERS.amenities,
-        ...(savedSearch.filters.amenities || {}),
-      },
-    }
-    setSearch(nextFilters.search)
-    setVehicleType(nextFilters.vehicleType)
-    setMake(nextFilters.make)
-    setModel(nextFilters.model)
-    setMinPrice(nextFilters.minPrice)
-    setMaxPrice(nextFilters.maxPrice)
-    setMaxMileage(nextFilters.maxMileage)
-    setMinSleeps(nextFilters.minSleeps)
-    setMinBelts(nextFilters.minBelts)
-    setSelfContainedOnly(nextFilters.selfContainedOnly)
-    setLocation(nextFilters.location)
-    setRadiusKm(nextFilters.radiusKm)
-    setAmenities(nextFilters.amenities)
-    setSortBy(nextFilters.sortBy)
-    setAppliedFilters(nextFilters)
-    setCurrentPage(1)
-    setHasSearched(true)
-    scrollToResults()
-    setSavedSearches(current => current.map(item => (
-      item.id === savedSearch.id ? { ...item, lastCount: savedSearch.count, lastCheckedAt: new Date().toISOString() } : item
-    )))
-  }
+  const appliedKey = filtersKey(appliedFilters)
+  const draftKey = filtersKey(draftFilters)
+  const isCurrentSearchSaved = savedSearches.some(item => filtersKey(item.filters) === appliedKey)
+  const isDraftSaved = savedSearches.some(item => filtersKey(item.filters) === draftKey)
 
-  const saveCurrentSearch = () => {
-    const name = describeSearch(appliedFilters)
-    const existingIndex = savedSearches.findIndex(savedSearch => JSON.stringify(savedSearch.filters) === JSON.stringify(appliedFilters))
-    const nextSearch = {
-      id: existingIndex >= 0 ? savedSearches[existingIndex].id : `${Date.now()}`,
-      name,
-      filters: appliedFilters,
-      lastCount: filtered.length,
-      lastCheckedAt: new Date().toISOString(),
-    }
+  const saveSearch = filters => {
+    const key = filtersKey(filters)
+    const entryName = describeSearch(filters)
 
     setSavedSearches(current => {
-      if (existingIndex >= 0) return current.map((item, index) => index === existingIndex ? nextSearch : item)
-      return [nextSearch, ...current].slice(0, 8)
+      const existingIndex = current.findIndex(item => filtersKey(item.filters) === key)
+      const entry = {
+        id: existingIndex >= 0 ? current[existingIndex].id : `${Date.now()}`,
+        name: entryName,
+        filters,
+        lastCount: filtered.length,
+        lastCheckedAt: new Date().toISOString(),
+      }
+      if (existingIndex >= 0) return current.map((item, index) => index === existingIndex ? entry : item)
+      return [entry, ...current].slice(0, 8)
     })
   }
 
-  const deleteSavedSearch = searchId => {
-    setSavedSearches(current => current.filter(savedSearch => savedSearch.id !== searchId))
+  const removeSavedSearch = id => {
+    setSavedSearches(current => current.filter(item => item.id !== id))
+  }
+
+  // El icono de marcador actua como interruptor: guarda la busqueda actual o la
+  // quita si ya estaba guardada.
+  const toggleSaveCurrentSearch = () => {
+    if (isCurrentSearchSaved) {
+      setSavedSearches(current => current.filter(item => filtersKey(item.filters) !== appliedKey))
+      return
+    }
+    saveSearch(appliedFilters)
+  }
+
+  const applyFiltersObject = filters => {
+    const next = {
+      ...DEFAULT_FILTERS,
+      ...filters,
+      amenities: { ...DEFAULT_FILTERS.amenities, ...(filters?.amenities || {}) },
+    }
+
+    setSearch(next.search)
+    setVehicleType(next.vehicleType)
+    setMake(next.make)
+    setModel(next.model)
+    setMinYear(next.minYear)
+    setMaxYear(next.maxYear)
+    setTransmission(next.transmission)
+    setMinPrice(next.minPrice)
+    setMaxPrice(next.maxPrice)
+    setMaxMileage(next.maxMileage)
+    setMinSleeps(next.minSleeps)
+    setMinBelts(next.minBelts)
+    setSelfContainedOnly(next.selfContainedOnly)
+    setLocation(next.location)
+    setRadiusKm(next.radiusKm)
+    setSortBy(next.sortBy)
+    setAmenities(next.amenities)
+    setAppliedFilters(next)
+    setCurrentPage(1)
+    setHasSearched(true)
+  }
+
+  const applySavedSearch = saved => {
+    applyFiltersObject(saved.filters)
+    setAdvancedFiltersOpen(false)
+    scrollToResults()
   }
 
   return (
     <div className={`app-shell ${hasSearched ? 'has-searched' : 'is-pre-search'}`}>
-      <Navbar search={search} onSearchChange={handleSearchChange} onSearchSubmit={applySearch} onFilterClick={showAdvancedFilters} />
+      <Navbar onFilterClick={showAdvancedFilters} />
 
       <header className="hero" style={{ backgroundImage: `url(${heroSeaImage})` }}>
         <div className="hero-inner">
-          <h1>Selling cars, campervans and motorhomes made easy.</h1>
-          <p>Buy and sell road-trip vehicles across New Zealand with the details that matter: make, model, WOF, mileage, seat belts, sleeps, self-contained status and location.</p>
+          <h1>What are you looking for?</h1>
+
+          <div className="hero-quick-filters" aria-label="Quick filters">
+            <button type="button" onClick={() => applyQuickFilter({ maxPrice: '50000' })}>Within my budget</button>
+            <button type="button" onClick={() => applyQuickFilter({ selfContainedOnly: true })}>Freedom camping</button>
+            <button type="button" onClick={() => applyQuickFilter({ vehicleType: 'campervan' })}>Campervans only</button>
+          </div>
 
           <div className="hero-search">
             <input
               type="search"
-              placeholder="Try: Hiace self contained Auckland, Sprinter, Chch motorhome..."
+              placeholder="Model, city, WOF..."
               value={search}
               onChange={event => handleSearchChange(event.target.value)}
               onKeyDown={handleSearchKeyDown}
             />
-            <button className="btn btn-primary" type="button" onClick={applySearch}>
-              <FiSearch />
-              Search
+            <button
+              className={`hero-search-save ${isCurrentSearchSaved ? 'is-saved' : ''}`}
+              type="button"
+              onClick={toggleSaveCurrentSearch}
+              aria-pressed={isCurrentSearchSaved}
+              aria-label={isCurrentSearchSaved ? 'Remove saved search' : 'Save this search'}
+            >
+              <FiBookmark />
             </button>
-          </div>
-
-          <div className="hero-filters">
-            <BasicFiltersPanel
-              idPrefix="hero"
-              makes={makes}
-              models={models}
-              search={search}
-              vehicleType={vehicleType}
-              make={make}
-              model={model}
-              maxPrice={maxPrice}
-              sortBy={sortBy}
-              onSearchChange={handleSearchChange}
-              onVehicleTypeChange={handleVehicleTypeChange}
-              onMakeChange={handleMakeChange}
-              onModelChange={handleModelChange}
-              onMaxPriceChange={handleMaxPriceChange}
-              onSortChange={handleSortChange}
-              onClear={clearFilters}
-              onSave={saveCurrentSearch}
-              onSearch={applySearch}
-              onAdvancedFilters={showAdvancedFilters}
-            />
+            <span className="hero-search-divider" aria-hidden="true" />
+            <button className="hero-search-filters" type="button" onClick={showAdvancedFilters}>
+              <FiSettings />
+              Filters
+            </button>
           </div>
         </div>
       </header>
 
       <main className="container page-section">
-        {savedSearchResults.length > 0 && (
-          <section className="saved-searches-panel panel panel-pad">
-            <div className="saved-searches-head">
-              <div>
-                <h2 className="section-title" style={{ fontSize: '1.2rem' }}>Saved searches</h2>
-                <p className="section-subtitle">Alerts compare each saved search with the last result count you saw.</p>
-              </div>
-              <span className={`badge ${savedSearchAlerts ? 'badge-accent' : ''}`}>
-                <FiBell />
-                {savedSearchAlerts ? `${savedSearchAlerts} new` : 'No new matches'}
-              </span>
-            </div>
+        <div className={`active-filter-bar ${appliedChips.length === 0 ? 'is-empty' : ''}`}>
+          <div className="active-filter-scroll" aria-label="Active filters">
+            {appliedChips.length > 0 ? (
+              <>
+                <span className="active-filter-label">Active filters:</span>
+                {appliedChips.map(chip => (
+                  <span className="active-filter-chip" key={chip.id}>
+                    {chip.label}
+                    <button type="button" onClick={() => removeFilter(chip.id)} aria-label={`Remove ${chip.label} filter`}>
+                      <FiX />
+                    </button>
+                  </span>
+                ))}
+              </>
+            ) : (
+              <span className="active-filter-chip active-filter-chip-static">All vehicles</span>
+            )}
+          </div>
+          <div className="active-filter-actions">
+            <button className="active-filter-clear" type="button" onClick={clearFilters}>Clear all</button>
+          </div>
+        </div>
 
-            <div className="saved-searches-list">
-              {savedSearchResults.map(savedSearch => (
-                <div className="saved-search-item" key={savedSearch.id}>
-                  <button className="saved-search-main" type="button" onClick={() => applySavedSearch(savedSearch)}>
-                    <strong>{savedSearch.name}</strong>
-                    <span>
-                      {savedSearch.count} matches
-                      {savedSearch.newCount > 0 ? ` · ${savedSearch.newCount} new since last check` : ''}
-                    </span>
-                  </button>
-                  <button className="icon-btn" type="button" onClick={() => deleteSavedSearch(savedSearch.id)} aria-label={`Delete saved search ${savedSearch.name}`}>
-                    <FiTrash2 />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="section-header" ref={resultsRef}>
+        <div className="section-header results-header" ref={resultsRef}>
           <div>
-            <h2 className="section-title">{filtered.length} vehicles available</h2>
-            <p className="section-subtitle">
-              Showing {firstVisible}-{lastVisible} of {filtered.length}. Search handles typos and related terms like RV, self-contained, Chch or camper.
-            </p>
+            <h2 className="section-title">{filtered.length} vehicles</h2>
           </div>
           <div className="segmented-control" aria-label="View mode">
             <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
-            <button className={viewMode === 'map' ? 'is-active' : ''} type="button" onClick={() => setViewMode('map')}><FiMap />Map</button>
-            {hasSearched && (
-              <button className="mobile-results-filter-button" type="button" onClick={() => setAdvancedFiltersOpen(true)}>
-                <FiSliders />
-                Filters
-              </button>
-            )}
+            <button className={viewMode === 'map' ? 'is-active' : ''} type="button" onClick={() => { setViewMode('map'); scrollToResults() }}><FiMap />Map</button>
+            <button className="results-filter-button" type="button" onClick={() => setAdvancedFiltersOpen(true)}>
+              <FiSettings />
+              Filters
+            </button>
           </div>
         </div>
 
-        <div className={hasSearched ? 'search-results-layout' : ''}>
-          <div className="search-results-main">
-            {loading ? (
-              <div className="loading-state">
-                <div>
-                  <div className="spinner" />
-                  Loading vehicles...
-                </div>
+        <div className="search-results-main">
+          {loading ? (
+            <div className="loading-state">
+              <div>
+                <div className="spinner" />
+                Loading vehicles...
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state panel">
-                <div>
-                  <FiSearch size={42} />
-                  <h2>No vehicles found</h2>
-                  <p>Try a broader model, region or price range.</p>
-                  <button className="btn btn-primary" type="button" onClick={clearFilters}>
-                    Clear filters
-                    <FiArrowRight />
-                  </button>
-                </div>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state panel">
+              <div>
+                <FiSearch size={42} />
+                <h2>No vehicles found</h2>
+                <p>Try a broader model, region or price range.</p>
+                <button className="btn btn-primary" type="button" onClick={clearFilters}>
+                  Clear filters
+                  <FiArrowRight />
+                </button>
               </div>
-            ) : viewMode === 'map' ? (
-              <>
-                <VehicleMap vehicles={filtered} />
-                <div className="map-results-list">
-                  {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
-                </div>
-                <PaginationBar
-                  currentPage={activePage}
-                  totalPages={totalPages}
-                  firstVisible={firstVisible}
-                  lastVisible={lastVisible}
-                  totalItems={filtered.length}
-                  onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
-                  onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                />
-              </>
-            ) : (
-              <>
-                <div className="products-grid">
-                  {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
-                </div>
-                <PaginationBar
-                  currentPage={activePage}
-                  totalPages={totalPages}
-                  firstVisible={firstVisible}
-                  lastVisible={lastVisible}
-                  totalItems={filtered.length}
-                  onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
-                  onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                />
-              </>
-            )}
-          </div>
-
-          {hasSearched && (
-            <AdvancedFiltersPanel
-              minPrice={minPrice}
-              maxPrice={maxPrice}
-              maxMileage={maxMileage}
-              minSleeps={minSleeps}
-              minBelts={minBelts}
-              selfContainedOnly={selfContainedOnly}
-              location={location}
-              radiusKm={radiusKm}
-              amenities={amenities}
-              locations={locations}
-              onMinPriceChange={handleMinPriceChange}
-              onMaxPriceChange={handleMaxPriceChange}
-              onMaxMileageChange={handleMaxMileageChange}
-              onMinSleepsChange={handleMinSleepsChange}
-              onMinBeltsChange={handleMinBeltsChange}
-              onSelfContainedChange={setSelfContainedOnly}
-              onLocationChange={handleLocationChange}
-              onRadiusChange={handleRadiusChange}
-              onAmenityChange={handleAmenityChange}
-              onClear={clearFilters}
-              onSearch={applySearch}
-              open={advancedFiltersOpen}
-              onOpenChange={setAdvancedFiltersOpen}
-            />
+            </div>
+          ) : viewMode === 'map' ? (
+            <VehicleMap vehicles={filtered} />
+          ) : (
+            <>
+              <div className="products-grid">
+                {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
+              </div>
+              <PaginationBar
+                currentPage={activePage}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+                onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+              />
+            </>
           )}
         </div>
+
+        <AdvancedFiltersModal
+          make={make}
+          model={model}
+          minYear={minYear}
+          maxYear={maxYear}
+          transmission={transmission}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          maxMileage={maxMileage}
+          minSleeps={minSleeps}
+          minBelts={minBelts}
+          selfContainedOnly={selfContainedOnly}
+          location={location}
+          radiusKm={radiusKm}
+          amenities={amenities}
+          locations={locations}
+          makes={makes}
+          models={models}
+          years={years}
+          onMakeChange={handleMakeChange}
+          onModelChange={handleModelChange}
+          onMinYearChange={handleMinYearChange}
+          onMaxYearChange={handleMaxYearChange}
+          onTransmissionChange={handleTransmissionChange}
+          onMinPriceChange={handleMinPriceChange}
+          onMaxPriceChange={handleMaxPriceChange}
+          onMaxMileageChange={handleMaxMileageChange}
+          onMinSleepsChange={handleMinSleepsChange}
+          onMinBeltsChange={handleMinBeltsChange}
+          onSelfContainedChange={setSelfContainedOnly}
+          onLocationChange={handleLocationChange}
+          onRadiusChange={handleRadiusChange}
+          onAmenityChange={handleAmenityChange}
+          onClear={clearFilters}
+          onApply={applyAdvancedFilters}
+          open={advancedFiltersOpen}
+          onOpenChange={setAdvancedFiltersOpen}
+          savedSearches={savedSearches}
+          isDraftSaved={isDraftSaved}
+          onSaveDraft={() => saveSearch(draftFilters)}
+          onApplySaved={applySavedSearch}
+          onRemoveSaved={removeSavedSearch}
+        />
       </main>
+
+      <Footer />
     </div>
   )
 }
 
-function BasicFiltersPanel({
+function AdvancedFilterFields({
   idPrefix,
-  makes,
-  models,
-  vehicleType,
   make,
   model,
-  maxPrice,
-  sortBy,
-  onVehicleTypeChange,
-  onMakeChange,
-  onModelChange,
-  onMaxPriceChange,
-  onSortChange,
-  onClear,
-  onSave,
-  onSearch,
-  onAdvancedFilters,
-}) {
-  const makeListId = `${idPrefix}-make-options`
-  const modelListId = `${idPrefix}-model-options`
-  const priceListId = `${idPrefix}-max-price-options`
-
-  return (
-    <section className="filters-panel panel panel-pad">
-      <div className="filter-grid">
-        <label className="field-group">
-          <span>Vehicle type</span>
-          <select className="field" value={vehicleType} onChange={event => onVehicleTypeChange(event.target.value)}>
-            {VEHICLE_TYPES.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
-          </select>
-        </label>
-
-        <label className="field-group">
-          <span>Make</span>
-          <input
-            className="field"
-            list={makeListId}
-            placeholder="Any make"
-            value={make}
-            onChange={event => onMakeChange(event.target.value)}
-          />
-          <datalist id={makeListId}>
-            {makes.map(vehicleMakeName => <option key={vehicleMakeName} value={vehicleMakeName} />)}
-          </datalist>
-        </label>
-
-        <label className="field-group">
-          <span>Model</span>
-          <input
-            className="field"
-            list={modelListId}
-            placeholder="Any model"
-            value={model}
-            onChange={event => onModelChange(event.target.value)}
-          />
-          <datalist id={modelListId}>
-            {models.map(vehicleModel => <option key={vehicleModel} value={vehicleModel} />)}
-          </datalist>
-        </label>
-
-        <label className="field-group">
-          <span>Max price</span>
-          <input
-            className="field"
-            inputMode="numeric"
-            list={priceListId}
-            placeholder="Any price"
-            value={maxPrice}
-            onChange={event => onMaxPriceChange(event.target.value)}
-          />
-          <datalist id={priceListId}>
-            <option value="25000" label="Up to NZ$25k" />
-            <option value="50000" label="Up to NZ$50k" />
-            <option value="75000" label="Up to NZ$75k" />
-            <option value="100000" label="Up to NZ$100k" />
-          </datalist>
-        </label>
-
-        <label className="field-group">
-          <span>Sort</span>
-          <select className="field" value={sortBy} onChange={event => onSortChange(event.target.value)}>
-            <option value="recent">Most recent</option>
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
-            <option value="mileage_asc">Lowest mileage</option>
-          </select>
-        </label>
-      </div>
-
-      <div className="filter-toolbar">
-        <div className="filter-toolbar-actions">
-          <button className="btn btn-light" type="button" onClick={onAdvancedFilters}>
-            <FiSliders />
-            Advanced filters
-          </button>
-          <button className="btn btn-secondary" type="button" onClick={onClear}>Clear filters</button>
-          <button className="btn btn-primary" type="button" onClick={onSearch}>
-            <FiSearch />
-            Search
-          </button>
-          <button className="btn btn-dark" type="button" onClick={onSave}>
-            <FiBookmark />
-            Save search
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function AdvancedFiltersPanel({
+  minYear,
+  maxYear,
+  transmission,
   minPrice,
   maxPrice,
   maxMileage,
@@ -842,6 +895,14 @@ function AdvancedFiltersPanel({
   radiusKm,
   amenities,
   locations,
+  makes = [],
+  models = [],
+  years = [],
+  onMakeChange,
+  onModelChange,
+  onMinYearChange,
+  onMaxYearChange,
+  onTransmissionChange,
   onMinPriceChange,
   onMaxPriceChange,
   onMaxMileageChange,
@@ -851,24 +912,38 @@ function AdvancedFiltersPanel({
   onLocationChange,
   onRadiusChange,
   onAmenityChange,
-  onClear,
-  onSearch,
-  open,
-  onOpenChange,
 }) {
-  const handleSummaryClick = event => {
-    if (window.matchMedia('(min-width: 901px)').matches) event.preventDefault()
-  }
+  const locationListId = `${idPrefix}-advanced-location-options`
+  const yearListId = `${idPrefix}-advanced-year-options`
+  // Un modelo restaurado de un filtro guardado puede no estar en la lista de la
+  // marca actual: se anade para que el select no aparezca vacio.
+  const modelOptions = model && !models.includes(model) ? [model, ...models] : models
 
   return (
-    <details className="advanced-filters panel panel-pad" aria-label="Filtros" open={open} onToggle={event => onOpenChange(event.currentTarget.open)}>
-      <summary className="advanced-filters-head" onClick={handleSummaryClick}>
-        <div>
-          <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Filtros</h2>
-          <p className="section-subtitle">Ajusta los resultados cuando quieras.</p>
+    <>
+      <div className="advanced-filter-group">
+        <strong>Make and model</strong>
+        <div className="dual-field">
+          <label className="field-group">
+            <span>Make</span>
+            <select className="field" value={make} onChange={event => onMakeChange(event.target.value)}>
+              <option value="">Any make</option>
+              {makes.map(item => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label className="field-group">
+            <span>Model</span>
+            {modelOptions.length > 0 ? (
+              <select className="field" value={model} onChange={event => onModelChange(event.target.value)}>
+                <option value="">Any model</option>
+                {modelOptions.map(item => <option key={item} value={item}>{item}</option>)}
+              </select>
+            ) : (
+              <input className="field" placeholder="Any model" value={model} onChange={event => onModelChange(event.target.value)} />
+            )}
+          </label>
         </div>
-        <FiSliders />
-      </summary>
+      </div>
 
       <div className="advanced-filter-group">
         <strong>Price range</strong>
@@ -899,8 +974,8 @@ function AdvancedFiltersPanel({
         <strong>Location</strong>
         <label className="field-group">
           <span>City</span>
-          <input className="field" list="advanced-location-options" placeholder="Any city" value={location} onChange={event => onLocationChange(event.target.value)} />
-          <datalist id="advanced-location-options">
+          <input className="field" list={locationListId} placeholder="Any city" value={location} onChange={event => onLocationChange(event.target.value)} />
+          <datalist id={locationListId}>
             {locations.map(place => <option key={place} value={place} />)}
           </datalist>
         </label>
@@ -923,6 +998,27 @@ function AdvancedFiltersPanel({
 
       <div className="advanced-filter-group">
         <strong>Vehicle details</strong>
+        <div className="dual-field">
+          <label className="field-group">
+            <span>Year from</span>
+            <input className="field" inputMode="numeric" list={yearListId} placeholder="Any year" value={minYear} onChange={event => onMinYearChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Year to</span>
+            <input className="field" inputMode="numeric" list={yearListId} placeholder="Any year" value={maxYear} onChange={event => onMaxYearChange(event.target.value)} />
+          </label>
+        </div>
+        <datalist id={yearListId}>
+          {years.map(item => <option key={item} value={item} />)}
+        </datalist>
+        <label className="field-group">
+          <span>Transmission</span>
+          <select className="field" value={transmission} onChange={event => onTransmissionChange(event.target.value)}>
+            <option value="all">Any transmission</option>
+            <option value="Automatic">Automatic</option>
+            <option value="Manual">Manual</option>
+          </select>
+        </label>
         <label className="field-group">
           <span>Max mileage</span>
           <input className="field" inputMode="numeric" placeholder="150000" value={maxMileage} onChange={event => onMaxMileageChange(event.target.value)} />
@@ -954,15 +1050,82 @@ function AdvancedFiltersPanel({
           ))}
         </div>
       </div>
+    </>
+  )
+}
 
-      <div className="advanced-filter-actions">
-        <button className="btn btn-secondary" type="button" onClick={onClear}>Clear</button>
-        <button className="btn btn-primary" type="button" onClick={onSearch}>
-          <FiSearch />
-          Search
-        </button>
+function AdvancedFiltersModal({
+  onClear,
+  onApply,
+  open,
+  onOpenChange,
+  savedSearches = [],
+  isDraftSaved = false,
+  onSaveDraft,
+  onApplySaved,
+  onRemoveSaved,
+  ...fieldProps
+}) {
+  if (!open) return null
+
+  return (
+    <div className="filters-modal-overlay" onClick={() => onOpenChange(false)}>
+      <div className="filters-modal-sheet panel" role="dialog" aria-modal="true" aria-label="Filters" onClick={event => event.stopPropagation()}>
+        <div className="filters-modal-head">
+          <h2 className="section-title" style={{ fontSize: '1.1rem' }}>Filters</h2>
+          <button className="icon-btn" type="button" aria-label="Close filters" onClick={() => onOpenChange(false)}>
+            <FiX />
+          </button>
+        </div>
+
+        <div className="filters-modal-body">
+          <AdvancedFilterFields {...fieldProps} idPrefix="modal" />
+
+          <div className="advanced-filter-group saved-filters-group">
+            <div className="saved-filters-head">
+              <strong>Saved filters</strong>
+              <button
+                className={`saved-filters-save ${isDraftSaved ? 'is-saved' : ''}`}
+                type="button"
+                onClick={onSaveDraft}
+                aria-pressed={isDraftSaved}
+              >
+                <FiBookmark />
+                {isDraftSaved ? 'Saved' : 'Save these filters'}
+              </button>
+            </div>
+
+            {savedSearches.length === 0 ? (
+              <p className="saved-filters-empty">You have no saved filters yet.</p>
+            ) : (
+              <ul className="saved-filters-list">
+                {savedSearches.map(saved => (
+                  <li key={saved.id}>
+                    <button className="saved-filters-item" type="button" onClick={() => onApplySaved(saved)}>
+                      <span className="saved-filters-name">{saved.name}</span>
+                      <span className="saved-filters-count">{saved.lastCount} vehicles</span>
+                    </button>
+                    <button
+                      className="saved-filters-remove"
+                      type="button"
+                      onClick={() => onRemoveSaved(saved.id)}
+                      aria-label={`Remove saved filter ${saved.name}`}
+                    >
+                      <FiX />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="advanced-filter-actions">
+          <button className="btn btn-secondary" type="button" onClick={onClear}>Clear</button>
+          <button className="btn btn-primary" type="button" onClick={onApply}>Apply</button>
+        </div>
       </div>
-    </details>
+    </div>
   )
 }
 
@@ -1033,20 +1196,19 @@ function RangeSlider({
   )
 }
 
-function PaginationBar({ currentPage, totalPages, firstVisible, lastVisible, totalItems, onPrevious, onNext }) {
+function PaginationBar({ currentPage, totalPages, totalItems, onPrevious, onNext }) {
   if (totalItems <= PAGE_SIZE) return null
 
   return (
     <nav className="pagination-bar" aria-label="Product pages">
-      <button className="btn btn-secondary" type="button" disabled={currentPage === 1} onClick={onPrevious}>
+      <button className="pagination-nav" type="button" disabled={currentPage === 1} onClick={onPrevious}>
         <FiArrowLeft />
         Previous
       </button>
       <span>
-        {firstVisible}-{lastVisible} of {totalItems}
-        <strong> Page {currentPage} of {totalPages}</strong>
+        <strong>Page {currentPage} of {totalPages}</strong>
       </span>
-      <button className="btn btn-primary" type="button" disabled={currentPage === totalPages} onClick={onNext}>
+      <button className="pagination-nav" type="button" disabled={currentPage === totalPages} onClick={onNext}>
         Next
         <FiArrowRight />
       </button>
@@ -1074,9 +1236,18 @@ function VehicleMap({ vehicles }) {
           zoom: 5,
           minZoom: 5,
           maxZoom: 19,
-          scrollWheelZoom: true,
+          // La rueda hace scroll de la pagina, no zoom del mapa: encadenaba
+          // cargas de tiles hasta bloquear el render. Se usan los botones +/-,
+          // el pinch en movil o ctrl + rueda.
+          scrollWheelZoom: false,
           zoomControl: true,
         })
+
+        map.getContainer().addEventListener('wheel', event => {
+          if (!event.ctrlKey && !event.metaKey) return
+          event.preventDefault()
+          map.setZoom(map.getZoom() + (event.deltaY < 0 ? 1 : -1))
+        }, { passive: false })
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
@@ -1123,11 +1294,21 @@ function VehicleMap({ vehicles }) {
         }),
       }).addTo(layer)
 
+      const image = vehicle.image || 'https://placehold.co/640x480/f1ede5/171717?text=Swapy'
+      const price = Number(vehicle.price || 0).toLocaleString('en-NZ')
+      const meta = [vehicle.location || 'New Zealand', vehicle.model].filter(Boolean).join(' · ')
+
       marker.bindPopup(`
-        <strong>${vehicle.title}</strong>
-        <p>${vehicle.location || 'New Zealand'} - ${vehicle.model || ''}</p>
-        <a href="/product/${vehicle.id}">View listing</a>
-      `)
+        <div class="map-popup">
+          <img class="map-popup-image" src="${escapeHtml(image)}" alt="" />
+          <div class="map-popup-body">
+            <strong>${escapeHtml(vehicle.title)}</strong>
+            <p class="map-popup-price">NZ$${price}</p>
+            <p class="map-popup-meta">${escapeHtml(meta)}</p>
+            <a href="/product/${encodeURIComponent(vehicle.id)}">View listing</a>
+          </div>
+        </div>
+      `, { minWidth: 220, maxWidth: 240 })
       bounds.push([vehicle.lat, vehicle.lng])
     })
 

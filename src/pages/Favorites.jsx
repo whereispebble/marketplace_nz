@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiHeart } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
 import { getFavoriteProducts } from '../services/favorites'
 
@@ -56,6 +57,8 @@ export default function Favorites() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }

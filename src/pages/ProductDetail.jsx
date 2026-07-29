@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FiEye, FiHeart, FiMapPin, FiMessageCircle, FiShield, FiStar, FiUsers } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 import { MOCK_VEHICLES } from '../data/mockVehicles'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 
@@ -108,7 +109,7 @@ export default function ProductDetail() {
                   {product.selfContained ? 'Self-contained' : 'Not self-contained'}
                 </span>
               </div>
-              <h1 className="page-title" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)' }}>{product.title}</h1>
+              <h1 className="page-title">{product.title}</h1>
               <p className="product-price" style={{ fontSize: '2.4rem', marginTop: 16 }}>
                 NZ${Number(product.price || 0).toLocaleString('en-NZ')}
               </p>
@@ -174,6 +175,8 @@ export default function ProductDetail() {
           </aside>
         </section>
       </main>
+
+      <Footer />
     </div>
   )
 }

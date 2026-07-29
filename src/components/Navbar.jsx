@@ -1,30 +1,15 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { FiHeart, FiHome, FiMessageCircle, FiPlus, FiSearch, FiSliders, FiUser } from 'react-icons/fi'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { FiHeart, FiHome, FiMail, FiMessageCircle, FiPlus, FiSliders, FiUser } from 'react-icons/fi'
 import logo from '../assets/swapy-logo.svg'
 
-export default function Navbar({ search = '', onSearchChange, onSearchSubmit, onFilterClick, compact = false, title }) {
+const NAV_LINKS = [
+  { to: '/', label: 'Buy', end: true },
+  { to: '/new-product', label: 'Sell' },
+  { to: '/how-it-works', label: 'How it works' },
+]
+
+export default function Navbar({ onFilterClick, compact = false, title }) {
   const navigate = useNavigate()
-  const [localSearch, setLocalSearch] = useState('')
-  const activeSearch = onSearchChange ? search : localSearch
-
-  const handleSearchKeyDown = event => {
-    if (event.key !== 'Enter') return
-    if (onSearchSubmit) {
-      onSearchSubmit()
-      return
-    }
-    navigate('/')
-  }
-
-  const handleSearchChange = event => {
-    const value = event.target.value
-    if (onSearchChange) {
-      onSearchChange(value)
-      return
-    }
-    setLocalSearch(value)
-  }
 
   const handleFilterClick = () => {
     if (onFilterClick) {
@@ -43,15 +28,17 @@ export default function Navbar({ search = '', onSearchChange, onSearchSubmit, on
       {title ? (
         <h2 className="section-title" style={{ fontSize: '1.05rem', justifySelf: 'center' }}>{title}</h2>
       ) : (
-        <div className="search-pill">
-          <FiSearch />
-          <input
-            type="search"
-            placeholder="Search model, region, WOF or self-contained"
-            value={activeSearch}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-          />
+        <div className="nav-links" aria-label="Sections">
+          {NAV_LINKS.map(link => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </div>
       )}
 
@@ -64,13 +51,16 @@ export default function Navbar({ search = '', onSearchChange, onSearchSubmit, on
       <div className="nav-actions" aria-label="Main navigation">
         <NavIcon to="/" label="Home" icon={<FiHome />} className="mobile-nav-only" />
         <NavIcon to="/favorites" label="Favorites" icon={<FiHeart />} />
-        <Link to="/new-product" className="btn btn-primary">
+        <NavIcon to="/chats" label="Messages" icon={<FiMail />} />
+        <Link to="/new-product" className="nav-icon mobile-nav-only" title="Sell" aria-label="Sell">
           <FiPlus />
-          <span className="sell-label-desktop">List vehicle</span>
-          <span className="nav-label sell-label-mobile">Sell</span>
+          <span className="nav-label">Sell</span>
         </Link>
-        <NavIcon to="/chats" label="Messages" icon={<FiMessageCircle />} />
-        <NavIcon to="/profile" label="Profile" icon={<FiUser />} />
+        <Link to="/profile" className="btn btn-primary nav-profile-btn">
+          <FiUser />
+          <span className="sell-label-desktop">Profile</span>
+          <span className="nav-label sell-label-mobile">Profile</span>
+        </Link>
       </div>
     </nav>
   )

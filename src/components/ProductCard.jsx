@@ -4,10 +4,21 @@ import { FaHeart, FaRegHeart } from 'react-icons/fa'
 import { FiMapPin, FiShield, FiUsers } from 'react-icons/fi'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 
+const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+
+// Un anuncio se considera "New" si se publico hace menos de una semana.
+function isNewListing(product) {
+  const raw = product?.created_at || product?.createdAt || product?.publishedAt
+  if (!raw) return false
+  const published = new Date(raw).getTime()
+  if (Number.isNaN(published)) return false
+  return Date.now() - published < NEW_LISTING_WINDOW_MS
+}
+
 export default function ProductCard({ product, initiallyLiked = false }) {
   const [liked, setLiked] = useState(initiallyLiked)
   const [savingFavorite, setSavingFavorite] = useState(false)
-  const isCertified = Boolean(product.selfContained)
+  const isNew = isNewListing(product)
 
   useEffect(() => {
     let ignore = false
@@ -28,9 +39,7 @@ export default function ProductCard({ product, initiallyLiked = false }) {
 
   return (
     <article className="product-card">
-      <span className={`badge product-badge ${isCertified ? 'badge-mint' : ''}`}>
-        {isCertified ? 'Self-contained' : product.condition || 'Used'}
-      </span>
+      {isNew && <span className="badge product-badge badge-mint">New</span>}
 
       <button
         className={`favorite-btn ${liked ? 'is-liked' : ''}`}

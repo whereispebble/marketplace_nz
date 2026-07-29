@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiMapPin, FiMove, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
 import { VEHICLE_TYPES } from '../data/mockVehicles'
+// Misma foto que el hero de la home, asi que ya viene de cache al navegar
+import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
 const CONDITIONS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
 const LISTING_STATUSES = [
@@ -68,6 +71,8 @@ export default function NewProduct() {
     price: '',
     vehicleType: '',
     condition: '',
+    transmission: '',
+    year: '',
     mileage: '',
     wof: '',
     sleeps: '',
@@ -102,6 +107,8 @@ export default function NewProduct() {
     vehicleType: form.vehicleType,
     category: form.vehicleType,
     condition: form.condition || 'Used',
+    transmission: form.transmission,
+    year: form.year ? Number(form.year) : null,
     mileage: Number(form.mileage || 0),
     wof: form.wof,
     sleeps: Number(form.sleeps || 0),
@@ -224,6 +231,8 @@ export default function NewProduct() {
       category: form.vehicleType,
       vehicleType: form.vehicleType,
       condition: form.condition,
+      transmission: form.transmission || null,
+      year: form.year ? Number(form.year) : null,
       mileage: form.mileage ? Number(form.mileage) : null,
       wof: form.wof.trim(),
       sleeps: form.sleeps ? Number(form.sleeps) : null,
@@ -287,7 +296,9 @@ export default function NewProduct() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell photo-shell">
+      <div className="photo-background" style={{ backgroundImage: `url(${sellBackground})` }} aria-hidden="true" />
+
       <Navbar compact />
 
       <main className="container page-section" style={{ maxWidth: 980 }}>
@@ -398,6 +409,18 @@ export default function NewProduct() {
                     <span>{selectedCity ? `${selectedCity.lat}, ${selectedCity.lng}` : 'Choose a supported NZ city to place this listing on the map.'}</span>
                   </div>
                 </div>
+                <label className="field-group">
+                  <span>Year</span>
+                  <input className="field" name="year" type="number" min="1950" max="2100" placeholder="2014" value={form.year} onChange={handleChange} />
+                </label>
+                <label className="field-group">
+                  <span>Transmission</span>
+                  <select className="field" name="transmission" value={form.transmission} onChange={handleChange}>
+                    <option value="">Select transmission</option>
+                    <option value="Automatic">Automatic</option>
+                    <option value="Manual">Manual</option>
+                  </select>
+                </label>
                 <FieldError errors={fieldErrors} name="mileage">
                   <label className="field-group"><span>Mileage (km)</span><input className={fieldErrorClass(fieldErrors, 'mileage')} name="mileage" type="number" min="0" placeholder="168000" value={form.mileage} onChange={handleChange} /></label>
                 </FieldError>
@@ -522,6 +545,8 @@ export default function NewProduct() {
           </div>
         </section>
       </main>
+
+      <Footer />
     </div>
   )
 }

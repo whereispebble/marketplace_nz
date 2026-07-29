@@ -175,7 +175,7 @@ export default function Chat() {
                         onChange={event => setOfferAmount(event.target.value)}
                         onKeyDown={event => event.key === 'Enter' && handleMakeOffer()}
                       />
-                      <button className="btn btn-primary" type="button" disabled={selectedOffer?.status === 'pending'} onClick={handleMakeOffer}>
+                      <button className="btn btn-secondary" type="button" disabled={selectedOffer?.status === 'pending'} onClick={handleMakeOffer}>
                         <FiTag />
                         {selectedOffer?.status === 'pending' ? 'Pending' : 'Make an offer'}
                       </button>

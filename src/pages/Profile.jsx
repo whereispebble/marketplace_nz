@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiEdit3, FiLogOut, FiMapPin, FiPackage, FiStar } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 import { MOCK_VEHICLES } from '../data/mockVehicles'
 
 const MOCK_PROFILE = {
@@ -116,7 +117,7 @@ export default function Profile() {
                 </div>
               ) : (
                 <>
-                  <h1 className="page-title" style={{ fontSize: 'clamp(2rem, 4vw, 3.4rem)' }}>{profile.username}</h1>
+                  <h1 className="page-title">{profile.username}</h1>
                   <p className="muted-row" style={{ marginTop: 10 }}><FiMapPin />{profile.location || 'No location'} · {profile.email}</p>
                   <p className="section-subtitle" style={{ maxWidth: 650 }}>{profile.bio || 'No bio yet.'}</p>
                 </>
@@ -170,6 +171,8 @@ export default function Profile() {
         {activeTab === 'saved' && <Empty title="No saved vehicles yet" action="Browse vehicles" to="/" />}
         {activeTab === 'reviews' && <Empty title="No reviews yet" />}
       </main>
+
+      <Footer />
     </div>
   )
 }

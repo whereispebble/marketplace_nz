@@ -8,6 +8,8 @@ import NewProduct from './pages/NewProduct'
 import Profile from './pages/Profile'
 import Favorites from './pages/Favorites'
 import Chat from './pages/Chat'
+import HowItWorks from './pages/HowItWorks'
+import Legal from './pages/Legal'
 
 function App() {
   return (
@@ -19,6 +21,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/new-product" element={<NewProduct />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/privacy" element={<Legal document="privacy" />} />
+        <Route path="/terms" element={<Legal document="terms" />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:sellerId" element={<Profile />} />
         <Route path="/favorites" element={<Favorites />} />

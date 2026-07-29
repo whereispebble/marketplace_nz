@@ -7,35 +7,117 @@ export const VEHICLE_TYPES = [
   { id: 'car', name: 'Cars soon' },
 ]
 
+// Marcas: lista exacta de la API publica de Trade Me
+// (https://api.trademe.co.nz/v1/Categories/UsedCars.json), 99 entradas.
+// Modelos: catalogo curado de los mas vendidos en Nueva Zelanda para las marcas
+// principales. Las marcas sin modelos listados dejan el campo como texto libre.
 export const NZ_VEHICLE_CATALOG = [
-  { make: 'Toyota', models: ['Alphard', 'Aqua', 'Camry', 'Corolla', 'Estima', 'Hiace', 'Hilux', 'Land Cruiser', 'LiteAce', 'Prado', 'RAV4', 'TownAce', 'Vitz', 'Yaris'] },
-  { make: 'Nissan', models: ['Caravan', 'Elgrand', 'NV200', 'NV350', 'Navara', 'Serena', 'X-Trail'] },
-  { make: 'Mitsubishi', models: ['Delica', 'L300', 'Outlander', 'Pajero', 'Triton'] },
-  { make: 'Mazda', models: ['Atenza', 'Bongo', 'CX-5', 'Demio', 'MPV', 'Premacy'] },
-  { make: 'Ford', models: ['Everest', 'Ranger', 'Tourneo', 'Transit', 'Transit Custom'] },
-  { make: 'Mercedes-Benz', models: ['Sprinter', 'Vito'] },
-  { make: 'Fiat', models: ['Ducato'] },
-  { make: 'Volkswagen', models: ['Amarok', 'California', 'Crafter', 'Transporter'] },
-  { make: 'Hyundai', models: ['H-1', 'iLoad', 'iMax', 'Santa Fe', 'Staria'] },
-  { make: 'Kia', models: ['Carnival', 'Sorento', 'Sportage'] },
-  { make: 'Honda', models: ['CR-V', 'Fit', 'Freed', 'Odyssey', 'Stepwgn'] },
-  { make: 'Subaru', models: ['Forester', 'Legacy', 'Outback'] },
-  { make: 'Suzuki', models: ['Every', 'Jimny', 'Swift', 'Vitara'] },
-  { make: 'Isuzu', models: ['D-Max', 'Elf', 'Fargo', 'N-Series'] },
-  { make: 'LDV', models: ['Deliver 9', 'G10', 'T60', 'V80'] },
-  { make: 'Renault', models: ['Master', 'Trafic'] },
-  { make: 'Peugeot', models: ['Boxer', 'Expert', 'Partner'] },
-  { make: 'Citroen', models: ['Berlingo', 'Jumper', 'Relay'] },
+  { make: 'Alfa Romeo', models: ['Giulia', 'Giulietta', 'Stelvio', 'Tonale'] },
+  { make: 'Arcfox', models: [] },
+  { make: 'Aston Martin', models: [] },
+  { make: 'Audi', models: ['A1', 'A3', 'A4', 'A5', 'A6', 'e-tron', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT'] },
+  { make: 'Austin', models: [] },
+  { make: 'BAIC', models: [] },
+  { make: 'Bentley', models: [] },
+  { make: 'BMW', models: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '7 Series', 'i3', 'i4', 'iX', 'X1', 'X3', 'X5', 'X7'] },
+  { make: 'Buick', models: [] },
+  { make: 'BYD', models: ['Atto 3', 'Dolphin', 'Seal', 'Sealion', 'Shark'] },
+  { make: 'Cadillac', models: [] },
+  { make: 'Chery', models: [] },
+  { make: 'Chevrolet', models: ['Camaro', 'Colorado', 'Corvette', 'Silverado'] },
+  { make: 'Chrysler', models: ['300C', 'Grand Voyager', 'Voyager'] },
+  { make: 'Citroen', models: ['Berlingo', 'C3', 'C4', 'C5', 'Dispatch', 'Jumper', 'Relay'] },
+  { make: 'Cupra', models: [] },
+  { make: 'Daewoo', models: [] },
+  { make: 'Daihatsu', models: ['Charade', 'Hijet', 'Mira', 'Move', 'Terios'] },
+  { make: 'Daimler', models: [] },
+  { make: 'DENZA', models: [] },
+  { make: 'DFSK', models: [] },
+  { make: 'Dodge', models: ['Journey', 'Nitro', 'Ram'] },
+  { make: 'Dongfeng', models: [] },
+  { make: 'DS Automobiles', models: [] },
+  { make: 'Farizon', models: [] },
+  { make: 'Ferrari', models: [] },
+  { make: 'Fiat', models: ['500', 'Doblo', 'Ducato', 'Scudo', 'Talento'] },
+  { make: 'Ford', models: ['Econovan', 'Escape', 'Everest', 'Explorer', 'Fiesta', 'Focus', 'Mondeo', 'Mustang', 'Ranger', 'Territory', 'Tourneo', 'Transit', 'Transit Connect', 'Transit Custom'] },
+  { make: 'Forthing', models: [] },
+  { make: 'Foton', models: [] },
+  { make: 'GAC', models: [] },
+  { make: 'Geely', models: [] },
+  { make: 'Genesis', models: [] },
+  { make: 'GMC', models: [] },
+  { make: 'GWM', models: ['Cannon', 'Haval H6', 'Ora', 'Tank 300', 'Tank 500'] },
+  { make: 'HAVAL', models: ['H2', 'H6', 'H9', 'Jolion'] },
+  { make: 'Holden', models: ['Astra', 'Barina', 'Captiva', 'Colorado', 'Commodore', 'Cruze', 'Trailblazer', 'Trax'] },
+  { make: 'Honda', models: ['Accord', 'City', 'Civic', 'CR-V', 'Fit', 'Freed', 'HR-V', 'Jazz', 'Odyssey', 'Stepwgn'] },
+  { make: 'Humber', models: [] },
+  { make: 'Hummer', models: [] },
+  { make: 'Hyundai', models: ['Elantra', 'H-1', 'i20', 'i30', 'Ioniq', 'iLoad', 'iMax', 'Kona', 'Santa Fe', 'Staria', 'Tucson'] },
+  { make: 'INEOS', models: [] },
+  { make: 'INFINITI', models: ['Q50', 'QX50', 'QX60'] },
+  { make: 'Isuzu', models: ['Bighorn', 'D-Max', 'Elf', 'Fargo', 'MU-X', 'N-Series'] },
   { make: 'Iveco', models: ['Daily'] },
-  { make: 'Holden', models: ['Colorado', 'Commodore', 'Trax'] },
-  { make: 'BMW', models: ['1 Series', '3 Series', '5 Series', 'X1', 'X3', 'X5'] },
-  { make: 'Audi', models: ['A3', 'A4', 'Q3', 'Q5', 'Q7'] },
-  { make: 'Tesla', models: ['Model 3', 'Model Y'] },
+  { make: 'JAC', models: [] },
+  { make: 'JAECOO', models: [] },
+  { make: 'Jaguar', models: ['E-Pace', 'F-Pace', 'XE', 'XF', 'XJ'] },
+  { make: 'Jeep', models: ['Cherokee', 'Compass', 'Grand Cherokee', 'Wrangler'] },
+  { make: 'KGM', models: [] },
+  { make: 'Kia', models: ['Carnival', 'Cerato', 'EV6', 'Niro', 'Picanto', 'Rio', 'Seltos', 'Sorento', 'Sportage', 'Stonic'] },
+  { make: 'Lamborghini', models: [] },
+  { make: 'Lancia', models: [] },
+  { make: 'Land Rover', models: ['Defender', 'Discovery', 'Discovery Sport', 'Freelander', 'Range Rover', 'Range Rover Evoque', 'Range Rover Sport'] },
+  { make: 'LDV', models: ['Deliver 9', 'eDeliver 9', 'G10', 'T60', 'V80'] },
+  { make: 'Leapmotor', models: [] },
+  { make: 'Lexus', models: ['CT', 'ES', 'IS', 'NX', 'RX', 'UX'] },
+  { make: 'Lotus', models: [] },
+  { make: 'Mahindra', models: ['Pik-Up', 'Scorpio', 'XUV700'] },
+  { make: 'Maserati', models: [] },
+  { make: 'Mazda', models: ['Atenza', 'Axela', 'Biante', 'Bongo', 'BT-50', 'CX-3', 'CX-5', 'CX-8', 'CX-9', 'Demio', 'Mazda2', 'Mazda3', 'Mazda6', 'MPV', 'Premacy'] },
+  { make: 'McLaren', models: [] },
+  { make: 'Mercedes-Benz', models: ['A-Class', 'C-Class', 'E-Class', 'GLA', 'GLC', 'GLE', 'Sprinter', 'V-Class', 'Valente', 'Vito'] },
+  { make: 'MG', models: ['HS', 'MG3', 'MG4', 'MG5', 'ZS'] },
+  { make: 'MINI', models: ['Clubman', 'Cooper', 'Countryman'] },
+  { make: 'Mitsubishi', models: ['ASX', 'Delica', 'Eclipse Cross', 'L300', 'Lancer', 'Outlander', 'Pajero', 'Pajero Sport', 'Triton'] },
+  { make: 'Morgan', models: [] },
+  { make: 'Morris', models: [] },
+  { make: 'Nio', models: [] },
+  { make: 'Nissan', models: ['Caravan', 'Dualis', 'e-NV200', 'Elgrand', 'Juke', 'Leaf', 'Navara', 'Note', 'NV200', 'NV350', 'Pathfinder', 'Qashqai', 'Serena', 'Skyline', 'Tiida', 'X-Trail'] },
+  { make: 'OMODA', models: [] },
+  { make: 'Opel', models: ['Astra', 'Combo', 'Vivaro'] },
+  { make: 'Peugeot', models: ['208', '2008', '308', '3008', '5008', 'Boxer', 'Expert', 'Partner', 'Traveller'] },
+  { make: 'Polestar', models: ['Polestar 2', 'Polestar 3'] },
+  { make: 'Pontiac', models: [] },
+  { make: 'Porsche', models: ['911', 'Cayenne', 'Macan', 'Panamera'] },
+  { make: 'Ram', models: ['1500', '2500', '3500'] },
+  { make: 'Renault', models: ['Captur', 'Clio', 'Kangoo', 'Koleos', 'Master', 'Megane', 'Trafic'] },
+  { make: 'Riley', models: [] },
+  { make: 'Rolls-Royce', models: [] },
+  { make: 'Rover', models: [] },
+  { make: 'Saab', models: [] },
+  { make: 'SEAT', models: ['Ibiza', 'Leon'] },
+  { make: 'Skoda', models: ['Fabia', 'Karoq', 'Kodiaq', 'Octavia', 'Superb'] },
+  { make: 'Smart', models: [] },
+  { make: 'Ssangyong', models: ['Korando', 'Musso', 'Rexton', 'Tivoli'] },
+  { make: 'Studebaker', models: [] },
+  { make: 'Subaru', models: ['BRZ', 'Forester', 'Impreza', 'Legacy', 'Levorg', 'Outback', 'WRX', 'XV'] },
+  { make: 'Suzuki', models: ['Baleno', 'Every', 'Ignis', 'Jimny', 'S-Cross', 'Swift', 'Vitara'] },
+  { make: 'Tesla', models: ['Model 3', 'Model S', 'Model X', 'Model Y'] },
+  { make: 'Toyota', models: ['Alphard', 'Aqua', 'Auris', 'Camry', 'Corolla', 'Estima', 'Hiace', 'Highlander', 'Hilux', 'Land Cruiser', 'Land Cruiser Prado', 'LiteAce', 'Noah', 'Prius', 'RAV4', 'Regius', 'Sienta', 'TownAce', 'Vitz', 'Voxy', 'Yaris', 'Yaris Cross'] },
+  { make: 'Triumph', models: [] },
+  { make: 'TVR', models: [] },
+  { make: 'Vauxhall', models: [] },
+  { make: 'Volkswagen', models: ['Amarok', 'Caddy', 'California', 'Caravelle', 'Crafter', 'Golf', 'ID.4', 'Multivan', 'Passat', 'Polo', 'Tiguan', 'Touareg', 'Transporter'] },
+  { make: 'Volvo', models: ['EX30', 'S60', 'V40', 'V60', 'XC40', 'XC60', 'XC90'] },
+  { make: 'XPENG', models: [] },
+  { make: 'Zeekr', models: [] },
+  { make: 'Other', models: [] },
 ]
 
 const FEATURED_MOCK_VEHICLES = [
   {
     id: 1,
+    transmission: 'Manual',
+    year: 2014,
     title: 'Toyota Hiace Self-Contained Camper',
     make: 'Toyota',
     model: 'Toyota Hiace',
@@ -64,6 +146,8 @@ const FEATURED_MOCK_VEHICLES = [
   },
   {
     id: 2,
+    transmission: 'Automatic',
+    year: 2018,
     title: 'Mercedes Sprinter Off-Grid Conversion',
     make: 'Mercedes-Benz',
     model: 'Mercedes Sprinter',
@@ -92,6 +176,8 @@ const FEATURED_MOCK_VEHICLES = [
   },
   {
     id: 3,
+    transmission: 'Automatic',
+    year: 2012,
     title: 'Fiat Ducato 4 Berth Motorhome',
     make: 'Fiat',
     model: 'Fiat Ducato',
@@ -120,6 +206,8 @@ const FEATURED_MOCK_VEHICLES = [
   },
   {
     id: 4,
+    transmission: 'Manual',
+    year: 2009,
     title: 'Mitsubishi Delica 4x4 Weekender',
     make: 'Mitsubishi',
     model: 'Mitsubishi Delica',
@@ -147,6 +235,8 @@ const FEATURED_MOCK_VEHICLES = [
   },
   {
     id: 5,
+    transmission: 'Manual',
+    year: 2016,
     title: 'Ford Transit Custom Camper',
     make: 'Ford',
     model: 'Ford Transit',
@@ -174,6 +264,8 @@ const FEATURED_MOCK_VEHICLES = [
   },
   {
     id: 6,
+    transmission: 'Manual',
+    year: 2007,
     title: 'Nissan Caravan Budget Camper',
     make: 'Nissan',
     model: 'Nissan Caravan',
@@ -283,7 +375,10 @@ function createGeneratedVehicles() {
     const seller = MOCK_SELLERS[index % MOCK_SELLERS.length]
     const image = MOCK_IMAGE_POOL[index % MOCK_IMAGE_POOL.length]
     const secondaryImage = MOCK_IMAGE_POOL[(index + 3) % MOCK_IMAGE_POOL.length]
-    const year = 2009 + (index % 16)
+    // El indice elige la plantilla cada 16 posiciones, asi que el anio se
+    // desplaza tambien con el numero de vuelta para que cada modelo aparezca en
+    // varios anios distintos y no siempre en el mismo.
+    const year = 2009 + ((index * 5 + Math.floor(index / 16) * 3) % 16)
     const priceAdjustment = ((index % 9) - 4) * 1700
     const mileageAdjustment = ((index % 11) - 5) * 8500
     const price = Math.max(9900, template.basePrice + priceAdjustment)
@@ -295,6 +390,8 @@ function createGeneratedVehicles() {
 
     return {
       id: index + 7,
+      transmission: index % 3 === 0 ? 'Manual' : 'Automatic',
+      year,
       title: `${year} ${template.title}`,
       make: template.make,
       model: template.model,
@@ -321,4 +418,18 @@ function createGeneratedVehicles() {
   })
 }
 
-export const MOCK_VEHICLES = [...FEATURED_MOCK_VEHICLES, ...createGeneratedVehicles()]
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Reparte fechas de publicacion simuladas: algunos anuncios caen dentro de la
+// ultima semana para que se vea el badge "New" y el resto quedan mas antiguos.
+function withMockCreatedAt(vehicles) {
+  const now = Date.now()
+
+  return vehicles.map((vehicle, index) => {
+    if (vehicle.created_at) return vehicle
+    const daysAgo = index % 5 === 0 ? index % 6 : 9 + (index % 60)
+    return { ...vehicle, created_at: new Date(now - daysAgo * DAY_MS).toISOString() }
+  })
+}
+
+export const MOCK_VEHICLES = withMockCreatedAt([...FEATURED_MOCK_VEHICLES, ...createGeneratedVehicles()])
