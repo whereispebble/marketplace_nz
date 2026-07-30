@@ -714,7 +714,7 @@ export default function Home() {
 
   return (
     <div className={`app-shell ${hasSearched ? 'has-searched' : 'is-pre-search'}`}>
-      <Navbar onFilterClick={showAdvancedFilters} />
+      <Navbar />
 
       <header className="hero" style={{ backgroundImage: `url(${heroSeaImage})` }}>
         <div className="hero-inner">
