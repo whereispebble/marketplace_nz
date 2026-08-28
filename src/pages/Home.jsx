@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FiArrowLeft, FiArrowRight, FiBookmark, FiGrid, FiMap, FiSearch, FiSettings, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiBookmark, FiChevronDown, FiGrid, FiMap, FiSearch, FiSettings, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
+import LocationField from '../components/LocationField'
 import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG } from '../data/mockVehicles'
 
 let leafletPromise
@@ -19,6 +20,25 @@ const DEFAULT_FILTERS = {
   minYear: '',
   maxYear: '',
   transmission: 'all',
+  fuel: 'all',
+  drivetrain: 'all',
+  minEngineCc: '',
+  maxEngineCc: '',
+  minSeats: '',
+  minDoors: '',
+  condition: 'all',
+  wofValidity: 'all',
+  regoValidity: 'all',
+  layout: 'all',
+  minLengthM: '',
+  maxLengthM: '',
+  maxWeightKg: '',
+  carLicenceOnly: false,
+  minFreshWaterL: '',
+  minGreyWaterL: '',
+  minBatteryAh: '',
+  minSolarW: '',
+  toiletType: 'all',
   minPrice: '',
   maxPrice: '',
   maxMileage: '',
@@ -26,7 +46,7 @@ const DEFAULT_FILTERS = {
   minBelts: '',
   selfContainedOnly: false,
   location: '',
-  radiusKm: '',
+  locationPoint: null,
   sortBy: 'recent',
   amenities: {
     shower: false,
@@ -39,6 +59,72 @@ const DEFAULT_FILTERS = {
     water: false,
   },
 }
+
+// Sugerencias rapidas del hero: mismas en movil y escritorio.
+const QUICK_SEARCHES = [
+  { label: 'Campervan', filters: { vehicleType: 'campervan' } },
+  { label: 'Toyota Hiace', filters: { search: 'Toyota Hiace' } },
+  { label: 'Auckland', filters: { location: 'Auckland' } },
+]
+
+// "Best match" ordena por cercania cuando hay una ubicacion elegida y por
+// fecha cuando no la hay, asi que no hace falta una opcion "mas cerca" aparte.
+const SORT_OPTIONS = [
+  { id: 'recent', label: 'Best match' },
+  { id: 'newest', label: 'Newest listings' },
+  { id: 'price_asc', label: 'Price: low to high' },
+  { id: 'price_desc', label: 'Price: high to low' },
+  { id: 'mileage_asc', label: 'Lowest mileage' },
+  { id: 'mileage_desc', label: 'Highest mileage' },
+  { id: 'year_desc', label: 'Year: newest first' },
+  { id: 'year_asc', label: 'Year: oldest first' },
+  { id: 'sleeps_desc', label: 'Most berths' },
+  { id: 'wof_desc', label: 'Longest WOF left' },
+]
+
+const FUEL_FILTERS = ['Diesel', 'Petrol', 'Hybrid', 'Electric', 'LPG']
+
+const DRIVETRAIN_FILTERS = [
+  { id: 'all', label: 'Any drivetrain' },
+  { id: '4wd', label: '4WD / AWD only' },
+  { id: '2wd', label: '2WD only' },
+]
+
+const CONDITION_FILTERS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
+
+// Meses minimos que debe quedarle al papel para entrar en cada opcion.
+const VALIDITY_FILTERS = [
+  { id: 'all', label: 'Any' },
+  { id: 'valid', label: 'Valid today' },
+  { id: '3', label: '3+ months left' },
+  { id: '6', label: '6+ months left' },
+]
+
+const LAYOUT_FILTERS = [
+  'Rear bed',
+  'Rear garage',
+  'End lounge',
+  'Pop-top',
+  'Bunks',
+  'Open plan',
+  'Fixed double',
+]
+
+const TOILET_FILTERS = [
+  { id: 'all', label: 'Any' },
+  { id: 'fixed', label: 'Fixed toilet' },
+  { id: 'portable', label: 'Portable toilet' },
+  { id: 'none', label: 'No toilet' },
+]
+
+const VEHICLE_TYPE_FILTERS = [
+  { id: 'all', label: 'All vehicle types' },
+  { id: 'campervan', label: 'Campervan' },
+  { id: 'motorhome', label: 'Motorhome' },
+  { id: 'van', label: 'Van' },
+  { id: '4x4', label: '4x4' },
+  { id: 'car', label: 'Car' },
+]
 
 const AMENITY_FILTERS = [
   { id: 'shower', label: 'Shower', terms: ['shower'] },
@@ -186,6 +272,69 @@ function distanceKm(first, second) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+// Meses que faltan para una fecha; negativo si ya paso.
+function monthsUntil(value) {
+  if (!value) return null
+  const target = new Date(value)
+  if (Number.isNaN(target.getTime())) return null
+  return (target.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)
+}
+
+function matchesValidity(value, rule) {
+  if (rule === 'all') return true
+  const months = monthsUntil(value)
+  if (months === null) return false
+  if (rule === 'valid') return months > 0
+  return months >= Number(rule)
+}
+
+function matchesDrivetrain(vehicle, rule) {
+  if (rule === 'all') return true
+  const raw = normalise(vehicle.drivetrain)
+  const isFourWheel = ['4wd', 'awd', '4x4', 'four wheel drive', 'all wheel drive'].includes(raw)
+    || normalise(vehicle.vehicleType) === '4x4'
+  return rule === '4wd' ? isFourWheel : Boolean(raw) && !isFourWheel
+}
+
+function matchesToilet(vehicle, rule) {
+  if (rule === 'all') return true
+  const raw = normalise(vehicle.toiletType)
+  if (rule === 'none') return !raw || raw === 'none'
+  if (rule === 'fixed') return raw.includes('fixed') || raw.includes('cassette')
+  return raw.includes('portable')
+}
+
+function numberOrNull(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+function compareAscending(first, second) {
+  if (first === null && second === null) return 0
+  if (first === null) return 1
+  if (second === null) return -1
+  return first - second
+}
+
+function compareDescending(first, second) {
+  if (first === null && second === null) return 0
+  if (first === null) return 1
+  if (second === null) return -1
+  return second - first
+}
+
+const SORTERS = {
+  newest: (a, b) => compareDescending(numberOrNull(new Date(a.created_at || 0).getTime()), numberOrNull(new Date(b.created_at || 0).getTime())),
+  price_asc: (a, b) => compareAscending(numberOrNull(a.price), numberOrNull(b.price)),
+  price_desc: (a, b) => compareDescending(numberOrNull(a.price), numberOrNull(b.price)),
+  mileage_asc: (a, b) => compareAscending(numberOrNull(a.mileage), numberOrNull(b.mileage)),
+  mileage_desc: (a, b) => compareDescending(numberOrNull(a.mileage), numberOrNull(b.mileage)),
+  year_desc: (a, b) => compareDescending(vehicleYear(a), vehicleYear(b)),
+  year_asc: (a, b) => compareAscending(vehicleYear(a), vehicleYear(b)),
+  sleeps_desc: (a, b) => compareDescending(numberOrNull(a.sleeps), numberOrNull(b.sleeps)),
+  wof_desc: (a, b) => compareDescending(monthsUntil(a.wofExpiry), monthsUntil(b.wofExpiry)),
+}
+
 function vehicleHasAmenity(vehicle, amenity) {
   const text = normalise([
     vehicle.title,
@@ -289,10 +438,26 @@ function filterVehicles(vehicles, filters) {
   const minBelts = parsePositiveNumber(filters.minBelts)
   const minYear = parsePositiveNumber(filters.minYear)
   const maxYear = parsePositiveNumber(filters.maxYear)
-  const radiusKm = parsePositiveNumber(filters.radiusKm)
-  const origin = filters.location
-    ? vehicles.find(vehicle => normalise(vehicle.location) === normalise(filters.location))
-    : null
+  const minEngineCc = parsePositiveNumber(filters.minEngineCc)
+  const maxEngineCc = parsePositiveNumber(filters.maxEngineCc)
+  const minSeats = parsePositiveNumber(filters.minSeats)
+  const minDoors = parsePositiveNumber(filters.minDoors)
+  const minLengthM = parsePositiveNumber(filters.minLengthM)
+  const maxLengthM = parsePositiveNumber(filters.maxLengthM)
+  const maxWeightKg = parsePositiveNumber(filters.maxWeightKg)
+  const minFreshWaterL = parsePositiveNumber(filters.minFreshWaterL)
+  const minGreyWaterL = parsePositiveNumber(filters.minGreyWaterL)
+  const minBatteryAh = parsePositiveNumber(filters.minBatteryAh)
+  const minSolarW = parsePositiveNumber(filters.minSolarW)
+  // Prioridad a las coordenadas reales de la ubicacion elegida en el
+  // autocompletado; si no hay, se cae al anuncio que coincida por nombre.
+  const point = filters.locationPoint
+  const hasPoint = Number.isFinite(Number(point?.lat)) && Number.isFinite(Number(point?.lng))
+  const origin = hasPoint
+    ? { lat: Number(point.lat), lng: Number(point.lng) }
+    : filters.location
+      ? vehicles.find(vehicle => normalise(vehicle.location) === normalise(filters.location))
+      : null
   const selectedAmenities = AMENITY_FILTERS.filter(amenity => filters.amenities?.[amenity.id])
 
   return vehicles
@@ -312,21 +477,44 @@ function filterVehicles(vehicles, filters) {
     .filter(vehicle => minBelts === null || Number(vehicle.belts || 0) >= minBelts)
     .filter(vehicle => !filters.selfContainedOnly || Boolean(vehicle.selfContained))
     .filter(vehicle => filters.transmission === 'all' || normalise(vehicle.transmission) === normalise(filters.transmission))
+    .filter(vehicle => filters.fuel === 'all' || normalise(vehicle.fuel) === normalise(filters.fuel))
+    .filter(vehicle => matchesDrivetrain(vehicle, filters.drivetrain))
+    .filter(vehicle => minEngineCc === null || Number(vehicle.engineCc || 0) >= minEngineCc)
+    .filter(vehicle => maxEngineCc === null || (Number(vehicle.engineCc || 0) > 0 && Number(vehicle.engineCc) <= maxEngineCc))
+    .filter(vehicle => minSeats === null || Number(vehicle.seats || vehicle.belts || 0) >= minSeats)
+    .filter(vehicle => minDoors === null || Number(vehicle.doors || 0) >= minDoors)
+    .filter(vehicle => filters.condition === 'all' || normalise(vehicle.condition) === normalise(filters.condition))
+    .filter(vehicle => matchesValidity(vehicle.wofExpiry, filters.wofValidity))
+    .filter(vehicle => matchesValidity(vehicle.regoExpiry, filters.regoValidity))
+    .filter(vehicle => filters.layout === 'all' || normalise(vehicle.layout) === normalise(filters.layout))
+    .filter(vehicle => minLengthM === null || Number(vehicle.lengthM || 0) >= minLengthM)
+    .filter(vehicle => maxLengthM === null || (Number(vehicle.lengthM || 0) > 0 && Number(vehicle.lengthM) <= maxLengthM))
+    .filter(vehicle => maxWeightKg === null || (Number(vehicle.weightKg || 0) > 0 && Number(vehicle.weightKg) <= maxWeightKg))
+    // Un coche normal (clase 1) no puede pasar de 3.500 kg de peso bruto.
+    .filter(vehicle => !filters.carLicenceOnly || Number(vehicle.weightKg || 0) <= 3500)
+    .filter(vehicle => minFreshWaterL === null || Number(vehicle.freshWaterL || 0) >= minFreshWaterL)
+    .filter(vehicle => minGreyWaterL === null || Number(vehicle.greyWaterL || 0) >= minGreyWaterL)
+    .filter(vehicle => minBatteryAh === null || Number(vehicle.batteryAh || 0) >= minBatteryAh)
+    .filter(vehicle => minSolarW === null || Number(vehicle.solarW || 0) >= minSolarW)
+    .filter(vehicle => matchesToilet(vehicle, filters.toiletType))
     .filter(vehicle => {
       if (!filters.location) return true
-      if (origin && radiusKm !== null) {
-        const distance = distanceKm(origin, vehicle)
-        return distance !== null && distance <= radiusKm
-      }
+      // Una ubicacion elegida en el desplegable tiene coordenadas: no descarta
+      // anuncios, ordena por cercania. El texto escrito a mano si filtra.
+      if (hasPoint) return true
       return fuzzyIncludes(`${vehicle.location} ${vehicle.region}`, filters.location)
     })
     .filter(vehicle => selectedAmenities.every(amenity => vehicleHasAmenity(vehicle, amenity)))
     .filter(vehicle => fuzzyIncludes(vehicleSearchText(vehicle), filters.search))
     .sort((a, b) => {
-      if (filters.sortBy === 'price_asc') return a.price - b.price
-      if (filters.sortBy === 'price_desc') return b.price - a.price
-      if (filters.sortBy === 'mileage_asc') return a.mileage - b.mileage
-      return 0
+      const sorter = SORTERS[filters.sortBy]
+      if (sorter) return sorter(a, b)
+      // Best match: de mas cerca a mas lejos si hay una ubicacion de
+      // referencia, y si no se deja el orden de llegada. 'distance' se sigue
+      // aceptando por las busquedas guardadas antiguas.
+      const from = origin || filters.sortPoint
+      if (!from) return 0
+      return compareAscending(distanceKm(from, a), distanceKm(from, b))
     })
 }
 
@@ -354,7 +542,24 @@ function activeFilterChips(filters) {
   if (filters.minBelts) chips.push({ id: 'minBelts', label: `${filters.minBelts}+ belts` })
   if (filters.selfContainedOnly) chips.push({ id: 'selfContainedOnly', label: 'Self-contained' })
   if (filters.transmission && filters.transmission !== 'all') chips.push({ id: 'transmission', label: filters.transmission })
-  if (filters.location) chips.push({ id: 'location', label: filters.radiusKm ? `${filters.location} + ${filters.radiusKm} km` : filters.location })
+  if (filters.fuel !== 'all') chips.push({ id: 'fuel', label: filters.fuel })
+  if (filters.drivetrain !== 'all') chips.push({ id: 'drivetrain', label: DRIVETRAIN_FILTERS.find(item => item.id === filters.drivetrain)?.label || filters.drivetrain })
+  if (filters.minEngineCc || filters.maxEngineCc) chips.push({ id: 'engineCc', label: `${filters.minEngineCc || '0'} - ${filters.maxEngineCc || 'any'} cc` })
+  if (filters.minSeats) chips.push({ id: 'minSeats', label: `${filters.minSeats}+ seats` })
+  if (filters.minDoors) chips.push({ id: 'minDoors', label: `${filters.minDoors}+ doors` })
+  if (filters.condition !== 'all') chips.push({ id: 'condition', label: filters.condition })
+  if (filters.wofValidity !== 'all') chips.push({ id: 'wofValidity', label: `WOF ${VALIDITY_FILTERS.find(item => item.id === filters.wofValidity)?.label.toLowerCase()}` })
+  if (filters.regoValidity !== 'all') chips.push({ id: 'regoValidity', label: `Rego ${VALIDITY_FILTERS.find(item => item.id === filters.regoValidity)?.label.toLowerCase()}` })
+  if (filters.layout !== 'all') chips.push({ id: 'layout', label: filters.layout })
+  if (filters.minLengthM || filters.maxLengthM) chips.push({ id: 'lengthM', label: `${filters.minLengthM || '0'} - ${filters.maxLengthM || 'any'} m` })
+  if (filters.maxWeightKg) chips.push({ id: 'maxWeightKg', label: `Under ${Number(filters.maxWeightKg).toLocaleString('en-NZ')} kg` })
+  if (filters.carLicenceOnly) chips.push({ id: 'carLicenceOnly', label: 'Car licence' })
+  if (filters.minFreshWaterL) chips.push({ id: 'minFreshWaterL', label: `${filters.minFreshWaterL}+ L fresh` })
+  if (filters.minGreyWaterL) chips.push({ id: 'minGreyWaterL', label: `${filters.minGreyWaterL}+ L grey` })
+  if (filters.minBatteryAh) chips.push({ id: 'minBatteryAh', label: `${filters.minBatteryAh}+ Ah` })
+  if (filters.minSolarW) chips.push({ id: 'minSolarW', label: `${filters.minSolarW}+ W solar` })
+  if (filters.toiletType !== 'all') chips.push({ id: 'toiletType', label: TOILET_FILTERS.find(item => item.id === filters.toiletType)?.label })
+  if (filters.location) chips.push({ id: 'location', label: filters.location })
   AMENITY_FILTERS.forEach(amenity => {
     if (filters.amenities?.[amenity.id]) chips.push({ id: amenity.id, label: amenity.label })
   })
@@ -375,6 +580,29 @@ export default function Home() {
   const [minYear, setMinYear] = useState(restoredDraft.minYear)
   const [maxYear, setMaxYear] = useState(restoredDraft.maxYear)
   const [transmission, setTransmission] = useState(restoredDraft.transmission)
+  const [fuel, setFuel] = useState(restoredDraft.fuel)
+  const [drivetrain, setDrivetrain] = useState(restoredDraft.drivetrain)
+  const [minEngineCc, setMinEngineCc] = useState(restoredDraft.minEngineCc)
+  const [maxEngineCc, setMaxEngineCc] = useState(restoredDraft.maxEngineCc)
+  const [minSeats, setMinSeats] = useState(restoredDraft.minSeats)
+  const [minDoors, setMinDoors] = useState(restoredDraft.minDoors)
+  const [condition, setCondition] = useState(restoredDraft.condition)
+  const [wofValidity, setWofValidity] = useState(restoredDraft.wofValidity)
+  const [regoValidity, setRegoValidity] = useState(restoredDraft.regoValidity)
+  const [layout, setLayout] = useState(restoredDraft.layout)
+  const [minLengthM, setMinLengthM] = useState(restoredDraft.minLengthM)
+  const [maxLengthM, setMaxLengthM] = useState(restoredDraft.maxLengthM)
+  const [maxWeightKg, setMaxWeightKg] = useState(restoredDraft.maxWeightKg)
+  const [carLicenceOnly, setCarLicenceOnly] = useState(restoredDraft.carLicenceOnly)
+  const [minFreshWaterL, setMinFreshWaterL] = useState(restoredDraft.minFreshWaterL)
+  const [minGreyWaterL, setMinGreyWaterL] = useState(restoredDraft.minGreyWaterL)
+  const [minBatteryAh, setMinBatteryAh] = useState(restoredDraft.minBatteryAh)
+  const [minSolarW, setMinSolarW] = useState(restoredDraft.minSolarW)
+  const [toiletType, setToiletType] = useState(restoredDraft.toiletType)
+  // Posicion del dispositivo: solo se usa para ordenar por cercania, no se
+  // guarda con los filtros.
+  const [devicePoint, setDevicePoint] = useState(null)
+  const [locatingDevice, setLocatingDevice] = useState(false)
   const [minPrice, setMinPrice] = useState(restoredDraft.minPrice)
   const [maxPrice, setMaxPrice] = useState(restoredDraft.maxPrice)
   const [maxMileage, setMaxMileage] = useState(restoredDraft.maxMileage)
@@ -382,7 +610,7 @@ export default function Home() {
   const [minBelts, setMinBelts] = useState(restoredDraft.minBelts)
   const [selfContainedOnly, setSelfContainedOnly] = useState(restoredDraft.selfContainedOnly)
   const [location, setLocation] = useState(restoredDraft.location)
-  const [radiusKm, setRadiusKm] = useState(restoredDraft.radiusKm)
+  const [locationPoint, setLocationPoint] = useState(restoredDraft.locationPoint || null)
   const [amenities, setAmenities] = useState({ ...DEFAULT_FILTERS.amenities, ...(restoredDraft.amenities || {}) })
   const [sortBy, setSortBy] = useState(restoredDraft.sortBy)
   const [appliedFilters, setAppliedFilters] = useState({
@@ -407,10 +635,6 @@ export default function Home() {
     loadVehicles()
     return () => { ignore = true }
   }, [])
-
-  const locations = useMemo(() => (
-    [...new Set(vehicles.map(vehicle => vehicle.location).filter(Boolean))].sort()
-  ), [vehicles])
 
   // Catalogo de Trade Me como base, mas cualquier marca que aparezca en los
   // anuncios y no este en la lista.
@@ -446,6 +670,25 @@ export default function Home() {
     minYear,
     maxYear,
     transmission,
+    fuel,
+    drivetrain,
+    minEngineCc,
+    maxEngineCc,
+      minSeats,
+    minDoors,
+    condition,
+    wofValidity,
+    regoValidity,
+    layout,
+    minLengthM,
+    maxLengthM,
+    maxWeightKg,
+    carLicenceOnly,
+    minFreshWaterL,
+    minGreyWaterL,
+    minBatteryAh,
+    minSolarW,
+    toiletType,
     minPrice,
     maxPrice,
     maxMileage,
@@ -453,10 +696,10 @@ export default function Home() {
     minBelts,
     selfContainedOnly,
     location,
-    radiusKm,
+    locationPoint,
     sortBy,
     amenities,
-  }), [search, vehicleType, make, model, minYear, maxYear, transmission, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, radiusKm, sortBy, amenities])
+  }), [search, vehicleType, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, sortBy, amenities])
 
   const filtered = useMemo(() => (
     filterVehicles(vehicles, {
@@ -466,6 +709,25 @@ export default function Home() {
       minYear,
       maxYear,
       transmission,
+      fuel,
+      drivetrain,
+      minEngineCc,
+      maxEngineCc,
+        minSeats,
+      minDoors,
+      condition,
+      wofValidity,
+      regoValidity,
+      layout,
+      minLengthM,
+      maxLengthM,
+      maxWeightKg,
+      carLicenceOnly,
+      minFreshWaterL,
+      minGreyWaterL,
+      minBatteryAh,
+      minSolarW,
+      toiletType,
       minPrice,
       maxPrice,
       maxMileage,
@@ -473,10 +735,12 @@ export default function Home() {
       minBelts,
       selfContainedOnly,
       location,
-      radiusKm,
+      locationPoint,
       amenities,
+      sortBy,
+      sortPoint: devicePoint,
     })
-  ), [vehicles, appliedFilters, make, model, minYear, maxYear, transmission, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, radiusKm, amenities])
+  ), [vehicles, devicePoint, sortBy, appliedFilters, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, amenities])
 
   const appliedChips = useMemo(() => activeFilterChips(appliedFilters), [appliedFilters])
 
@@ -529,11 +793,34 @@ export default function Home() {
     scrollToResults()
   }
 
+  const QUICK_FILTER_SETTERS = {
+    search: setSearch,
+    vehicleType: setVehicleType,
+    make: setMake,
+    model: setModel,
+    minYear: setMinYear,
+    maxYear: setMaxYear,
+    transmission: setTransmission,
+    fuel: setFuel,
+    drivetrain: setDrivetrain,
+    condition: setCondition,
+    layout: setLayout,
+    minPrice: setMinPrice,
+    maxPrice: setMaxPrice,
+    maxMileage: setMaxMileage,
+    minSleeps: setMinSleeps,
+    minBelts: setMinBelts,
+    selfContainedOnly: setSelfContainedOnly,
+    location: setLocation,
+    sortBy: setSortBy,
+  }
+
   const applyQuickFilter = updates => {
-    if ('maxPrice' in updates) setMaxPrice(updates.maxPrice)
-    if ('selfContainedOnly' in updates) setSelfContainedOnly(updates.selfContainedOnly)
-    if ('vehicleType' in updates) setVehicleType(updates.vehicleType)
-    setAppliedFilters({ ...draftFilters, ...updates })
+    Object.entries(updates).forEach(([key, value]) => QUICK_FILTER_SETTERS[key]?.(value))
+    // Una sugerencia escribe el nombre pero no fija coordenadas: el radio
+    // sigue necesitando una eleccion en el autocompletado.
+    if ('location' in updates) setLocationPoint(null)
+    setAppliedFilters({ ...draftFilters, ...updates, ...('location' in updates ? { locationPoint: null } : {}) })
     setCurrentPage(1)
     setHasSearched(true)
     scrollToResults()
@@ -541,6 +828,21 @@ export default function Home() {
 
   const FILTER_RESETTERS = {
     search: setSearch,
+    fuel: () => setFuel('all'),
+    drivetrain: () => setDrivetrain('all'),
+    minSeats: setMinSeats,
+    minDoors: setMinDoors,
+    condition: () => setCondition('all'),
+    wofValidity: () => setWofValidity('all'),
+    regoValidity: () => setRegoValidity('all'),
+    layout: () => setLayout('all'),
+    maxWeightKg: setMaxWeightKg,
+    carLicenceOnly: () => setCarLicenceOnly(false),
+    minFreshWaterL: setMinFreshWaterL,
+    minGreyWaterL: setMinGreyWaterL,
+    minBatteryAh: setMinBatteryAh,
+    minSolarW: setMinSolarW,
+    toiletType: () => setToiletType('all'),
     vehicleType: () => setVehicleType(DEFAULT_FILTERS.vehicleType),
     make: setMake,
     model: setModel,
@@ -555,10 +857,16 @@ export default function Home() {
   const removeFilter = filterId => {
     if (filterId === 'location') {
       setLocation('')
-      setRadiusKm('')
+      setLocationPoint(null)
     } else if (filterId === 'year') {
       setMinYear('')
       setMaxYear('')
+    } else if (filterId === 'engineCc') {
+      setMinEngineCc('')
+      setMaxEngineCc('')
+    } else if (filterId === 'lengthM') {
+      setMinLengthM('')
+      setMaxLengthM('')
     } else if (filterId === 'transmission') {
       setTransmission('all')
     } else if (filterId in FILTER_RESETTERS) {
@@ -568,8 +876,10 @@ export default function Home() {
     }
 
     setAppliedFilters(current => {
-      if (filterId === 'location') return { ...current, location: '', radiusKm: '' }
+      if (filterId === 'location') return { ...current, location: '', locationPoint: null }
       if (filterId === 'year') return { ...current, minYear: '', maxYear: '' }
+      if (filterId === 'engineCc') return { ...current, minEngineCc: '', maxEngineCc: '' }
+      if (filterId === 'lengthM') return { ...current, minLengthM: '', maxLengthM: '' }
       if (filterId === 'transmission') return { ...current, transmission: 'all' }
       if (filterId in DEFAULT_FILTERS) return { ...current, [filterId]: DEFAULT_FILTERS[filterId] }
       return { ...current, amenities: { ...current.amenities, [filterId]: false } }
@@ -596,6 +906,7 @@ export default function Home() {
   const handleFilterChange = setter => value => setter(value)
 
   const handleSearchChange = handleFilterChange(setSearch)
+  const handleVehicleTypeChange = handleFilterChange(setVehicleType)
   // Al cambiar de marca el modelo anterior deja de tener sentido.
   const handleMakeChange = value => {
     setMake(value)
@@ -606,13 +917,56 @@ export default function Home() {
   const handleMinYearChange = handleFilterChange(setMinYear)
   const handleMaxYearChange = handleFilterChange(setMaxYear)
   const handleTransmissionChange = handleFilterChange(setTransmission)
+  const handleFuelChange = handleFilterChange(setFuel)
+  const handleDrivetrainChange = handleFilterChange(setDrivetrain)
+  const handleMinEngineCcChange = handleFilterChange(setMinEngineCc)
+  const handleMaxEngineCcChange = handleFilterChange(setMaxEngineCc)
+  const handleMinSeatsChange = handleFilterChange(setMinSeats)
+  const handleMinDoorsChange = handleFilterChange(setMinDoors)
+  const handleConditionChange = handleFilterChange(setCondition)
+  const handleWofValidityChange = handleFilterChange(setWofValidity)
+  const handleRegoValidityChange = handleFilterChange(setRegoValidity)
+  const handleLayoutChange = handleFilterChange(setLayout)
+  const handleMinLengthChange = handleFilterChange(setMinLengthM)
+  const handleMaxLengthChange = handleFilterChange(setMaxLengthM)
+  const handleMaxWeightChange = handleFilterChange(setMaxWeightKg)
+  const handleMinFreshWaterChange = handleFilterChange(setMinFreshWaterL)
+  const handleMinGreyWaterChange = handleFilterChange(setMinGreyWaterL)
+  const handleMinBatteryChange = handleFilterChange(setMinBatteryAh)
+  const handleMinSolarChange = handleFilterChange(setMinSolarW)
+  const handleToiletTypeChange = handleFilterChange(setToiletType)
+
+  // Geolocalizacion del navegador para ordenar por cercania sin escribir ciudad.
+  const useDeviceLocation = () => {
+    if (!navigator.geolocation) return
+    setLocatingDevice(true)
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const point = { label: 'My location', lat: position.coords.latitude, lng: position.coords.longitude, device: true }
+        setDevicePoint(point)
+        setLocation('My location')
+        setLocationPoint(point)
+        setLocatingDevice(false)
+      },
+      () => setLocatingDevice(false),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+    )
+  }
   const handleMinPriceChange = handleFilterChange(setMinPrice)
   const handleMaxPriceChange = handleFilterChange(setMaxPrice)
   const handleMaxMileageChange = handleFilterChange(setMaxMileage)
   const handleMinSleepsChange = handleFilterChange(setMinSleeps)
   const handleMinBeltsChange = handleFilterChange(setMinBelts)
-  const handleLocationChange = handleFilterChange(setLocation)
-  const handleRadiusChange = handleFilterChange(setRadiusKm)
+  // Escribir a mano invalida las coordenadas: solo una sugerencia real las fija.
+  const handleLocationChange = value => {
+    setLocation(value)
+    setLocationPoint(null)
+  }
+
+  const handleLocationSelect = place => {
+    setLocation(place.label)
+    setLocationPoint({ label: place.label, region: place.region, lat: place.lat, lng: place.lng })
+  }
 
   const handleAmenityChange = amenityId => {
     setAmenities(current => ({ ...current, [amenityId]: !current[amenityId] }))
@@ -626,6 +980,25 @@ export default function Home() {
     setMinYear('')
     setMaxYear('')
     setTransmission('all')
+    setFuel('all')
+    setDrivetrain('all')
+    setMinEngineCc('')
+    setMaxEngineCc('')
+    setMinSeats('')
+    setMinDoors('')
+    setCondition('all')
+    setWofValidity('all')
+    setRegoValidity('all')
+    setLayout('all')
+    setMinLengthM('')
+    setMaxLengthM('')
+    setMaxWeightKg('')
+    setCarLicenceOnly(false)
+    setMinFreshWaterL('')
+    setMinGreyWaterL('')
+    setMinBatteryAh('')
+    setMinSolarW('')
+    setToiletType('all')
     setMinPrice('')
     setMaxPrice('')
     setMaxMileage('')
@@ -633,7 +1006,7 @@ export default function Home() {
     setMinBelts('')
     setSelfContainedOnly(false)
     setLocation('')
-    setRadiusKm('')
+    setLocationPoint(null)
     setAmenities(DEFAULT_FILTERS.amenities)
     setSortBy('recent')
     setAppliedFilters(DEFAULT_FILTERS)
@@ -691,6 +1064,25 @@ export default function Home() {
     setMinYear(next.minYear)
     setMaxYear(next.maxYear)
     setTransmission(next.transmission)
+    setFuel(next.fuel)
+    setDrivetrain(next.drivetrain)
+    setMinEngineCc(next.minEngineCc)
+    setMaxEngineCc(next.maxEngineCc)
+    setMinSeats(next.minSeats)
+    setMinDoors(next.minDoors)
+    setCondition(next.condition)
+    setWofValidity(next.wofValidity)
+    setRegoValidity(next.regoValidity)
+    setLayout(next.layout)
+    setMinLengthM(next.minLengthM)
+    setMaxLengthM(next.maxLengthM)
+    setMaxWeightKg(next.maxWeightKg)
+    setCarLicenceOnly(next.carLicenceOnly)
+    setMinFreshWaterL(next.minFreshWaterL)
+    setMinGreyWaterL(next.minGreyWaterL)
+    setMinBatteryAh(next.minBatteryAh)
+    setMinSolarW(next.minSolarW)
+    setToiletType(next.toiletType)
     setMinPrice(next.minPrice)
     setMaxPrice(next.maxPrice)
     setMaxMileage(next.maxMileage)
@@ -698,7 +1090,7 @@ export default function Home() {
     setMinBelts(next.minBelts)
     setSelfContainedOnly(next.selfContainedOnly)
     setLocation(next.location)
-    setRadiusKm(next.radiusKm)
+    setLocationPoint(next.locationPoint || null)
     setSortBy(next.sortBy)
     setAmenities(next.amenities)
     setAppliedFilters(next)
@@ -720,10 +1112,12 @@ export default function Home() {
         <div className="hero-inner">
           <h1>What are you looking for?</h1>
 
-          <div className="hero-quick-filters" aria-label="Quick filters">
-            <button type="button" onClick={() => applyQuickFilter({ maxPrice: '50000' })}>Within my budget</button>
-            <button type="button" onClick={() => applyQuickFilter({ selfContainedOnly: true })}>Freedom camping</button>
-            <button type="button" onClick={() => applyQuickFilter({ vehicleType: 'campervan' })}>Campervans only</button>
+          <div className="hero-quick-filters" aria-label="Search suggestions">
+            {QUICK_SEARCHES.map(suggestion => (
+              <button key={suggestion.label} type="button" onClick={() => applyQuickFilter(suggestion.filters)}>
+                {suggestion.label}
+              </button>
+            ))}
           </div>
 
           <div className="hero-search">
@@ -780,9 +1174,12 @@ export default function Home() {
           <div>
             <h2 className="section-title">{filtered.length} vehicles</h2>
           </div>
+          <SortMenu value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
           <div className="segmented-control" aria-label="View mode">
-            <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
-            <button className={viewMode === 'map' ? 'is-active' : ''} type="button" onClick={() => { setViewMode('map'); scrollToResults() }}><FiMap />Map</button>
+            <div className="view-toggle" role="group" aria-label="Results view">
+              <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
+              <button className={viewMode === 'map' ? 'is-active' : ''} type="button" aria-pressed={viewMode === 'map'} onClick={() => { setViewMode('map'); scrollToResults() }}><FiMap />Map</button>
+            </div>
             <button className="results-filter-button" type="button" onClick={() => setAdvancedFiltersOpen(true)}>
               <FiSettings />
               Filters
@@ -811,7 +1208,7 @@ export default function Home() {
               </div>
             </div>
           ) : viewMode === 'map' ? (
-            <VehicleMap vehicles={filtered} />
+            <VehicleMap vehicles={filtered} focusPoint={locationPoint} />
           ) : (
             <>
               <div className="products-grid">
@@ -829,11 +1226,33 @@ export default function Home() {
         </div>
 
         <AdvancedFiltersModal
+          vehicleType={vehicleType}
           make={make}
           model={model}
           minYear={minYear}
           maxYear={maxYear}
           transmission={transmission}
+          fuel={fuel}
+          drivetrain={drivetrain}
+          minEngineCc={minEngineCc}
+          maxEngineCc={maxEngineCc}
+          minSeats={minSeats}
+          minDoors={minDoors}
+          condition={condition}
+          wofValidity={wofValidity}
+          regoValidity={regoValidity}
+          layout={layout}
+          minLengthM={minLengthM}
+          maxLengthM={maxLengthM}
+          maxWeightKg={maxWeightKg}
+          carLicenceOnly={carLicenceOnly}
+          minFreshWaterL={minFreshWaterL}
+          minGreyWaterL={minGreyWaterL}
+          minBatteryAh={minBatteryAh}
+          minSolarW={minSolarW}
+          toiletType={toiletType}
+          sortBy={sortBy}
+          locatingDevice={locatingDevice}
           minPrice={minPrice}
           maxPrice={maxPrice}
           maxMileage={maxMileage}
@@ -841,17 +1260,38 @@ export default function Home() {
           minBelts={minBelts}
           selfContainedOnly={selfContainedOnly}
           location={location}
-          radiusKm={radiusKm}
+          locationPoint={locationPoint}
           amenities={amenities}
-          locations={locations}
           makes={makes}
           models={models}
           years={years}
+          onVehicleTypeChange={handleVehicleTypeChange}
           onMakeChange={handleMakeChange}
           onModelChange={handleModelChange}
           onMinYearChange={handleMinYearChange}
           onMaxYearChange={handleMaxYearChange}
           onTransmissionChange={handleTransmissionChange}
+          onFuelChange={handleFuelChange}
+          onDrivetrainChange={handleDrivetrainChange}
+          onMinEngineCcChange={handleMinEngineCcChange}
+          onMaxEngineCcChange={handleMaxEngineCcChange}
+          onMinSeatsChange={handleMinSeatsChange}
+          onMinDoorsChange={handleMinDoorsChange}
+          onConditionChange={handleConditionChange}
+          onWofValidityChange={handleWofValidityChange}
+          onRegoValidityChange={handleRegoValidityChange}
+          onLayoutChange={handleLayoutChange}
+          onMinLengthChange={handleMinLengthChange}
+          onMaxLengthChange={handleMaxLengthChange}
+          onMaxWeightChange={handleMaxWeightChange}
+          onCarLicenceChange={setCarLicenceOnly}
+          onMinFreshWaterChange={handleMinFreshWaterChange}
+          onMinGreyWaterChange={handleMinGreyWaterChange}
+          onMinBatteryChange={handleMinBatteryChange}
+          onMinSolarChange={handleMinSolarChange}
+          onToiletTypeChange={handleToiletTypeChange}
+          onSortByChange={setSortBy}
+          onUseDeviceLocation={useDeviceLocation}
           onMinPriceChange={handleMinPriceChange}
           onMaxPriceChange={handleMaxPriceChange}
           onMaxMileageChange={handleMaxMileageChange}
@@ -859,7 +1299,7 @@ export default function Home() {
           onMinBeltsChange={handleMinBeltsChange}
           onSelfContainedChange={setSelfContainedOnly}
           onLocationChange={handleLocationChange}
-          onRadiusChange={handleRadiusChange}
+          onLocationSelect={handleLocationSelect}
           onAmenityChange={handleAmenityChange}
           onClear={clearFilters}
           onApply={applyAdvancedFilters}
@@ -880,11 +1320,33 @@ export default function Home() {
 
 function AdvancedFilterFields({
   idPrefix,
+  vehicleType,
   make,
   model,
   minYear,
   maxYear,
   transmission,
+  fuel,
+  drivetrain,
+  minEngineCc,
+  maxEngineCc,
+  minSeats,
+  minDoors,
+  condition,
+  wofValidity,
+  regoValidity,
+  layout,
+  minLengthM,
+  maxLengthM,
+  maxWeightKg,
+  carLicenceOnly,
+  minFreshWaterL,
+  minGreyWaterL,
+  minBatteryAh,
+  minSolarW,
+  toiletType,
+  sortBy,
+  locatingDevice,
   minPrice,
   maxPrice,
   maxMileage,
@@ -892,17 +1354,38 @@ function AdvancedFilterFields({
   minBelts,
   selfContainedOnly,
   location,
-  radiusKm,
+  locationPoint,
   amenities,
-  locations,
   makes = [],
   models = [],
   years = [],
+  onVehicleTypeChange,
   onMakeChange,
   onModelChange,
   onMinYearChange,
   onMaxYearChange,
   onTransmissionChange,
+  onFuelChange,
+  onDrivetrainChange,
+  onMinEngineCcChange,
+  onMaxEngineCcChange,
+  onMinSeatsChange,
+  onMinDoorsChange,
+  onConditionChange,
+  onWofValidityChange,
+  onRegoValidityChange,
+  onLayoutChange,
+  onMinLengthChange,
+  onMaxLengthChange,
+  onMaxWeightChange,
+  onCarLicenceChange,
+  onMinFreshWaterChange,
+  onMinGreyWaterChange,
+  onMinBatteryChange,
+  onMinSolarChange,
+  onToiletTypeChange,
+  onSortByChange,
+  onUseDeviceLocation,
   onMinPriceChange,
   onMaxPriceChange,
   onMaxMileageChange,
@@ -910,10 +1393,9 @@ function AdvancedFilterFields({
   onMinBeltsChange,
   onSelfContainedChange,
   onLocationChange,
-  onRadiusChange,
+  onLocationSelect,
   onAmenityChange,
 }) {
-  const locationListId = `${idPrefix}-advanced-location-options`
   const yearListId = `${idPrefix}-advanced-year-options`
   // Un modelo restaurado de un filtro guardado puede no estar en la lista de la
   // marca actual: se anade para que el select no aparezca vacio.
@@ -921,6 +1403,16 @@ function AdvancedFilterFields({
 
   return (
     <>
+      <div className="advanced-filter-group">
+        <strong>Vehicle type</strong>
+        <label className="field-group">
+          <span>Type</span>
+          <select className="field" value={vehicleType} onChange={event => onVehicleTypeChange(event.target.value)}>
+            {VEHICLE_TYPE_FILTERS.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+          </select>
+        </label>
+      </div>
+
       <div className="advanced-filter-group">
         <strong>Make and model</strong>
         <div className="dual-field">
@@ -972,33 +1464,24 @@ function AdvancedFilterFields({
 
       <div className="advanced-filter-group">
         <strong>Location</strong>
-        <label className="field-group">
-          <span>City</span>
-          <input className="field" list={locationListId} placeholder="Any city" value={location} onChange={event => onLocationChange(event.target.value)} />
-          <datalist id={locationListId}>
-            {locations.map(place => <option key={place} value={place} />)}
-          </datalist>
-        </label>
-        <label className="field-group">
-          <span>Radius</span>
-          <input className="field" inputMode="numeric" placeholder="Any radius" value={radiusKm} onChange={event => onRadiusChange(event.target.value)} />
-        </label>
-        <RangeSlider
-          min={0}
-          max={500}
-          step={25}
-          minValue="0"
-          maxValue={radiusKm}
-          minLabel="Exact"
-          maxLabel="500 km"
-          single
-          onMaxChange={onRadiusChange}
+        <LocationField
+          idPrefix={idPrefix}
+          value={location}
+          selected={locationPoint}
+          hint="Pick a suggestion to sort by distance."
+          locating={locatingDevice}
+          onChange={onLocationChange}
+          onSelect={onLocationSelect}
+          onUseMyLocation={onUseDeviceLocation}
         />
+        <p className="filter-note">
+          Pick a suggestion and the results are ordered from closest to furthest.
+        </p>
       </div>
 
       <div className="advanced-filter-group">
         <strong>Vehicle details</strong>
-        <div className="dual-field">
+        <div className="dual-field dual-field-inline">
           <label className="field-group">
             <span>Year from</span>
             <input className="field" inputMode="numeric" list={yearListId} placeholder="Any year" value={minYear} onChange={event => onMinYearChange(event.target.value)} />
@@ -1023,7 +1506,7 @@ function AdvancedFilterFields({
           <span>Max mileage</span>
           <input className="field" inputMode="numeric" placeholder="150000" value={maxMileage} onChange={event => onMaxMileageChange(event.target.value)} />
         </label>
-        <div className="dual-field">
+        <div className="dual-field dual-field-inline">
           <label className="field-group">
             <span>Sleeps min</span>
             <input className="field" inputMode="numeric" placeholder="2" value={minSleeps} onChange={event => onMinSleepsChange(event.target.value)} />
@@ -1033,10 +1516,150 @@ function AdvancedFilterFields({
             <input className="field" inputMode="numeric" placeholder="3" value={minBelts} onChange={event => onMinBeltsChange(event.target.value)} />
           </label>
         </div>
+        <label className="field-group">
+          <span>Condition</span>
+          <select className="field" value={condition} onChange={event => onConditionChange(event.target.value)}>
+            <option value="all">Any condition</option>
+            {CONDITION_FILTERS.map(item => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Mechanical</strong>
+        <div className="dual-field">
+          <label className="field-group">
+            <span>Fuel</span>
+            <select className="field" value={fuel} onChange={event => onFuelChange(event.target.value)}>
+              <option value="all">Any fuel</option>
+              {FUEL_FILTERS.map(item => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          <label className="field-group">
+            <span>Drivetrain</span>
+            <select className="field" value={drivetrain} onChange={event => onDrivetrainChange(event.target.value)}>
+              {DRIVETRAIN_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="dual-field dual-field-inline">
+          <label className="field-group">
+            <span>Engine from (cc)</span>
+            <input className="field" inputMode="numeric" placeholder="2000" value={minEngineCc} onChange={event => onMinEngineCcChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Engine to (cc)</span>
+            <input className="field" inputMode="numeric" placeholder="3000" value={maxEngineCc} onChange={event => onMaxEngineCcChange(event.target.value)} />
+          </label>
+        </div>
+        <div className="dual-field dual-field-inline">
+          <label className="field-group">
+            <span>Seats min</span>
+            <input className="field" inputMode="numeric" placeholder="4" value={minSeats} onChange={event => onMinSeatsChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Doors min</span>
+            <input className="field" inputMode="numeric" placeholder="3" value={minDoors} onChange={event => onMinDoorsChange(event.target.value)} />
+          </label>
+        </div>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Paperwork</strong>
+        <div className="dual-field">
+          <label className="field-group">
+            <span>WOF</span>
+            <select className="field" value={wofValidity} onChange={event => onWofValidityChange(event.target.value)}>
+              {VALIDITY_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+          </label>
+          <label className="field-group">
+            <span>Rego</span>
+            <select className="field" value={regoValidity} onChange={event => onRegoValidityChange(event.target.value)}>
+              {VALIDITY_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Layout and size</strong>
+        <label className="field-group">
+          <span>Layout</span>
+          <select className="field" value={layout} onChange={event => onLayoutChange(event.target.value)}>
+            <option value="all">Any layout</option>
+            {LAYOUT_FILTERS.map(item => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <div className="dual-field dual-field-inline">
+          <label className="field-group">
+            <span>Length from (m)</span>
+            <input className="field" inputMode="decimal" placeholder="5" value={minLengthM} onChange={event => onMinLengthChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Length to (m)</span>
+            <input className="field" inputMode="decimal" placeholder="7" value={maxLengthM} onChange={event => onMaxLengthChange(event.target.value)} />
+          </label>
+        </div>
+        <label className="field-group">
+          <span>Max weight (kg)</span>
+          <input className="field" inputMode="numeric" placeholder="3500" value={maxWeightKg} onChange={event => onMaxWeightChange(event.target.value)} />
+        </label>
+        <label className="toggle-row">
+          <input type="checkbox" checked={carLicenceOnly} onChange={event => onCarLicenceChange(event.target.checked)} />
+          Drivable on a car licence (up to 3,500 kg)
+        </label>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Off-grid capacity</strong>
+        <div className="dual-field dual-field-inline">
+          <label className="field-group">
+            <span>Fresh water min (L)</span>
+            <input className="field" inputMode="numeric" placeholder="60" value={minFreshWaterL} onChange={event => onMinFreshWaterChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Grey water min (L)</span>
+            <input className="field" inputMode="numeric" placeholder="60" value={minGreyWaterL} onChange={event => onMinGreyWaterChange(event.target.value)} />
+          </label>
+        </div>
+        <div className="dual-field dual-field-inline">
+          <label className="field-group">
+            <span>Battery min (Ah)</span>
+            <input className="field" inputMode="numeric" placeholder="100" value={minBatteryAh} onChange={event => onMinBatteryChange(event.target.value)} />
+          </label>
+          <label className="field-group">
+            <span>Solar min (W)</span>
+            <input className="field" inputMode="numeric" placeholder="200" value={minSolarW} onChange={event => onMinSolarChange(event.target.value)} />
+          </label>
+        </div>
+        <label className="field-group">
+          <span>Toilet</span>
+          <select className="field" value={toiletType} onChange={event => onToiletTypeChange(event.target.value)}>
+            {TOILET_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Self-containment</strong>
         <label className="toggle-row">
           <input type="checkbox" checked={selfContainedOnly} onChange={event => onSelfContainedChange(event.target.checked)} />
           Self-contained only
         </label>
+      </div>
+
+      <div className="advanced-filter-group">
+        <strong>Sort</strong>
+        <label className="field-group">
+          <span>Order results by</span>
+          <select className="field" value={sortBy} onChange={event => onSortByChange(event.target.value)}>
+            {SORT_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+          </select>
+        </label>
+        <p className="filter-note">
+          "Best match" shows the closest vehicles first when you pick a location, and the newest listings when you do not.
+        </p>
       </div>
 
       <div className="advanced-filter-group">
@@ -1216,7 +1839,67 @@ function PaginationBar({ currentPage, totalPages, totalItems, onPrevious, onNext
   )
 }
 
-function VehicleMap({ vehicles }) {
+function SortMenu({ value, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+  const active = options.find(option => option.id === value) || options[0]
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const handleClickOutside = event => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="results-sort" ref={containerRef}>
+      <button
+        className="results-sort-trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Sort results, currently ${active.label}`}
+        onClick={() => setOpen(current => !current)}
+      >
+        <FiChevronDown className="results-sort-caret" />
+        <span className="results-sort-label">Sort</span>
+        <span className="results-sort-value">{active.label}</span>
+      </button>
+
+      {open && (
+        <ul className="results-sort-menu" role="listbox">
+          {options.map(option => (
+            <li key={option.id}>
+              <button
+                className={`results-sort-option ${option.id === value ? 'is-active' : ''}`}
+                type="button"
+                role="option"
+                aria-selected={option.id === value}
+                onClick={() => { onChange(option.id); setOpen(false) }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function VehicleMap({ vehicles, focusPoint }) {
   const mapRef = useRef(null)
   const leafletMapRef = useRef(null)
   const markerLayerRef = useRef(null)
@@ -1274,6 +1957,10 @@ function VehicleMap({ vehicles }) {
     }
   }, [])
 
+  const focusLat = Number(focusPoint?.lat)
+  const focusLng = Number(focusPoint?.lng)
+  const hasFocus = Number.isFinite(focusLat) && Number.isFinite(focusLng)
+
   useEffect(() => {
     const L = window.L
     const map = leafletMapRef.current
@@ -1312,10 +1999,38 @@ function VehicleMap({ vehicles }) {
       bounds.push([vehicle.lat, vehicle.lng])
     })
 
+    if (hasFocus) {
+      const focus = { lat: focusLat, lng: focusLng }
+
+      L.circleMarker([focusLat, focusLng], {
+        className: 'swapy-map-focus',
+        radius: 9,
+        weight: 3,
+        color: '#14bc7d',
+        fillColor: '#14bc7d',
+        fillOpacity: 0.25,
+      })
+        .addTo(layer)
+        .bindTooltip(escapeHtml(focusPoint.label || 'Selected location'), { direction: 'top', offset: [0, -10] })
+
+      // El encuadre cubre la ubicacion elegida y los anuncios mas cercanos, no
+      // todo el pais: asi se ve el sitio buscado y algo de oferta alrededor.
+      const nearest = vehicles
+        .filter(vehicle => vehicle.lat && vehicle.lng)
+        .map(vehicle => ({ vehicle, distance: distanceKm(focus, vehicle) }))
+        .filter(entry => entry.distance !== null)
+        .sort((first, second) => first.distance - second.distance)
+        .slice(0, 5)
+        .map(entry => [entry.vehicle.lat, entry.vehicle.lng])
+
+      map.fitBounds([[focusLat, focusLng], ...nearest], { padding: [40, 40], maxZoom: 11 })
+      return
+    }
+
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [34, 34], maxZoom: 8 })
     }
-  }, [vehicles, mapReady])
+  }, [vehicles, mapReady, hasFocus, focusLat, focusLng, focusPoint?.label])
 
   useEffect(() => {
     const map = leafletMapRef.current

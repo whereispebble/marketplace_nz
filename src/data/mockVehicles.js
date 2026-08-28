@@ -124,7 +124,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: 'campervan',
     price: 38500,
     mileage: 168000,
-    condition: 'WOF current',
+    condition: 'Excellent',
     wof: 'Valid until Sep 2026',
     sleeps: 2,
     belts: 3,
@@ -154,7 +154,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: 'van',
     price: 72900,
     mileage: 94000,
-    condition: 'Fresh service',
+    condition: 'Very good',
     wof: 'Valid until Jan 2027',
     sleeps: 2,
     belts: 2,
@@ -184,7 +184,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: 'motorhome',
     price: 89500,
     mileage: 76000,
-    condition: 'Dealer inspected',
+    condition: 'Excellent',
     wof: 'Valid until Nov 2026',
     sleeps: 4,
     belts: 4,
@@ -214,7 +214,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: '4x4',
     price: 24900,
     mileage: 201000,
-    condition: 'Adventure ready',
+    condition: 'Good',
     wof: 'Valid until Jul 2026',
     sleeps: 2,
     belts: 5,
@@ -243,7 +243,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: 'campervan',
     price: 46900,
     mileage: 112000,
-    condition: 'Tidy conversion',
+    condition: 'Very good',
     wof: 'Valid until Aug 2026',
     sleeps: 2,
     belts: 3,
@@ -272,7 +272,7 @@ const FEATURED_MOCK_VEHICLES = [
     vehicleType: 'campervan',
     price: 18900,
     mileage: 238000,
-    condition: 'Budget friendly',
+    condition: 'Needs work',
     wof: 'Valid until May 2026',
     sleeps: 2,
     belts: 3,
@@ -365,7 +365,7 @@ const MOCK_IMAGE_POOL = [
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80',
 ]
 
-const MOCK_CONDITIONS = ['WOF current', 'Fresh service', 'Dealer inspected', 'Tidy conversion', 'Adventure ready', 'New tyres fitted', 'Recently certified']
+const MOCK_CONDITIONS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
 const MOCK_WOF_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function createGeneratedVehicles() {
@@ -432,4 +432,51 @@ function withMockCreatedAt(vehicles) {
   })
 }
 
-export const MOCK_VEHICLES = withMockCreatedAt([...FEATURED_MOCK_VEHICLES, ...createGeneratedVehicles()])
+const MOCK_LAYOUTS = ['Rear bed', 'Rear garage', 'End lounge', 'Pop-top', 'Bunks', 'Open plan', 'Fixed double']
+const MOCK_FUELS = ['Diesel', 'Petrol', 'Hybrid', 'Electric', 'LPG']
+
+function isoDateInMonths(months) {
+  const date = new Date()
+  date.setMonth(date.getMonth() + months)
+  return date.toISOString().slice(0, 10)
+}
+
+// Rellena de forma determinista los campos que alimentan los filtros nuevos.
+// Solo toca los anuncios que no los traen, asi que un anuncio real de Supabase
+// con sus propios datos se respeta tal cual.
+function withMockSpecs(vehicles) {
+  return vehicles.map((vehicle, index) => {
+    const camper = ['campervan', 'motorhome', 'van'].includes(vehicle.vehicleType)
+    const fourWheel = vehicle.vehicleType === '4x4' || index % 6 === 0
+    const certified = Boolean(vehicle.selfContained)
+
+    return {
+      // En NZ el diesel domina en camper, pero hay bastante Hiace y Bongo de
+      // gasolina: se reparte para que el filtro tenga resultados en ambos.
+      fuel: camper || fourWheel
+        ? (index % 4 === 1 ? 'Petrol' : 'Diesel')
+        : MOCK_FUELS[index % MOCK_FUELS.length],
+      drivetrain: fourWheel ? (index % 2 === 0 ? '4WD' : 'AWD') : '2WD',
+      engineCc: 1800 + ((index * 137) % 1400),
+      seats: vehicle.belts || 4,
+      doors: camper ? 3 + (index % 2) : 4 + (index % 2),
+      // Uno de cada siete anuncios lleva el WOF caducado a proposito.
+      wofExpiry: isoDateInMonths(index % 7 === 0 ? -1 : 1 + (index % 11)),
+      regoExpiry: isoDateInMonths(index % 9 === 0 ? -2 : 1 + (index % 12)),
+      layout: camper ? MOCK_LAYOUTS[index % MOCK_LAYOUTS.length] : '',
+      lengthM: camper ? Number((4.8 + ((index % 12) * 0.22)).toFixed(1)) : Number((4.4 + ((index % 5) * 0.15)).toFixed(1)),
+      weightKg: camper ? 2400 + ((index % 10) * 220) : 1500 + ((index % 8) * 120),
+      freshWaterL: certified ? 40 + ((index % 9) * 10) : (index % 3) * 12,
+      greyWaterL: certified ? 40 + ((index % 8) * 10) : (index % 3) * 10,
+      batteryAh: certified ? 80 + ((index % 7) * 20) : (index % 4) * 25,
+      solarW: certified ? 100 + ((index % 6) * 60) : (index % 5) * 40,
+      toiletType: certified ? 'fixed' : (index % 3 === 0 ? 'portable' : 'none'),
+      // La verde exige inodoro fijo; la amarilla solo vale en sitios NZMCA.
+      scCertification: certified ? (index % 4 === 0 ? 'yellow' : 'green') : '',
+      scExpiry: certified ? isoDateInMonths(index % 11 === 0 ? -3 : 6 + (index % 30)) : null,
+      ...vehicle,
+    }
+  })
+}
+
+export const MOCK_VEHICLES = withMockSpecs(withMockCreatedAt([...FEATURED_MOCK_VEHICLES, ...createGeneratedVehicles()]))
