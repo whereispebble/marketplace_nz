@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FiArrowLeft, FiArrowRight, FiBookmark, FiGrid, FiMap, FiNavigation, FiSearch, FiSettings, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiBookmark, FiChevronDown, FiGrid, FiMap, FiSearch, FiSettings, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import ProductCard from '../components/ProductCard'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
+import LocationField from '../components/LocationField'
 import { MOCK_VEHICLES, NZ_VEHICLE_CATALOG } from '../data/mockVehicles'
 
 let leafletPromise
@@ -23,7 +24,6 @@ const DEFAULT_FILTERS = {
   drivetrain: 'all',
   minEngineCc: '',
   maxEngineCc: '',
-  minPowerKw: '',
   minSeats: '',
   minDoors: '',
   condition: 'all',
@@ -39,8 +39,6 @@ const DEFAULT_FILTERS = {
   minBatteryAh: '',
   minSolarW: '',
   toiletType: 'all',
-  scCertification: 'all',
-  scValidOnly: false,
   minPrice: '',
   maxPrice: '',
   maxMileage: '',
@@ -62,42 +60,6 @@ const DEFAULT_FILTERS = {
   },
 }
 
-// Autocompletado de ubicaciones reales via Photon (OpenStreetMap), el mismo
-// proveedor de datos que el mapa. Se limita a Nueva Zelanda por bbox + pais.
-const GEOCODER_URL = 'https://photon.komoot.io/api/'
-const NZ_BBOX = '166.0,-47.6,179.6,-34.0'
-
-function formatPlace(feature) {
-  const props = feature?.properties || {}
-  const name = props.name
-  if (!name) return null
-  const area = [props.city && props.city !== name ? props.city : null, props.district && props.district !== name ? props.district : null, props.state]
-    .filter(Boolean)
-  const unique = [...new Set(area)].slice(0, 2)
-  return {
-    id: `${props.osm_type || 'x'}${props.osm_id || Math.random()}`,
-    name,
-    label: [name, ...unique].join(', '),
-    context: unique.join(', '),
-    lng: feature.geometry?.coordinates?.[0],
-    lat: feature.geometry?.coordinates?.[1],
-  }
-}
-
-async function searchPlaces(query, signal) {
-  const url = `${GEOCODER_URL}?q=${encodeURIComponent(query)}&lang=en&limit=8&bbox=${NZ_BBOX}`
-  const response = await fetch(url, { signal })
-  if (!response.ok) throw new Error('geocoder error')
-  const data = await response.json()
-  return (data.features || [])
-    .filter(feature => (feature.properties?.countrycode || 'NZ') === 'NZ')
-    .filter(feature => ['city', 'town', 'village', 'suburb', 'locality', 'region', 'state', 'district', 'county'].includes(feature.properties?.type || 'city'))
-    .map(formatPlace)
-    .filter(Boolean)
-    .filter((place, index, all) => all.findIndex(other => other.label === place.label) === index)
-    .slice(0, 6)
-}
-
 // Sugerencias rapidas del hero: mismas en movil y escritorio.
 const QUICK_SEARCHES = [
   { label: 'Campervan', filters: { vehicleType: 'campervan' } },
@@ -109,9 +71,15 @@ const QUICK_SEARCHES = [
 // fecha cuando no la hay, asi que no hace falta una opcion "mas cerca" aparte.
 const SORT_OPTIONS = [
   { id: 'recent', label: 'Best match' },
+  { id: 'newest', label: 'Newest listings' },
   { id: 'price_asc', label: 'Price: low to high' },
   { id: 'price_desc', label: 'Price: high to low' },
   { id: 'mileage_asc', label: 'Lowest mileage' },
+  { id: 'mileage_desc', label: 'Highest mileage' },
+  { id: 'year_desc', label: 'Year: newest first' },
+  { id: 'year_asc', label: 'Year: oldest first' },
+  { id: 'sleeps_desc', label: 'Most berths' },
+  { id: 'wof_desc', label: 'Longest WOF left' },
 ]
 
 const FUEL_FILTERS = ['Diesel', 'Petrol', 'Hybrid', 'Electric', 'LPG']
@@ -147,15 +115,6 @@ const TOILET_FILTERS = [
   { id: 'fixed', label: 'Fixed toilet' },
   { id: 'portable', label: 'Portable toilet' },
   { id: 'none', label: 'No toilet' },
-]
-
-// Desde el 6 de junio de 2026 solo la tarjeta verde sirve para freedom camping.
-const SC_CERTIFICATION_FILTERS = [
-  { id: 'all', label: 'Any' },
-  { id: 'green', label: 'Green card (freedom camping)' },
-  { id: 'yellow', label: 'Yellow card (NZMCA sites)' },
-  { id: 'any', label: 'Any certification' },
-  { id: 'none', label: 'Not certified' },
 ]
 
 const VEHICLE_TYPE_FILTERS = [
@@ -345,13 +304,35 @@ function matchesToilet(vehicle, rule) {
   return raw.includes('portable')
 }
 
-function matchesCertification(vehicle, rule) {
-  if (rule === 'all') return true
-  const raw = normalise(vehicle.scCertification)
-  const certified = raw === 'green' || raw === 'yellow'
-  if (rule === 'none') return !certified
-  if (rule === 'any') return certified
-  return raw === rule
+function numberOrNull(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+function compareAscending(first, second) {
+  if (first === null && second === null) return 0
+  if (first === null) return 1
+  if (second === null) return -1
+  return first - second
+}
+
+function compareDescending(first, second) {
+  if (first === null && second === null) return 0
+  if (first === null) return 1
+  if (second === null) return -1
+  return second - first
+}
+
+const SORTERS = {
+  newest: (a, b) => compareDescending(numberOrNull(new Date(a.created_at || 0).getTime()), numberOrNull(new Date(b.created_at || 0).getTime())),
+  price_asc: (a, b) => compareAscending(numberOrNull(a.price), numberOrNull(b.price)),
+  price_desc: (a, b) => compareDescending(numberOrNull(a.price), numberOrNull(b.price)),
+  mileage_asc: (a, b) => compareAscending(numberOrNull(a.mileage), numberOrNull(b.mileage)),
+  mileage_desc: (a, b) => compareDescending(numberOrNull(a.mileage), numberOrNull(b.mileage)),
+  year_desc: (a, b) => compareDescending(vehicleYear(a), vehicleYear(b)),
+  year_asc: (a, b) => compareAscending(vehicleYear(a), vehicleYear(b)),
+  sleeps_desc: (a, b) => compareDescending(numberOrNull(a.sleeps), numberOrNull(b.sleeps)),
+  wof_desc: (a, b) => compareDescending(monthsUntil(a.wofExpiry), monthsUntil(b.wofExpiry)),
 }
 
 function vehicleHasAmenity(vehicle, amenity) {
@@ -459,7 +440,6 @@ function filterVehicles(vehicles, filters) {
   const maxYear = parsePositiveNumber(filters.maxYear)
   const minEngineCc = parsePositiveNumber(filters.minEngineCc)
   const maxEngineCc = parsePositiveNumber(filters.maxEngineCc)
-  const minPowerKw = parsePositiveNumber(filters.minPowerKw)
   const minSeats = parsePositiveNumber(filters.minSeats)
   const minDoors = parsePositiveNumber(filters.minDoors)
   const minLengthM = parsePositiveNumber(filters.minLengthM)
@@ -501,7 +481,6 @@ function filterVehicles(vehicles, filters) {
     .filter(vehicle => matchesDrivetrain(vehicle, filters.drivetrain))
     .filter(vehicle => minEngineCc === null || Number(vehicle.engineCc || 0) >= minEngineCc)
     .filter(vehicle => maxEngineCc === null || (Number(vehicle.engineCc || 0) > 0 && Number(vehicle.engineCc) <= maxEngineCc))
-    .filter(vehicle => minPowerKw === null || Number(vehicle.powerKw || 0) >= minPowerKw)
     .filter(vehicle => minSeats === null || Number(vehicle.seats || vehicle.belts || 0) >= minSeats)
     .filter(vehicle => minDoors === null || Number(vehicle.doors || 0) >= minDoors)
     .filter(vehicle => filters.condition === 'all' || normalise(vehicle.condition) === normalise(filters.condition))
@@ -518,8 +497,6 @@ function filterVehicles(vehicles, filters) {
     .filter(vehicle => minBatteryAh === null || Number(vehicle.batteryAh || 0) >= minBatteryAh)
     .filter(vehicle => minSolarW === null || Number(vehicle.solarW || 0) >= minSolarW)
     .filter(vehicle => matchesToilet(vehicle, filters.toiletType))
-    .filter(vehicle => matchesCertification(vehicle, filters.scCertification))
-    .filter(vehicle => !filters.scValidOnly || matchesValidity(vehicle.scExpiry, 'valid'))
     .filter(vehicle => {
       if (!filters.location) return true
       // Una ubicacion elegida en el desplegable tiene coordenadas: no descarta
@@ -530,20 +507,14 @@ function filterVehicles(vehicles, filters) {
     .filter(vehicle => selectedAmenities.every(amenity => vehicleHasAmenity(vehicle, amenity)))
     .filter(vehicle => fuzzyIncludes(vehicleSearchText(vehicle), filters.search))
     .sort((a, b) => {
-      if (filters.sortBy === 'price_asc') return a.price - b.price
-      if (filters.sortBy === 'price_desc') return b.price - a.price
-      if (filters.sortBy === 'mileage_asc') return a.mileage - b.mileage
-      // Sin un orden explicito: de mas cerca a mas lejos si hay una ubicacion
-      // de referencia, y si no se deja el orden de llegada. 'distance' se
-      // sigue aceptando por las busquedas guardadas antiguas.
+      const sorter = SORTERS[filters.sortBy]
+      if (sorter) return sorter(a, b)
+      // Best match: de mas cerca a mas lejos si hay una ubicacion de
+      // referencia, y si no se deja el orden de llegada. 'distance' se sigue
+      // aceptando por las busquedas guardadas antiguas.
       const from = origin || filters.sortPoint
       if (!from) return 0
-      const first = distanceKm(from, a)
-      const second = distanceKm(from, b)
-      if (first === null && second === null) return 0
-      if (first === null) return 1
-      if (second === null) return -1
-      return first - second
+      return compareAscending(distanceKm(from, a), distanceKm(from, b))
     })
 }
 
@@ -574,7 +545,6 @@ function activeFilterChips(filters) {
   if (filters.fuel !== 'all') chips.push({ id: 'fuel', label: filters.fuel })
   if (filters.drivetrain !== 'all') chips.push({ id: 'drivetrain', label: DRIVETRAIN_FILTERS.find(item => item.id === filters.drivetrain)?.label || filters.drivetrain })
   if (filters.minEngineCc || filters.maxEngineCc) chips.push({ id: 'engineCc', label: `${filters.minEngineCc || '0'} - ${filters.maxEngineCc || 'any'} cc` })
-  if (filters.minPowerKw) chips.push({ id: 'minPowerKw', label: `${filters.minPowerKw}+ kW` })
   if (filters.minSeats) chips.push({ id: 'minSeats', label: `${filters.minSeats}+ seats` })
   if (filters.minDoors) chips.push({ id: 'minDoors', label: `${filters.minDoors}+ doors` })
   if (filters.condition !== 'all') chips.push({ id: 'condition', label: filters.condition })
@@ -589,8 +559,6 @@ function activeFilterChips(filters) {
   if (filters.minBatteryAh) chips.push({ id: 'minBatteryAh', label: `${filters.minBatteryAh}+ Ah` })
   if (filters.minSolarW) chips.push({ id: 'minSolarW', label: `${filters.minSolarW}+ W solar` })
   if (filters.toiletType !== 'all') chips.push({ id: 'toiletType', label: TOILET_FILTERS.find(item => item.id === filters.toiletType)?.label })
-  if (filters.scCertification !== 'all') chips.push({ id: 'scCertification', label: SC_CERTIFICATION_FILTERS.find(item => item.id === filters.scCertification)?.label })
-  if (filters.scValidOnly) chips.push({ id: 'scValidOnly', label: 'Certification valid' })
   if (filters.location) chips.push({ id: 'location', label: filters.location })
   AMENITY_FILTERS.forEach(amenity => {
     if (filters.amenities?.[amenity.id]) chips.push({ id: amenity.id, label: amenity.label })
@@ -616,7 +584,6 @@ export default function Home() {
   const [drivetrain, setDrivetrain] = useState(restoredDraft.drivetrain)
   const [minEngineCc, setMinEngineCc] = useState(restoredDraft.minEngineCc)
   const [maxEngineCc, setMaxEngineCc] = useState(restoredDraft.maxEngineCc)
-  const [minPowerKw, setMinPowerKw] = useState(restoredDraft.minPowerKw)
   const [minSeats, setMinSeats] = useState(restoredDraft.minSeats)
   const [minDoors, setMinDoors] = useState(restoredDraft.minDoors)
   const [condition, setCondition] = useState(restoredDraft.condition)
@@ -632,8 +599,6 @@ export default function Home() {
   const [minBatteryAh, setMinBatteryAh] = useState(restoredDraft.minBatteryAh)
   const [minSolarW, setMinSolarW] = useState(restoredDraft.minSolarW)
   const [toiletType, setToiletType] = useState(restoredDraft.toiletType)
-  const [scCertification, setScCertification] = useState(restoredDraft.scCertification)
-  const [scValidOnly, setScValidOnly] = useState(restoredDraft.scValidOnly)
   // Posicion del dispositivo: solo se usa para ordenar por cercania, no se
   // guarda con los filtros.
   const [devicePoint, setDevicePoint] = useState(null)
@@ -709,8 +674,7 @@ export default function Home() {
     drivetrain,
     minEngineCc,
     maxEngineCc,
-    minPowerKw,
-    minSeats,
+      minSeats,
     minDoors,
     condition,
     wofValidity,
@@ -725,8 +689,6 @@ export default function Home() {
     minBatteryAh,
     minSolarW,
     toiletType,
-    scCertification,
-    scValidOnly,
     minPrice,
     maxPrice,
     maxMileage,
@@ -737,7 +699,7 @@ export default function Home() {
     locationPoint,
     sortBy,
     amenities,
-  }), [search, vehicleType, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minPowerKw, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, scCertification, scValidOnly, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, sortBy, amenities])
+  }), [search, vehicleType, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, sortBy, amenities])
 
   const filtered = useMemo(() => (
     filterVehicles(vehicles, {
@@ -751,8 +713,7 @@ export default function Home() {
       drivetrain,
       minEngineCc,
       maxEngineCc,
-      minPowerKw,
-      minSeats,
+        minSeats,
       minDoors,
       condition,
       wofValidity,
@@ -767,8 +728,6 @@ export default function Home() {
       minBatteryAh,
       minSolarW,
       toiletType,
-      scCertification,
-      scValidOnly,
       minPrice,
       maxPrice,
       maxMileage,
@@ -781,7 +740,7 @@ export default function Home() {
       sortBy,
       sortPoint: devicePoint,
     })
-  ), [vehicles, devicePoint, sortBy, appliedFilters, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minPowerKw, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, scCertification, scValidOnly, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, amenities])
+  ), [vehicles, devicePoint, sortBy, appliedFilters, make, model, minYear, maxYear, transmission, fuel, drivetrain, minEngineCc, maxEngineCc, minSeats, minDoors, condition, wofValidity, regoValidity, layout, minLengthM, maxLengthM, maxWeightKg, carLicenceOnly, minFreshWaterL, minGreyWaterL, minBatteryAh, minSolarW, toiletType, minPrice, maxPrice, maxMileage, minSleeps, minBelts, selfContainedOnly, location, locationPoint, amenities])
 
   const appliedChips = useMemo(() => activeFilterChips(appliedFilters), [appliedFilters])
 
@@ -846,7 +805,6 @@ export default function Home() {
     drivetrain: setDrivetrain,
     condition: setCondition,
     layout: setLayout,
-    scCertification: setScCertification,
     minPrice: setMinPrice,
     maxPrice: setMaxPrice,
     maxMileage: setMaxMileage,
@@ -872,7 +830,6 @@ export default function Home() {
     search: setSearch,
     fuel: () => setFuel('all'),
     drivetrain: () => setDrivetrain('all'),
-    minPowerKw: setMinPowerKw,
     minSeats: setMinSeats,
     minDoors: setMinDoors,
     condition: () => setCondition('all'),
@@ -886,8 +843,6 @@ export default function Home() {
     minBatteryAh: setMinBatteryAh,
     minSolarW: setMinSolarW,
     toiletType: () => setToiletType('all'),
-    scCertification: () => setScCertification('all'),
-    scValidOnly: () => setScValidOnly(false),
     vehicleType: () => setVehicleType(DEFAULT_FILTERS.vehicleType),
     make: setMake,
     model: setModel,
@@ -966,7 +921,6 @@ export default function Home() {
   const handleDrivetrainChange = handleFilterChange(setDrivetrain)
   const handleMinEngineCcChange = handleFilterChange(setMinEngineCc)
   const handleMaxEngineCcChange = handleFilterChange(setMaxEngineCc)
-  const handleMinPowerKwChange = handleFilterChange(setMinPowerKw)
   const handleMinSeatsChange = handleFilterChange(setMinSeats)
   const handleMinDoorsChange = handleFilterChange(setMinDoors)
   const handleConditionChange = handleFilterChange(setCondition)
@@ -981,7 +935,6 @@ export default function Home() {
   const handleMinBatteryChange = handleFilterChange(setMinBatteryAh)
   const handleMinSolarChange = handleFilterChange(setMinSolarW)
   const handleToiletTypeChange = handleFilterChange(setToiletType)
-  const handleScCertificationChange = handleFilterChange(setScCertification)
 
   // Geolocalizacion del navegador para ordenar por cercania sin escribir ciudad.
   const useDeviceLocation = () => {
@@ -1012,7 +965,7 @@ export default function Home() {
 
   const handleLocationSelect = place => {
     setLocation(place.label)
-    setLocationPoint({ label: place.label, lat: place.lat, lng: place.lng })
+    setLocationPoint({ label: place.label, region: place.region, lat: place.lat, lng: place.lng })
   }
 
   const handleAmenityChange = amenityId => {
@@ -1031,7 +984,6 @@ export default function Home() {
     setDrivetrain('all')
     setMinEngineCc('')
     setMaxEngineCc('')
-    setMinPowerKw('')
     setMinSeats('')
     setMinDoors('')
     setCondition('all')
@@ -1047,8 +999,6 @@ export default function Home() {
     setMinBatteryAh('')
     setMinSolarW('')
     setToiletType('all')
-    setScCertification('all')
-    setScValidOnly(false)
     setMinPrice('')
     setMaxPrice('')
     setMaxMileage('')
@@ -1118,7 +1068,6 @@ export default function Home() {
     setDrivetrain(next.drivetrain)
     setMinEngineCc(next.minEngineCc)
     setMaxEngineCc(next.maxEngineCc)
-    setMinPowerKw(next.minPowerKw)
     setMinSeats(next.minSeats)
     setMinDoors(next.minDoors)
     setCondition(next.condition)
@@ -1134,8 +1083,6 @@ export default function Home() {
     setMinBatteryAh(next.minBatteryAh)
     setMinSolarW(next.minSolarW)
     setToiletType(next.toiletType)
-    setScCertification(next.scCertification)
-    setScValidOnly(next.scValidOnly)
     setMinPrice(next.minPrice)
     setMaxPrice(next.maxPrice)
     setMaxMileage(next.maxMileage)
@@ -1227,15 +1174,12 @@ export default function Home() {
           <div>
             <h2 className="section-title">{filtered.length} vehicles</h2>
           </div>
-          <label className="results-sort">
-            <span>Sort</span>
-            <select value={sortBy} onChange={event => setSortBy(event.target.value)} aria-label="Sort results">
-              {SORT_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          </label>
+          <SortMenu value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} />
           <div className="segmented-control" aria-label="View mode">
-            <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
-            <button className={viewMode === 'map' ? 'is-active' : ''} type="button" onClick={() => { setViewMode('map'); scrollToResults() }}><FiMap />Map</button>
+            <div className="view-toggle" role="group" aria-label="Results view">
+              <button className={viewMode === 'grid' ? 'is-active' : ''} type="button" aria-pressed={viewMode === 'grid'} onClick={() => setViewMode('grid')}><FiGrid />Grid</button>
+              <button className={viewMode === 'map' ? 'is-active' : ''} type="button" aria-pressed={viewMode === 'map'} onClick={() => { setViewMode('map'); scrollToResults() }}><FiMap />Map</button>
+            </div>
             <button className="results-filter-button" type="button" onClick={() => setAdvancedFiltersOpen(true)}>
               <FiSettings />
               Filters
@@ -1264,7 +1208,7 @@ export default function Home() {
               </div>
             </div>
           ) : viewMode === 'map' ? (
-            <VehicleMap vehicles={filtered} />
+            <VehicleMap vehicles={filtered} focusPoint={locationPoint} />
           ) : (
             <>
               <div className="products-grid">
@@ -1292,7 +1236,6 @@ export default function Home() {
           drivetrain={drivetrain}
           minEngineCc={minEngineCc}
           maxEngineCc={maxEngineCc}
-          minPowerKw={minPowerKw}
           minSeats={minSeats}
           minDoors={minDoors}
           condition={condition}
@@ -1308,8 +1251,6 @@ export default function Home() {
           minBatteryAh={minBatteryAh}
           minSolarW={minSolarW}
           toiletType={toiletType}
-          scCertification={scCertification}
-          scValidOnly={scValidOnly}
           sortBy={sortBy}
           locatingDevice={locatingDevice}
           minPrice={minPrice}
@@ -1334,7 +1275,6 @@ export default function Home() {
           onDrivetrainChange={handleDrivetrainChange}
           onMinEngineCcChange={handleMinEngineCcChange}
           onMaxEngineCcChange={handleMaxEngineCcChange}
-          onMinPowerKwChange={handleMinPowerKwChange}
           onMinSeatsChange={handleMinSeatsChange}
           onMinDoorsChange={handleMinDoorsChange}
           onConditionChange={handleConditionChange}
@@ -1350,8 +1290,6 @@ export default function Home() {
           onMinBatteryChange={handleMinBatteryChange}
           onMinSolarChange={handleMinSolarChange}
           onToiletTypeChange={handleToiletTypeChange}
-          onScCertificationChange={handleScCertificationChange}
-          onScValidChange={setScValidOnly}
           onSortByChange={setSortBy}
           onUseDeviceLocation={useDeviceLocation}
           onMinPriceChange={handleMinPriceChange}
@@ -1380,162 +1318,6 @@ export default function Home() {
   )
 }
 
-// Sugerencias de ubicaciones reales de NZ: no salen de los anuncios, se piden
-// al geocodificador mientras se escribe.
-function LocationAutocomplete({ idPrefix, value, selected, onChange, onSelect, onUseMyLocation, locating }) {
-  const [suggestions, setSuggestions] = useState([])
-  const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState('idle')
-  const [highlighted, setHighlighted] = useState(-1)
-  const containerRef = useRef(null)
-  const skipNextQuery = useRef(false)
-  const listId = `${idPrefix}-location-suggestions`
-
-  useEffect(() => {
-    if (skipNextQuery.current) {
-      skipNextQuery.current = false
-      return undefined
-    }
-
-    const query = value.trim()
-    if (query.length < 2) {
-      setSuggestions([])
-      setStatus('idle')
-      return undefined
-    }
-
-    const controller = new AbortController()
-    // Debounce: una peticion por pausa de escritura, no por tecla.
-    const timer = setTimeout(async () => {
-      setStatus('loading')
-      try {
-        const places = await searchPlaces(query, controller.signal)
-        setSuggestions(places)
-        setHighlighted(-1)
-        setStatus(places.length === 0 ? 'empty' : 'idle')
-        setOpen(true)
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        setSuggestions([])
-        setStatus('error')
-        setOpen(true)
-      }
-    }, 300)
-
-    return () => {
-      clearTimeout(timer)
-      controller.abort()
-    }
-  }, [value])
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (!containerRef.current?.contains(event.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const close = () => {
-    setSuggestions([])
-    setOpen(false)
-    setHighlighted(-1)
-    setStatus('idle')
-  }
-
-  const choose = place => {
-    skipNextQuery.current = true
-    onSelect(place)
-    close()
-  }
-
-  const chooseMyLocation = () => {
-    skipNextQuery.current = true
-    onUseMyLocation()
-    close()
-  }
-
-  // La opcion "My location" ocupa el indice 0; las sugerencias van detras.
-  const rows = [null, ...suggestions]
-
-  const handleKeyDown = event => {
-    if (!open) return
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      setHighlighted(current => (current + 1) % rows.length)
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setHighlighted(current => (current <= 0 ? rows.length - 1 : current - 1))
-    } else if (event.key === 'Enter' && highlighted >= 0) {
-      event.preventDefault()
-      if (highlighted === 0) chooseMyLocation()
-      else choose(rows[highlighted])
-    } else if (event.key === 'Escape') {
-      setOpen(false)
-    }
-  }
-
-  return (
-    <div className="field-group location-autocomplete" ref={containerRef}>
-      <span>Location</span>
-      <input
-        className="field"
-        placeholder="Search a New Zealand town or city"
-        value={value}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listId}
-        onChange={event => onChange(event.target.value)}
-        onFocus={() => setOpen(true)}
-        onKeyDown={handleKeyDown}
-      />
-
-      {open && (
-        <ul className="location-suggestions" id={listId} role="listbox">
-          <li>
-            <button
-              type="button"
-              role="option"
-              aria-selected={highlighted === 0}
-              className={`location-suggestion location-suggestion-device ${highlighted === 0 ? 'is-highlighted' : ''}`}
-              disabled={locating}
-              onMouseEnter={() => setHighlighted(0)}
-              onClick={chooseMyLocation}
-            >
-              <FiNavigation />
-              <strong>{locating ? 'Locating...' : 'My location'}</strong>
-              <span>Use the position of this device</span>
-            </button>
-          </li>
-          {status === 'loading' && <li className="location-suggestion-note">Searching...</li>}
-          {status === 'empty' && <li className="location-suggestion-note">No matching places in New Zealand</li>}
-          {status === 'error' && <li className="location-suggestion-note">Location search unavailable right now</li>}
-          {suggestions.map((place, index) => (
-            <li key={place.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index + 1 === highlighted}
-                className={`location-suggestion ${index + 1 === highlighted ? 'is-highlighted' : ''}`}
-                onMouseEnter={() => setHighlighted(index + 1)}
-                onClick={() => choose(place)}
-              >
-                <strong>{place.name}</strong>
-                {place.context && <span>{place.context}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {value.trim().length >= 2 && !selected && !open && (
-        <small className="location-hint">Pick a suggestion to filter by distance.</small>
-      )}
-    </div>
-  )
-}
-
 function AdvancedFilterFields({
   idPrefix,
   vehicleType,
@@ -1548,7 +1330,6 @@ function AdvancedFilterFields({
   drivetrain,
   minEngineCc,
   maxEngineCc,
-  minPowerKw,
   minSeats,
   minDoors,
   condition,
@@ -1564,8 +1345,6 @@ function AdvancedFilterFields({
   minBatteryAh,
   minSolarW,
   toiletType,
-  scCertification,
-  scValidOnly,
   sortBy,
   locatingDevice,
   minPrice,
@@ -1590,7 +1369,6 @@ function AdvancedFilterFields({
   onDrivetrainChange,
   onMinEngineCcChange,
   onMaxEngineCcChange,
-  onMinPowerKwChange,
   onMinSeatsChange,
   onMinDoorsChange,
   onConditionChange,
@@ -1606,8 +1384,6 @@ function AdvancedFilterFields({
   onMinBatteryChange,
   onMinSolarChange,
   onToiletTypeChange,
-  onScCertificationChange,
-  onScValidChange,
   onSortByChange,
   onUseDeviceLocation,
   onMinPriceChange,
@@ -1688,10 +1464,11 @@ function AdvancedFilterFields({
 
       <div className="advanced-filter-group">
         <strong>Location</strong>
-        <LocationAutocomplete
+        <LocationField
           idPrefix={idPrefix}
           value={location}
           selected={locationPoint}
+          hint="Pick a suggestion to sort by distance."
           locating={locatingDevice}
           onChange={onLocationChange}
           onSelect={onLocationSelect}
@@ -1775,10 +1552,6 @@ function AdvancedFilterFields({
             <input className="field" inputMode="numeric" placeholder="3000" value={maxEngineCc} onChange={event => onMaxEngineCcChange(event.target.value)} />
           </label>
         </div>
-        <label className="field-group">
-          <span>Power min (kW)</span>
-          <input className="field" inputMode="numeric" placeholder="80" value={minPowerKw} onChange={event => onMinPowerKwChange(event.target.value)} />
-        </label>
         <div className="dual-field dual-field-inline">
           <label className="field-group">
             <span>Seats min</span>
@@ -1870,23 +1643,10 @@ function AdvancedFilterFields({
 
       <div className="advanced-filter-group">
         <strong>Self-containment</strong>
-        <label className="field-group">
-          <span>Certification</span>
-          <select className="field" value={scCertification} onChange={event => onScCertificationChange(event.target.value)}>
-            {SC_CERTIFICATION_FILTERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
-        </label>
-        <label className="toggle-row">
-          <input type="checkbox" checked={scValidOnly} onChange={event => onScValidChange(event.target.checked)} />
-          Certification still valid
-        </label>
         <label className="toggle-row">
           <input type="checkbox" checked={selfContainedOnly} onChange={event => onSelfContainedChange(event.target.checked)} />
           Self-contained only
         </label>
-        <p className="filter-note">
-          Since 6 June 2026 only the green card is accepted for freedom camping, and it requires a fixed toilet.
-        </p>
       </div>
 
       <div className="advanced-filter-group">
@@ -2079,7 +1839,67 @@ function PaginationBar({ currentPage, totalPages, totalItems, onPrevious, onNext
   )
 }
 
-function VehicleMap({ vehicles }) {
+function SortMenu({ value, options, onChange }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+  const active = options.find(option => option.id === value) || options[0]
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const handleClickOutside = event => {
+      if (!containerRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="results-sort" ref={containerRef}>
+      <button
+        className="results-sort-trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Sort results, currently ${active.label}`}
+        onClick={() => setOpen(current => !current)}
+      >
+        <FiChevronDown className="results-sort-caret" />
+        <span className="results-sort-label">Sort</span>
+        <span className="results-sort-value">{active.label}</span>
+      </button>
+
+      {open && (
+        <ul className="results-sort-menu" role="listbox">
+          {options.map(option => (
+            <li key={option.id}>
+              <button
+                className={`results-sort-option ${option.id === value ? 'is-active' : ''}`}
+                type="button"
+                role="option"
+                aria-selected={option.id === value}
+                onClick={() => { onChange(option.id); setOpen(false) }}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function VehicleMap({ vehicles, focusPoint }) {
   const mapRef = useRef(null)
   const leafletMapRef = useRef(null)
   const markerLayerRef = useRef(null)
@@ -2137,6 +1957,10 @@ function VehicleMap({ vehicles }) {
     }
   }, [])
 
+  const focusLat = Number(focusPoint?.lat)
+  const focusLng = Number(focusPoint?.lng)
+  const hasFocus = Number.isFinite(focusLat) && Number.isFinite(focusLng)
+
   useEffect(() => {
     const L = window.L
     const map = leafletMapRef.current
@@ -2175,10 +1999,38 @@ function VehicleMap({ vehicles }) {
       bounds.push([vehicle.lat, vehicle.lng])
     })
 
+    if (hasFocus) {
+      const focus = { lat: focusLat, lng: focusLng }
+
+      L.circleMarker([focusLat, focusLng], {
+        className: 'swapy-map-focus',
+        radius: 9,
+        weight: 3,
+        color: '#14bc7d',
+        fillColor: '#14bc7d',
+        fillOpacity: 0.25,
+      })
+        .addTo(layer)
+        .bindTooltip(escapeHtml(focusPoint.label || 'Selected location'), { direction: 'top', offset: [0, -10] })
+
+      // El encuadre cubre la ubicacion elegida y los anuncios mas cercanos, no
+      // todo el pais: asi se ve el sitio buscado y algo de oferta alrededor.
+      const nearest = vehicles
+        .filter(vehicle => vehicle.lat && vehicle.lng)
+        .map(vehicle => ({ vehicle, distance: distanceKm(focus, vehicle) }))
+        .filter(entry => entry.distance !== null)
+        .sort((first, second) => first.distance - second.distance)
+        .slice(0, 5)
+        .map(entry => [entry.vehicle.lat, entry.vehicle.lng])
+
+      map.fitBounds([[focusLat, focusLng], ...nearest], { padding: [40, 40], maxZoom: 11 })
+      return
+    }
+
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [34, 34], maxZoom: 8 })
     }
-  }, [vehicles, mapReady])
+  }, [vehicles, mapReady, hasFocus, focusLat, focusLng, focusPoint?.label])
 
   useEffect(() => {
     const map = leafletMapRef.current

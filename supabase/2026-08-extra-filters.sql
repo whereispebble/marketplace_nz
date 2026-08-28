@@ -9,7 +9,6 @@ alter table public.products
   add column if not exists fuel text,
   add column if not exists drivetrain text,
   add column if not exists "engineCc" integer,
-  add column if not exists "powerKw" integer,
   add column if not exists seats integer,
   add column if not exists doors integer,
 

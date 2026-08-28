@@ -458,7 +458,6 @@ function withMockSpecs(vehicles) {
         : MOCK_FUELS[index % MOCK_FUELS.length],
       drivetrain: fourWheel ? (index % 2 === 0 ? '4WD' : 'AWD') : '2WD',
       engineCc: 1800 + ((index * 137) % 1400),
-      powerKw: 70 + ((index * 7) % 80),
       seats: vehicle.belts || 4,
       doors: camper ? 3 + (index % 2) : 4 + (index % 2),
       // Uno de cada siete anuncios lleva el WOF caducado a proposito.
