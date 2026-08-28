@@ -10,6 +10,21 @@ import { VEHICLE_TYPES } from '../data/mockVehicles'
 import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
 const CONDITIONS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
+const FUELS = ['Diesel', 'Petrol', 'Hybrid', 'Electric', 'LPG']
+const DRIVETRAINS = ['2WD', '4WD', 'AWD']
+const LAYOUTS = ['Rear bed', 'Rear garage', 'End lounge', 'Pop-top', 'Bunks', 'Open plan', 'Fixed double']
+const TOILET_TYPES = [
+  { id: '', name: 'Select toilet' },
+  { id: 'none', name: 'No toilet' },
+  { id: 'portable', name: 'Portable toilet' },
+  { id: 'fixed', name: 'Fixed toilet' },
+]
+// La tarjeta verde es la unica valida para freedom camping desde el 6/6/2026.
+const SC_CERTIFICATIONS = [
+  { id: '', name: 'Not certified' },
+  { id: 'green', name: 'Green card (freedom camping)' },
+  { id: 'yellow', name: 'Yellow card (NZMCA)' },
+]
 const LISTING_STATUSES = [
   { id: 'active', name: 'Active' },
   { id: 'draft', name: 'Draft' },
@@ -75,6 +90,24 @@ export default function NewProduct() {
     year: '',
     mileage: '',
     wof: '',
+    wofExpiry: '',
+    regoExpiry: '',
+    fuel: '',
+    drivetrain: '',
+    engineCc: '',
+    powerKw: '',
+    seats: '',
+    doors: '',
+    layout: '',
+    lengthM: '',
+    weightKg: '',
+    freshWaterL: '',
+    greyWaterL: '',
+    batteryAh: '',
+    solarW: '',
+    toiletType: '',
+    scCertification: '',
+    scExpiry: '',
     sleeps: '',
     belts: '',
     selfContained: false,
@@ -111,6 +144,24 @@ export default function NewProduct() {
     year: form.year ? Number(form.year) : null,
     mileage: Number(form.mileage || 0),
     wof: form.wof,
+    wofExpiry: form.wofExpiry || null,
+    regoExpiry: form.regoExpiry || null,
+    fuel: form.fuel,
+    drivetrain: form.drivetrain,
+    engineCc: form.engineCc ? Number(form.engineCc) : null,
+    powerKw: form.powerKw ? Number(form.powerKw) : null,
+    seats: form.seats ? Number(form.seats) : null,
+    doors: form.doors ? Number(form.doors) : null,
+    layout: form.layout,
+    lengthM: form.lengthM ? Number(form.lengthM) : null,
+    weightKg: form.weightKg ? Number(form.weightKg) : null,
+    freshWaterL: form.freshWaterL ? Number(form.freshWaterL) : null,
+    greyWaterL: form.greyWaterL ? Number(form.greyWaterL) : null,
+    batteryAh: form.batteryAh ? Number(form.batteryAh) : null,
+    solarW: form.solarW ? Number(form.solarW) : null,
+    toiletType: form.toiletType,
+    scCertification: form.scCertification,
+    scExpiry: form.scExpiry || null,
     sleeps: Number(form.sleeps || 0),
     belts: Number(form.belts || 0),
     selfContained: form.selfContained,
@@ -235,6 +286,24 @@ export default function NewProduct() {
       year: form.year ? Number(form.year) : null,
       mileage: form.mileage ? Number(form.mileage) : null,
       wof: form.wof.trim(),
+      wofExpiry: form.wofExpiry || null,
+      regoExpiry: form.regoExpiry || null,
+      fuel: form.fuel || null,
+      drivetrain: form.drivetrain || null,
+      engineCc: form.engineCc ? Number(form.engineCc) : null,
+      powerKw: form.powerKw ? Number(form.powerKw) : null,
+      seats: form.seats ? Number(form.seats) : null,
+      doors: form.doors ? Number(form.doors) : null,
+      layout: form.layout || null,
+      lengthM: form.lengthM ? Number(form.lengthM) : null,
+      weightKg: form.weightKg ? Number(form.weightKg) : null,
+      freshWaterL: form.freshWaterL ? Number(form.freshWaterL) : null,
+      greyWaterL: form.greyWaterL ? Number(form.greyWaterL) : null,
+      batteryAh: form.batteryAh ? Number(form.batteryAh) : null,
+      solarW: form.solarW ? Number(form.solarW) : null,
+      toiletType: form.toiletType || null,
+      scCertification: form.scCertification || null,
+      scExpiry: form.scExpiry || null,
       sleeps: form.sleeps ? Number(form.sleeps) : null,
       belts: form.belts ? Number(form.belts) : null,
       selfContained: form.selfContained,
@@ -431,6 +500,52 @@ export default function NewProduct() {
                 <FieldError errors={fieldErrors} name="belts">
                   <label className="field-group"><span>Seat belts</span><input className={fieldErrorClass(fieldErrors, 'belts')} name="belts" type="number" min="0" placeholder="3" value={form.belts} onChange={handleChange} /></label>
                 </FieldError>
+                <label className="field-group">
+                  <span>Fuel</span>
+                  <select className="field" name="fuel" value={form.fuel} onChange={handleChange}>
+                    <option value="">Select fuel</option>
+                    {FUELS.map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+                <label className="field-group">
+                  <span>Drivetrain</span>
+                  <select className="field" name="drivetrain" value={form.drivetrain} onChange={handleChange}>
+                    <option value="">Select drivetrain</option>
+                    {DRIVETRAINS.map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+                <label className="field-group"><span>Engine (cc)</span><input className="field" name="engineCc" type="number" min="0" placeholder="2982" value={form.engineCc} onChange={handleChange} /></label>
+                <label className="field-group"><span>Power (kW)</span><input className="field" name="powerKw" type="number" min="0" placeholder="140" value={form.powerKw} onChange={handleChange} /></label>
+                <label className="field-group"><span>Seats</span><input className="field" name="seats" type="number" min="0" placeholder="5" value={form.seats} onChange={handleChange} /></label>
+                <label className="field-group"><span>Doors</span><input className="field" name="doors" type="number" min="0" placeholder="4" value={form.doors} onChange={handleChange} /></label>
+                <label className="field-group"><span>WOF expiry</span><input className="field" name="wofExpiry" type="date" value={form.wofExpiry} onChange={handleChange} /></label>
+                <label className="field-group"><span>Rego expiry</span><input className="field" name="regoExpiry" type="date" value={form.regoExpiry} onChange={handleChange} /></label>
+                <label className="field-group">
+                  <span>Layout</span>
+                  <select className="field" name="layout" value={form.layout} onChange={handleChange}>
+                    <option value="">Select layout</option>
+                    {LAYOUTS.map(item => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+                <label className="field-group"><span>Length (m)</span><input className="field" name="lengthM" type="number" min="0" step="0.1" placeholder="5.4" value={form.lengthM} onChange={handleChange} /></label>
+                <label className="field-group"><span>Weight (kg)</span><input className="field" name="weightKg" type="number" min="0" placeholder="3200" value={form.weightKg} onChange={handleChange} /></label>
+                <label className="field-group"><span>Fresh water (L)</span><input className="field" name="freshWaterL" type="number" min="0" placeholder="80" value={form.freshWaterL} onChange={handleChange} /></label>
+                <label className="field-group"><span>Grey water (L)</span><input className="field" name="greyWaterL" type="number" min="0" placeholder="80" value={form.greyWaterL} onChange={handleChange} /></label>
+                <label className="field-group"><span>Battery (Ah)</span><input className="field" name="batteryAh" type="number" min="0" placeholder="100" value={form.batteryAh} onChange={handleChange} /></label>
+                <label className="field-group"><span>Solar (W)</span><input className="field" name="solarW" type="number" min="0" placeholder="200" value={form.solarW} onChange={handleChange} /></label>
+                <label className="field-group">
+                  <span>Toilet</span>
+                  <select className="field" name="toiletType" value={form.toiletType} onChange={handleChange}>
+                    {TOILET_TYPES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </label>
+                <label className="field-group">
+                  <span>Self-containment card</span>
+                  <select className="field" name="scCertification" value={form.scCertification} onChange={handleChange}>
+                    {SC_CERTIFICATIONS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </label>
+                <label className="field-group"><span>Card expiry</span><input className="field" name="scExpiry" type="date" value={form.scExpiry} onChange={handleChange} /></label>
                 <label className="field-group">
                   <span>Certification</span>
                   <label className="toggle-row">

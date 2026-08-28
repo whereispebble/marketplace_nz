@@ -323,7 +323,7 @@ a {
 .hero {
   position: relative;
   overflow: hidden;
-  min-height: clamp(231px, 34.6vh, 334px);
+  min-height: clamp(30px, 40px, 640px);
   color: white;
   background-position: center 50%;
   background-size: cover;
@@ -361,7 +361,7 @@ a {
   width: min(1180px, calc(100% - 32px));
   min-height: inherit;
   margin: 0 auto;
-  padding: clamp(16px, 2.6vh, 28px) 0 clamp(18px, 3vh, 32px);
+  padding: clamp(48px, 8vh, 96px) 0 clamp(52px, 9vh, 104px);
 }
 
 .eyebrow {
@@ -559,6 +559,44 @@ a {
   color: var(--ink);
   font-size: clamp(1rem, 1.25vw, 1.1rem);
   letter-spacing: -0.01em;
+}
+
+.results-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-left: auto;
+  margin-right: 12px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  white-space: nowrap;
+}
+
+.results-sort > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.results-sort select {
+  min-height: 34px;
+  max-width: 168px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.results-sort select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .results-header .segmented-control button {
@@ -1295,9 +1333,100 @@ a {
   border-top: 1px solid var(--line);
 }
 
+.filter-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .advanced-filter-group > strong {
   font-size: 0.94rem;
   font-weight: 950;
+}
+
+.location-autocomplete {
+  position: relative;
+}
+
+.location-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  margin: 6px 0 0;
+  padding: 6px;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 38px rgba(15, 32, 24, 0.16);
+}
+
+.location-suggestion {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.location-suggestion strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.location-suggestion span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.location-suggestion.is-highlighted,
+.location-suggestion:hover {
+  background: var(--surface-soft);
+}
+
+.location-suggestion-device {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 9px 9px 0 0;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+}
+
+.location-suggestion-device svg {
+  grid-row: span 2;
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+}
+
+.location-suggestion-device[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.location-suggestion-note {
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.location-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .dual-field {
@@ -2741,9 +2870,29 @@ textarea.field {
     display: none;
   }
 
-  /* Los atajos del hero ocupan demasiado en movil. */
+  /* Las sugerencias de busqueda tambien se muestran en movil, en una sola
+     fila con scroll horizontal si no caben. */
   .hero-quick-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 7px;
+    width: 100%;
+    margin-top: 10px;
+    padding-bottom: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hero-quick-filters::-webkit-scrollbar {
     display: none;
+  }
+
+  .hero-quick-filters button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 0.78rem;
   }
 
   /* El mapa se dimensiona para caber entre la barra superior y la navegacion
@@ -2765,7 +2914,7 @@ textarea.field {
   }
 
   .topbar {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 8px;
     min-height: 54px;
     padding: 7px 10px;
@@ -2791,11 +2940,25 @@ textarea.field {
     display: none;
   }
 
-  /* En movil todo el menu vive en el panel lateral: el header solo lleva el
-     logo y el boton de menu. */
-  .nav-links,
+  /* En movil la cabecera lleva logo, Buy/Sell centrados y el boton de menu;
+     el resto de secciones vive en el panel lateral. */
   .nav-actions {
     display: none !important;
+  }
+
+  .nav-links {
+    gap: 18px;
+    min-width: 0;
+    justify-self: center;
+  }
+
+  .nav-link-desktop {
+    display: none;
+  }
+
+  .nav-link {
+    font-size: 0.9rem;
+    font-weight: 700;
   }
 
   .menu-toggle {
@@ -2836,7 +2999,17 @@ textarea.field {
   }
 
   .hero {
-    min-height: clamp(260px, 50vh, 360px);
+    /* La altura se calcula para que por debajo del hero quepa justo la primera
+       fila de tarjetas: se resta del alto de pantalla la topbar fija, la
+       cabecera de resultados y la altura estimada de una tarjeta.
+       --hero-reveal-extra es el unico numero a tocar para afinarlo. */
+    --hero-card-image: calc((100vw - 36px) * 0.3125);
+    --hero-card-body: 132px;
+    --hero-chrome: 188px;
+    --hero-reveal-extra: 0px;
+    --hero-reveal: calc(var(--hero-chrome) + var(--hero-card-image) + var(--hero-card-body) + var(--hero-reveal-extra));
+    min-height: clamp(240px, calc(100vh - var(--hero-reveal)), 560px);
+    min-height: clamp(240px, calc(100dvh - var(--hero-reveal)), 560px);
     background-position: center center;
     /* fixed no funciona bien en iOS/Android: se deja scroll en mobile */
     background-attachment: scroll;
@@ -2850,19 +3023,20 @@ textarea.field {
     justify-items: center;
     text-align: center;
     align-content: center;
+    /* Padding contenido: si no, el propio relleno impide que el hero baje de
+       altura en pantallas cortas. */
     padding: 20px 0 24px;
   }
 
+  /* "safe center" centra cuando caben y alinea al inicio cuando desbordan,
+     para que el primer chip no quede fuera de alcance al hacer scroll. */
   .hero-quick-filters {
-    justify-content: center;
+    justify-content: flex-start;
+    justify-content: safe center;
   }
 
   .hero-filters {
     display: none;
-  }
-
-  .has-searched .hero {
-    min-height: auto;
   }
 
   .products-grid {
@@ -2900,6 +3074,54 @@ textarea.field {
     margin-right: 6px;
   }
 
+  /* La cabecera de resultados iba muy pegada al hero y a la parrilla: se le
+     da aire por arriba y por abajo. */
+  .page-section {
+    padding-top: 18px;
+  }
+
+  .section-header.results-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 2px 0;
+  }
+
+  /* El selector de orden se queda en la primera linea, junto al numero de
+     resultados; Filters/Grid/Map bajan a la segunda. */
+  .results-sort {
+    margin-right: 0;
+    min-height: 36px;
+    padding-left: 12px;
+  }
+
+  .results-sort select {
+    max-width: 132px;
+    min-height: 30px;
+    font-size: 0.82rem;
+  }
+
+  .results-header .segmented-control {
+    flex: 1 0 100%;
+  }
+
+  .results-header .section-title {
+    font-size: 1.02rem;
+  }
+
+  .results-header .segmented-control {
+    padding: 2px 0;
+  }
+
+  .results-header .segmented-control button {
+    min-height: 38px;
+  }
+
+  .active-filter-bar {
+    min-height: 30px;
+    margin-bottom: 12px;
+  }
+
   .map-results-list {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
     gap: 12px;
@@ -2929,10 +3151,16 @@ textarea.field {
     grid-template-columns: 1fr;
   }
 
-  .dual-field,
+  /* .dual-field-inline (Year from/to, Sleeps/Belts min) se queda en dos
+     columnas: son campos cortos y en vertical alargan mucho el panel. */
+  .dual-field:not(.dual-field-inline),
   .amenity-grid,
   .advanced-filter-actions {
     grid-template-columns: 1fr;
+  }
+
+  .dual-field-inline {
+    gap: 8px;
   }
 
   .filter-toolbar,
@@ -3034,6 +3262,11 @@ textarea.field {
 @media (max-width: 420px) {
   .product-title {
     white-space: normal;
+  }
+
+  /* Aqui el titulo puede ocupar dos lineas: la tarjeta crece y el hero baja. */
+  .hero {
+    --hero-card-body: 152px;
   }
 
   .hero h1 {

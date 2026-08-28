@@ -3,10 +3,12 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { FiFileText, FiHeart, FiHome, FiMail, FiMenu, FiPlus, FiShield, FiUser, FiX } from 'react-icons/fi'
 import logo from '../assets/swapy-logo.svg'
 
+// mobileHidden: en movil solo se dejan Buy y Sell en la cabecera; el resto
+// sigue estando en el panel lateral.
 const NAV_LINKS = [
   { to: '/', label: 'Buy', end: true },
   { to: '/new-product', label: 'Sell' },
-  { to: '/how-it-works', label: 'How it works' },
+  { to: '/how-it-works', label: 'How it works', mobileHidden: true },
 ]
 
 const MENU_SECTIONS = [
@@ -75,7 +77,7 @@ export default function Navbar({ compact = false, title }) {
                 key={link.to}
                 to={link.to}
                 end={link.end}
-                className={({ isActive }) => `nav-link ${isActive ? 'is-active' : ''}`}
+                className={({ isActive }) => `nav-link ${link.mobileHidden ? 'nav-link-desktop' : ''} ${isActive ? 'is-active' : ''}`.replace(/\s+/g, ' ').trim()}
               >
                 {link.label}
               </NavLink>
