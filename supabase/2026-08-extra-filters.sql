@@ -39,3 +39,22 @@ create index if not exists products_drivetrain_idx on public.products (drivetrai
 create index if not exists products_layout_idx on public.products (layout);
 create index if not exists products_sc_certification_idx on public.products ("scCertification");
 create index if not exists products_year_idx on public.products (year);
+
+-- Foto de perfil. El bucket avatars debe existir y ser publico:
+--   insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true)
+--   on conflict (id) do update set public = true;
+alter table public.profiles
+  add column if not exists avatar_url text;
+
+-- Cada usuario gestiona solo los ficheros de su propia carpeta del bucket.
+drop policy if exists "avatars are publicly readable" on storage.objects;
+create policy "avatars are publicly readable"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
+
+drop policy if exists "users manage their own avatar" on storage.objects;
+create policy "users manage their own avatar"
+  on storage.objects for all
+  to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);

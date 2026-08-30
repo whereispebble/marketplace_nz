@@ -21,6 +21,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/new-product" element={<NewProduct />} />
+        <Route path="/product/:id/edit" element={<NewProduct />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/privacy" element={<Legal document="privacy" />} />
         <Route path="/terms" element={<Legal document="terms" />} />
@@ -28,6 +29,7 @@ function App() {
         <Route path="/profile/:sellerId" element={<Profile />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/chats" element={<Chat />} />
+        <Route path="/chats/user/:sellerId" element={<Chat />} />
         <Route path="/chats/:chatId" element={<Chat />} />
       </Routes>
     </BrowserRouter>

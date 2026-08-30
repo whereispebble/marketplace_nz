@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiMapPin, FiMove, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
@@ -11,7 +11,7 @@ import { NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
 import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
 // Los bloques de camper solo tienen sentido en un vehiculo habitable.
-const CAMPER_TYPES = ['campervan', 'motorhome', 'van']
+const CAMPER_TYPES = ['campervan', 'motorhome', 'van', 'car-camper']
 
 const CAMPER_ONLY_FIELDS = {
   sleeps: '',
@@ -23,9 +23,8 @@ const CAMPER_ONLY_FIELDS = {
   batteryAh: '',
   solarW: '',
   toiletType: '',
-  scCertification: '',
-  scExpiry: '',
   selfContained: false,
+  scExpiry: '',
 }
 
 const CONDITIONS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
@@ -39,13 +38,9 @@ const TOILET_TYPES = [
   { id: 'fixed', name: 'Fixed toilet' },
 ]
 // La tarjeta verde es la unica valida para freedom camping desde el 6/6/2026.
-const SC_CERTIFICATIONS = [
-  { id: '', name: 'Not certified' },
-  { id: 'green', name: 'Green card (freedom camping)' },
-  { id: 'yellow', name: 'Yellow card (NZMCA)' },
-]
 const LISTING_STATUSES = [
   { id: 'active', name: 'Active' },
+  { id: 'reserved', name: 'Booked' },
   { id: 'draft', name: 'Draft' },
   { id: 'paused', name: 'Paused' },
   { id: 'sold', name: 'Sold' },
@@ -61,6 +56,8 @@ function formatPrice(value) {
 
 export default function NewProduct() {
   const navigate = useNavigate()
+  const { id: editingId } = useParams()
+  const isEditing = Boolean(editingId)
   const [form, setForm] = useState({
     title: '',
     make: '',
@@ -72,7 +69,6 @@ export default function NewProduct() {
     transmission: '',
     year: '',
     mileage: '',
-    wof: '',
     wofExpiry: '',
     regoExpiry: '',
     fuel: '',
@@ -88,7 +84,6 @@ export default function NewProduct() {
     batteryAh: '',
     solarW: '',
     toiletType: '',
-    scCertification: '',
     scExpiry: '',
     sleeps: '',
     belts: '',
@@ -101,6 +96,7 @@ export default function NewProduct() {
   })
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadingListing, setLoadingListing] = useState(Boolean(editingId))
   const [generalError, setGeneralError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [step, setStep] = useState(1)
@@ -122,8 +118,70 @@ export default function NewProduct() {
     imagesRef.current = images
   }, [images])
 
+  // Modo edicion: se rellena el formulario con el anuncio y solo lo puede
+  // abrir su dueno.
+  useEffect(() => {
+    if (!editingId) return undefined
+    let ignore = false
+
+    async function loadListing() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { navigate('/login'); return }
+
+      const { data, error } = await supabase.from('products').select('*').eq('id', editingId).single()
+      if (ignore) return
+      if (error || !data) { setGeneralError('This listing could not be loaded.'); setLoadingListing(false); return }
+      if (data.user_id !== user.id) { navigate(`/product/${editingId}`); return }
+
+      setForm(current => ({
+        ...current,
+        title: data.title || '',
+        make: data.make || '',
+        model: data.model || '',
+        description: data.description || '',
+        price: data.price ?? '',
+        vehicleType: data.vehicleType || data.category || '',
+        condition: data.condition || '',
+        transmission: data.transmission || '',
+        year: data.year ?? '',
+        mileage: data.mileage ?? '',
+        wofExpiry: data.wofExpiry || '',
+        regoExpiry: data.regoExpiry || '',
+        fuel: data.fuel || '',
+        drivetrain: data.drivetrain || '',
+        engineCc: data.engineCc ?? '',
+        seats: data.seats ?? '',
+        doors: data.doors ?? '',
+        layout: data.layout || '',
+        lengthM: data.lengthM ?? '',
+        weightKg: data.weightKg ?? '',
+        freshWaterL: data.freshWaterL ?? '',
+        greyWaterL: data.greyWaterL ?? '',
+        batteryAh: data.batteryAh ?? '',
+        solarW: data.solarW ?? '',
+        toiletType: data.toiletType || '',
+        scExpiry: data.scExpiry || '',
+        sleeps: data.sleeps ?? '',
+        belts: data.belts ?? '',
+        selfContained: Boolean(data.selfContained),
+        location: data.location || '',
+        region: data.region || '',
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
+        listingStatus: data.status === 'available' ? 'active' : (data.status || 'active'),
+      }))
+
+      const storedImages = (data.images?.length ? data.images : [data.image]).filter(Boolean)
+      setImages(storedImages.map((url, index) => ({ id: `stored-${index}-${url}`, file: null, preview: url, url })))
+      setLoadingListing(false)
+    }
+
+    loadListing()
+    return () => { ignore = true }
+  }, [editingId, navigate])
+
   useEffect(() => (
-    () => imagesRef.current.forEach(image => URL.revokeObjectURL(image.preview))
+    () => imagesRef.current.forEach(image => image.file && URL.revokeObjectURL(image.preview))
   ), [])
 
   const previewProduct = useMemo(() => ({
@@ -139,7 +197,6 @@ export default function NewProduct() {
     transmission: form.transmission,
     year: form.year ? Number(form.year) : null,
     mileage: Number(form.mileage || 0),
-    wof: form.wof,
     wofExpiry: form.wofExpiry || null,
     regoExpiry: form.regoExpiry || null,
     fuel: form.fuel,
@@ -155,7 +212,6 @@ export default function NewProduct() {
     batteryAh: form.batteryAh ? Number(form.batteryAh) : null,
     solarW: form.solarW ? Number(form.solarW) : null,
     toiletType: form.toiletType,
-    scCertification: form.scCertification,
     scExpiry: form.scExpiry || null,
     sleeps: Number(form.sleeps || 0),
     belts: Number(form.belts || 0),
@@ -187,6 +243,12 @@ export default function NewProduct() {
     // si no, quedarian ocultos en el formulario pero se publicarian igual.
     if (name === 'vehicleType' && !CAMPER_TYPES.includes(nextValue)) {
       setForm(current => ({ ...current, ...CAMPER_ONLY_FIELDS, vehicleType: nextValue }))
+      return
+    }
+
+    // Si deja de ser self-contained, la fecha de la certificacion sobra.
+    if (name === 'selfContained' && !nextValue) {
+      setForm(current => ({ ...current, selfContained: false, scExpiry: '' }))
       return
     }
 
@@ -244,7 +306,7 @@ export default function NewProduct() {
   const removeImage = imageId => {
     setImages(current => {
       const removed = current.find(image => image.id === imageId)
-      if (removed) URL.revokeObjectURL(removed.preview)
+      if (removed?.file) URL.revokeObjectURL(removed.preview)
       return current.filter(image => image.id !== imageId)
     })
   }
@@ -281,6 +343,7 @@ export default function NewProduct() {
 
     if (targetStep >= 1) {
       if (!form.title.trim()) nextErrors.title = 'Add a clear listing title.'
+      if (!isDraft && !form.make.trim()) nextErrors.make = 'Choose the vehicle make.'
       if (!isDraft && !form.model.trim()) nextErrors.model = 'Add the vehicle make and model.'
       if (!isDraft && (!form.price || Number(form.price) <= 0)) nextErrors.price = 'Add a valid price above NZ$0.'
     }
@@ -324,7 +387,6 @@ export default function NewProduct() {
       transmission: form.transmission || null,
       year: form.year ? Number(form.year) : null,
       mileage: form.mileage ? Number(form.mileage) : null,
-      wof: form.wof.trim(),
       wofExpiry: form.wofExpiry || null,
       regoExpiry: form.regoExpiry || null,
       fuel: form.fuel || null,
@@ -340,7 +402,6 @@ export default function NewProduct() {
       batteryAh: form.batteryAh ? Number(form.batteryAh) : null,
       solarW: form.solarW ? Number(form.solarW) : null,
       toiletType: form.toiletType || null,
-      scCertification: form.scCertification || null,
       scExpiry: form.scExpiry || null,
       sleeps: form.sleeps ? Number(form.sleeps) : null,
       belts: form.belts ? Number(form.belts) : null,
@@ -355,7 +416,7 @@ export default function NewProduct() {
 
   const handleSubmit = async (statusOverride = form.listingStatus) => {
     if (!validateStep(3, statusOverride)) {
-      if (!form.title.trim() || (statusOverride !== 'draft' && (!form.model.trim() || !form.price))) setStep(1)
+      if (!form.title.trim() || (statusOverride !== 'draft' && (!form.make.trim() || !form.model.trim() || !form.price))) setStep(1)
       else if (statusOverride !== 'draft' && (!form.vehicleType || !form.condition || !form.location.trim() || !selectedCity)) setStep(2)
       else setStep(3)
       return
@@ -367,39 +428,58 @@ export default function NewProduct() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { navigate('/login'); return }
 
-    const payload = { ...createPayload(statusOverride), user_id: user.id }
-    const { data, error } = await supabase.from('products').insert(payload).select().single()
-    if (error) { setGeneralError(error.message); setLoading(false); return }
+    const payload = createPayload(statusOverride)
+    let listing
 
-    const uploadedUrls = []
-    if (images.length > 0 && data) {
-      for (const [index, image] of images.entries()) {
-        const ext = image.file.name.split('.').pop()
-        const path = `${data.id}/${Date.now()}-${index}.${ext}`
-        const { data: upload, error: uploadError } = await supabase.storage.from('product-images').upload(path, image.file)
-        if (uploadError) {
-          setGeneralError(uploadError.message)
-          setLoading(false)
-          return
-        }
-        if (upload) {
-          const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path)
-          uploadedUrls.push(urlData.publicUrl)
-          await supabase.from('product_images').insert({
-            product_id: data.id,
-            image_url: urlData.publicUrl,
-            sort_order: index,
-          })
-        }
+    if (isEditing) {
+      const { data, error } = await supabase.from('products').update(payload).eq('id', editingId).eq('user_id', user.id).select().single()
+      if (error) { setGeneralError(error.message); setLoading(false); return }
+      listing = data
+    } else {
+      const { data, error } = await supabase.from('products').insert({ ...payload, user_id: user.id }).select().single()
+      if (error) { setGeneralError(error.message); setLoading(false); return }
+      listing = data
+    }
+
+    // Las fotos que ya estaban se conservan con su URL; solo se suben las nuevas.
+    const finalUrls = []
+    for (const [index, image] of images.entries()) {
+      if (!image.file) {
+        finalUrls.push(image.url || image.preview)
+        continue
+      }
+      const ext = image.file.name.split('.').pop()
+      const path = `${listing.id}/${Date.now()}-${index}.${ext}`
+      const { data: upload, error: uploadError } = await supabase.storage.from('product-images').upload(path, image.file)
+      if (uploadError) {
+        setGeneralError(uploadError.message)
+        setLoading(false)
+        return
+      }
+      if (upload) {
+        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path)
+        finalUrls.push(urlData.publicUrl)
+        await supabase.from('product_images').insert({
+          product_id: listing.id,
+          image_url: urlData.publicUrl,
+          sort_order: index,
+        })
       }
     }
 
-    if (uploadedUrls.length) {
-      await supabase.from('products').update({ image: uploadedUrls[0], images: uploadedUrls }).eq('id', data.id)
-    }
+    await supabase.from('products').update({ image: finalUrls[0] || null, images: finalUrls }).eq('id', listing.id)
 
     setLoading(false)
-    navigate(statusOverride === 'draft' ? '/profile' : `/product/${data.id}`)
+    navigate(statusOverride === 'draft' ? '/profile' : `/product/${listing.id}`)
+  }
+
+  if (loadingListing) {
+    return (
+      <div className="app-shell">
+        <Navbar compact />
+        <div className="loading-state"><div><div className="spinner" />Loading listing...</div></div>
+      </div>
+    )
   }
 
   return (
@@ -411,8 +491,12 @@ export default function NewProduct() {
       <main className="container page-section" style={{ maxWidth: 980 }}>
         <div className="section-header">
           <div>
-            <h1 className="page-title">List a vehicle</h1>
-            <p className="section-subtitle">Create a NZ-ready listing with a map-ready city, ordered photos and a final preview before publishing.</p>
+            <h1 className="page-title">{isEditing ? 'Edit listing' : 'List a vehicle'}</h1>
+            <p className="section-subtitle">
+              {isEditing
+                ? 'Update the details, photos and status of your listing. Changes go live as soon as you save.'
+                : 'Create a NZ-ready listing with a map-ready city, ordered photos and a final preview before publishing.'}
+            </p>
           </div>
         </div>
 
@@ -457,13 +541,15 @@ export default function NewProduct() {
                 </label>
               </FieldError>
               <div className="dual-field">
-                <label className="field-group">
-                  <span>Make</span>
-                  <select className="field" name="make" value={form.make} onChange={handleChange}>
-                    <option value="">Select make</option>
-                    {NZ_VEHICLE_CATALOG.map(entry => <option key={entry.make} value={entry.make}>{entry.make}</option>)}
-                  </select>
-                </label>
+                <FieldError errors={fieldErrors} name="make">
+                  <label className="field-group">
+                    <span>Make <em className="field-required" title="Required" aria-hidden="true">*</em></span>
+                    <select className={fieldErrorClass(fieldErrors, 'make')} name="make" value={form.make} onChange={handleChange}>
+                      <option value="">Select make</option>
+                      {NZ_VEHICLE_CATALOG.map(entry => <option key={entry.make} value={entry.make}>{entry.make}</option>)}
+                    </select>
+                  </label>
+                </FieldError>
                 <FieldError errors={fieldErrors} name="model">
                   <label className="field-group">
                     <span>Model <em className="field-required" title="Required" aria-hidden="true">*</em></span>
@@ -606,7 +692,6 @@ export default function NewProduct() {
                   <h3>Paperwork</h3>
                 </header>
                 <div className="filter-grid publish-grid">
-                  <label className="field-group"><span>WOF</span><input className="field" name="wof" placeholder="Valid until Sep 2026" value={form.wof} onChange={handleChange} /></label>
                   <label className="field-group"><span>WOF expiry</span><input className="field" name="wofExpiry" type="date" value={form.wofExpiry} onChange={handleChange} /></label>
                   <label className="field-group"><span>Rego expiry</span><input className="field" name="regoExpiry" type="date" value={form.regoExpiry} onChange={handleChange} /></label>
                 </div>
@@ -650,16 +735,20 @@ export default function NewProduct() {
                       {TOILET_TYPES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
                     </select>
                   </label>
-                  <label className="field-group">
-                    <span>Self-containment card</span>
-                    <select className="field" name="scCertification" value={form.scCertification} onChange={handleChange}>
-                      {SC_CERTIFICATIONS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="field-group"><span>Card expiry</span><input className="field" name="scExpiry" type="date" value={form.scExpiry} onChange={handleChange} /></label>
                   <label className="toggle-row publish-toggle">
                     <input type="checkbox" name="selfContained" checked={form.selfContained} onChange={handleChange} />
                     Self-contained
+                  </label>
+                  <label className="field-group">
+                    <span>Self-contained expiry</span>
+                    <input
+                      className="field"
+                      name="scExpiry"
+                      type="date"
+                      value={form.scExpiry}
+                      onChange={handleChange}
+                      disabled={!form.selfContained}
+                    />
                   </label>
                 </div>
               </section>
@@ -667,7 +756,7 @@ export default function NewProduct() {
 
               {!isCamper && form.vehicleType && (
                 <p className="publish-section-note">
-                  Layout, berths and off-grid details only apply to campervans, motorhomes and van conversions.
+                  Layout, berths and off-grid details only apply to campervans, motorhomes, van conversions and camperised cars.
                 </p>
               )}
             </div>
@@ -728,10 +817,12 @@ export default function NewProduct() {
               </div>
 
               <div className="panel preview-summary">
-                <div className="preview-summary-row">
+                <label className="preview-summary-row preview-summary-field">
                   <span>Status</span>
-                  <strong>{LISTING_STATUSES.find(status => status.id === form.listingStatus)?.name}</strong>
-                </div>
+                  <select className="field" name="listingStatus" value={form.listingStatus} onChange={handleChange}>
+                    {LISTING_STATUSES.map(status => <option key={status.id} value={status.id}>{status.name}</option>)}
+                  </select>
+                </label>
                 <div className="preview-summary-row">
                   <span>Price</span>
                   <strong>{formatPrice(form.price)}</strong>
@@ -768,7 +859,7 @@ export default function NewProduct() {
                 <button className="btn btn-primary" type="button" onClick={handleNext}>Next<FiArrowRight /></button>
               ) : (
                 <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
-                  {loading ? 'Saving...' : form.listingStatus === 'active' ? 'Publish listing' : 'Save listing'}
+                  {loading ? 'Saving...' : isEditing ? 'Save changes' : form.listingStatus === 'active' ? 'Publish listing' : 'Save listing'}
                   {loading ? null : <FiCheck />}
                 </button>
               )}

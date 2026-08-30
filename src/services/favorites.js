@@ -68,6 +68,7 @@ function productSnapshot(product) {
     mileage: product.mileage,
     condition: product.condition,
     wof: product.wof,
+    wofExpiry: product.wofExpiry,
     sleeps: product.sleeps,
     belts: product.belts,
     selfContained: product.selfContained,

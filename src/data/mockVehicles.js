@@ -4,7 +4,8 @@ export const VEHICLE_TYPES = [
   { id: 'motorhome', name: 'Motorhomes' },
   { id: 'van', name: 'Van conversions' },
   { id: '4x4', name: '4x4 campers' },
-  { id: 'car', name: 'Cars soon' },
+  { id: 'car', name: 'Cars' },
+  { id: 'car-camper', name: 'Camperised cars' },
 ]
 
 // Marcas: lista exacta de la API publica de Trade Me

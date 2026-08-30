@@ -124,6 +124,7 @@ const VEHICLE_TYPE_FILTERS = [
   { id: 'van', label: 'Van' },
   { id: '4x4', label: '4x4' },
   { id: 'car', label: 'Car' },
+  { id: 'car-camper', label: 'Camperised car' },
 ]
 
 const AMENITY_FILTERS = [

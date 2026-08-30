@@ -2194,6 +2194,210 @@ textarea.field {
   box-shadow: var(--shadow-soft);
 }
 
+/* La foto principal abre el visor a pantalla completa. */
+.media-viewer-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: zoom-in;
+}
+
+.media-viewer-zoom {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  background: rgba(15, 20, 18, 0.55);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.media-viewer-button:hover .media-viewer-zoom,
+.media-viewer-button:focus-visible .media-viewer-zoom {
+  opacity: 1;
+}
+
+.media-viewer-count {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: white;
+  background: rgba(15, 20, 18, 0.55);
+  font-size: 0.76rem;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+}
+
+/* En movil no hay hover: la lupa se deja siempre visible. */
+@media (hover: none) {
+  .media-viewer-zoom {
+    opacity: 1;
+  }
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(6px, 2vw, 20px);
+  padding: clamp(12px, 3vw, 32px);
+  background: rgba(8, 14, 12, 0.92);
+  animation: lightboxIn 0.16s ease-out;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-figure {
+  grid-column: 2;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 0;
+  min-width: 0;
+}
+
+.lightbox-figure img {
+  max-width: 100%;
+  max-height: min(76vh, 900px);
+  border-radius: 16px;
+  object-fit: contain;
+}
+
+.lightbox-figure figcaption {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.lightbox-arrow,
+.lightbox-close {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  background: rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightbox-arrow:hover,
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.lightbox-arrow svg,
+.lightbox-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.lightbox-arrow-prev {
+  grid-column: 1;
+}
+
+.lightbox-arrow-next {
+  grid-column: 3;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: clamp(12px, 3vw, 24px);
+  right: clamp(12px, 3vw, 24px);
+  width: 42px;
+  height: 42px;
+}
+
+.lightbox-thumbs {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  max-width: 100%;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lightbox-thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.lightbox-thumb {
+  flex: 0 0 auto;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.lightbox-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lightbox-thumb.is-active,
+.lightbox-thumb:hover {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .lightbox {
+    gap: 4px;
+    padding: 12px 6px 16px;
+  }
+
+  .lightbox-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lightbox-arrow svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lightbox-figure img {
+    max-height: 62vh;
+  }
+
+  .lightbox-thumbs {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox {
+    animation: none;
+  }
+}
+
 .media-viewer img {
   width: 100%;
   height: min(56vw, 520px);
@@ -2268,6 +2472,250 @@ textarea.field {
   font-weight: 950;
 }
 
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.avatar-lg {
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
+  font-size: 2rem;
+}
+
+/* La foto de perfil propia se pulsa para cambiarla. */
+.avatar-editor {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.avatar-button {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  cursor: pointer;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: rgba(10, 16, 14, 0.48);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.avatar-overlay svg {
+  width: 22px;
+  height: 22px;
+}
+
+.avatar-button:hover .avatar-overlay,
+.avatar-button:focus-visible .avatar-overlay {
+  opacity: 1;
+}
+
+/* Sin hover la camara se deja siempre a la vista, mas discreta. */
+@media (hover: none) {
+  .avatar-overlay {
+    inset: auto 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 10px 0 0 0;
+    opacity: 1;
+  }
+
+  .avatar-overlay svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.avatar-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  min-width: 186px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 18px 38px rgba(15, 32, 24, 0.16);
+}
+
+.avatar-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.avatar-menu button:hover {
+  background: var(--surface-soft);
+}
+
+.avatar-menu button.is-danger {
+  color: var(--rose);
+}
+
+/* Menu de gestion en las tarjetas de anuncios propios. */
+.product-card.is-menu-open {
+  overflow: visible;
+}
+
+.product-card.is-menu-open .product-image {
+  border-radius: 15px 15px 0 0;
+}
+
+.card-menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.card-menu-btn {
+  position: static;
+}
+
+.card-menu-list {
+  left: auto;
+  right: 0;
+  min-width: 178px;
+}
+
+.card-menu-list a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.card-menu-list a:hover {
+  background: var(--surface-soft);
+}
+
+/* Conversacion directa, sin anuncio en la cabecera. */
+.chat-avatar {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  font-size: 1.05rem;
+}
+
+.chat-empty {
+  margin: auto;
+  max-width: 320px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Perfil publico: mensaje directo y menu de tres puntos. */
+.profile-public-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.more-menu {
+  position: relative;
+}
+
+.more-menu-list {
+  left: auto;
+  right: 0;
+}
+
+/* Anuncios del perfil con las mismas tarjetas que en la busqueda. */
+.profile-products-grid {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+.profile-listing {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.profile-listing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.btn-compact {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+/* Ventana modal (reportar usuario). */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 32, 24, 0.45);
+}
+
+.modal-card {
+  width: min(460px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.avatar-status {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.avatar-status.is-error {
+  color: var(--rose);
+  white-space: normal;
+  width: 200px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2318,6 +2766,99 @@ textarea.field {
   display: block;
   margin-top: 4px;
   font-size: 0.95rem;
+}
+
+/* Etiquetas cortas con los rasgos del vehiculo, bajo la descripcion. */
+.spec-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.spec-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+/* Ficha tecnica completa, agrupada por bloques. */
+.spec-sheet {
+  display: grid;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.spec-sheet-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.spec-sheet-group dl {
+  margin: 0;
+}
+
+.spec-sheet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.spec-sheet-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.spec-sheet-row dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.spec-sheet-row dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.spec-flag {
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.spec-flag-expired {
+  color: #8c1d18;
+  background: #fdecea;
+}
+
+.spec-flag-soon {
+  color: #8a5300;
+  background: #fdf1dc;
+}
+
+/* La columna de la derecha acompana al scroll en escritorio. */
+@media (min-width: 901px) {
+  .detail-sidebar {
+    position: sticky;
+    top: 88px;
+  }
 }
 
 .stepper {
@@ -2693,6 +3234,15 @@ textarea.field {
   border-bottom: 1px solid var(--line);
   font-size: clamp(0.82rem, 1.9vh, 0.92rem);
 }
+
+.preview-summary-field {
+  align-items: center;
+}
+
+.preview-summary-field select {
+  max-width: 190px;
+}
+
 
 .preview-summary-row span {
   color: var(--muted);

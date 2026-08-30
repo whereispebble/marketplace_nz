@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiCheck, FiSend, FiTag, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
@@ -30,16 +30,34 @@ function formatPrice(value) {
 }
 
 export default function Chat() {
-  const { chatId } = useParams()
-  const initialChat = MOCK_CHATS.find(chat => (
+  const { chatId, sellerId } = useParams()
+
+  // Conversacion directa desde el perfil de alguien: no va sobre un anuncio
+  // concreto, asi que la cabecera solo lleva a la persona.
+  const directChat = useMemo(() => {
+    if (!sellerId) return null
+    const seller = MOCK_VEHICLES.find(vehicle => String(vehicle.seller?.id) === String(sellerId))?.seller
+    return {
+      id: `user-${sellerId}`,
+      sellerId,
+      product: null,
+      direct: true,
+      other_user: seller?.name || 'Seller',
+      last_message: 'New conversation',
+      last_message_at: 'Now',
+      unread: 0,
+    }
+  }, [sellerId])
+
+  const initialChat = directChat || MOCK_CHATS.find(chat => (
     String(chat.id) === String(chatId)
     || String(chat.sellerId) === String(chatId)
     || String(chat.product.id) === String(chatId)
   )) || MOCK_CHATS[0]
-  const [chats] = useState(MOCK_CHATS)
-  const [messages, setMessages] = useState(MOCK_MESSAGES)
+  const [chats] = useState(() => (directChat ? [directChat, ...MOCK_CHATS] : MOCK_CHATS))
+  const [messages, setMessages] = useState(directChat ? [] : MOCK_MESSAGES)
   const [selectedChatId, setSelectedChatId] = useState(initialChat.id)
-  const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId))
+  const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId || sellerId))
   const [newMessage, setNewMessage] = useState('')
   const [offerAmount, setOfferAmount] = useState('')
   const [offers, setOffers] = useState({})
@@ -47,8 +65,8 @@ export default function Chat() {
   const messagesRef = useRef(null)
   const selectedChat = chats.find(chat => chat.id === selectedChatId) || initialChat
   const selectedOffer = offers[selectedChat.id]
-  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat.product.price
-  const sellerUserId = selectedChat.product.user_id || selectedChat.product.seller_id || selectedChat.sellerId
+  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat.product?.price
+  const sellerUserId = selectedChat.product?.user_id || selectedChat.product?.seller_id || selectedChat.sellerId
   const isSeller = Boolean(currentUser?.id && sellerUserId && String(currentUser.id) === String(sellerUserId))
 
   useEffect(() => {
@@ -133,10 +151,12 @@ export default function Chat() {
                     setMobileChatOpen(true)
                   }}
                 >
-                  <img src={chat.product.image} alt="" />
+                  {chat.product
+                    ? <img src={chat.product.image} alt="" />
+                    : <span className="avatar chat-avatar">{chat.other_user?.[0]?.toUpperCase() || 'U'}</span>}
                   <span style={{ minWidth: 0 }}>
                     <strong style={{ display: 'block' }}>{chat.other_user}</strong>
-                    <span className="section-subtitle" style={{ display: 'block', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.product.title}</span>
+                    <span className="section-subtitle" style={{ display: 'block', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.product ? chat.product.title : 'Direct message'}</span>
                     <span style={{ color: chat.unread ? 'var(--ink)' : 'var(--muted)', fontWeight: chat.unread ? 850 : 500 }}>{chat.last_message}</span>
                   </span>
                   <span style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
@@ -154,17 +174,25 @@ export default function Chat() {
                 <button className="icon-btn mobile-chat-back" type="button" onClick={() => setMobileChatOpen(false)} aria-label="Back to chats">
                   <FiArrowLeft />
                 </button>
-                <img src={selectedChat.product.image} alt="" />
+                {selectedChat.product
+                  ? <img src={selectedChat.product.image} alt="" />
+                  : <span className="avatar chat-avatar">{selectedChat.other_user?.[0]?.toUpperCase() || 'U'}</span>}
                 <div>
                   <strong>{selectedChat.other_user}</strong>
-                  <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
-                  <p className="chat-price-line">
-                    {selectedOffer?.status === 'accepted' ? 'Agreed price' : 'Listing price'}: <strong>{formatPrice(agreedPrice)}</strong>
-                  </p>
+                  {selectedChat.product ? (
+                    <>
+                      <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
+                      <p className="chat-price-line">
+                        {selectedOffer?.status === 'accepted' ? 'Agreed price' : 'Listing price'}: <strong>{formatPrice(agreedPrice)}</strong>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="section-subtitle" style={{ marginTop: 2 }}>Direct message</p>
+                  )}
                 </div>
                 <div className="chat-product-actions">
-                  <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary">View listing<FiArrowRight /></Link>
-                  {!isSeller && (
+                  {selectedChat.product && <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary">View listing<FiArrowRight /></Link>}
+                  {selectedChat.product && !isSeller && (
                     <div className="offer-inline">
                       <input
                         className="field"
@@ -186,6 +214,9 @@ export default function Chat() {
             )}
 
             <div className="messages" ref={messagesRef}>
+              {messages.length === 0 && (
+                <p className="chat-empty">Say hi to {selectedChat.other_user}. This conversation is not tied to any listing.</p>
+              )}
               {messages.map(message => (
                 <div className={`message ${message.sender_id === 'me' ? 'is-me' : ''}`} key={message.id}>
                   <div className="bubble">
@@ -195,7 +226,7 @@ export default function Chat() {
                 </div>
               ))}
 
-              {selectedOffer && (
+              {selectedOffer && selectedChat.product && (
                 <div className="message is-me">
                   <div className={`offer-card offer-${selectedOffer.status}`}>
                     <div className="offer-card-head">
@@ -220,7 +251,7 @@ export default function Chat() {
                     )}
                     {selectedOffer.status === 'pending' && !isSeller && <p>Pending seller response.</p>}
                     {selectedOffer.status === 'accepted' && <p>This agreed price is visible only in this conversation.</p>}
-                    {selectedOffer.status === 'declined' && <p>The listing price remains {formatPrice(selectedChat.product.price)} for this buyer.</p>}
+                    {selectedOffer.status === 'declined' && <p>The listing price remains {formatPrice(selectedChat.product?.price)} for this buyer.</p>}
                   </div>
                 </div>
               )}
