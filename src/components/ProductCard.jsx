@@ -1,26 +1,55 @@
-import { useEffect, useState } from 'react'
+/**
+ * Tarjeta de un anuncio.
+ *
+ * Se usa en la parrilla de resultados, en guardados y en los perfiles, asi que
+ * tiene dos modos:
+ *   - visitante: boton de guardar en favoritos.
+ *   - owned:     menu del dueno para marcar vendido o reservado y editar.
+ *
+ * Solo pinta distintivo de estado cuando el anuncio ya no esta disponible.
+ */
+
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaHeart, FaRegHeart } from 'react-icons/fa'
-import { FiMapPin, FiShield, FiUsers } from 'react-icons/fi'
+import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiShield, FiTag, FiUsers } from 'react-icons/fi'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
+import { listingBadge, listingStatusBadge } from '../constants/listingStatus'
 
-const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
-
-// Un anuncio se considera "New" si se publico hace menos de una semana.
-function isNewListing(product) {
-  const raw = product?.created_at || product?.createdAt || product?.publishedAt
-  if (!raw) return false
-  const published = new Date(raw).getTime()
-  if (Number.isNaN(published)) return false
-  return Date.now() - published < NEW_LISTING_WINDOW_MS
-}
-
-export default function ProductCard({ product, initiallyLiked = false }) {
+// owned: es un anuncio propio, asi que en vez de guardarlo se gestiona.
+export default function ProductCard({ product, initiallyLiked = false, owned = false, onStatusChange }) {
   const [liked, setLiked] = useState(initiallyLiked)
   const [savingFavorite, setSavingFavorite] = useState(false)
-  const isNew = isNewListing(product)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  // Distintivo de la tarjeta: vendido, reservado, o "New" durante la primera
+  // semana. Null el resto del tiempo.
+  const badge = listingBadge(product)
+  // La tarjeta se atenua solo si el anuncio ya no esta disponible; un anuncio
+  // nuevo tiene que verse en todo su esplendor.
+  const isUnavailable = Boolean(listingStatusBadge(product))
 
   useEffect(() => {
+    if (!menuOpen) return undefined
+
+    const handleClickOutside = event => {
+      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    }
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
+
+  useEffect(() => {
+    if (owned) return undefined
     let ignore = false
 
     async function loadFavoriteState() {
@@ -35,12 +64,63 @@ export default function ProductCard({ product, initiallyLiked = false }) {
       ignore = true
       window.removeEventListener(FAVORITES_UPDATED_EVENT, loadFavoriteState)
     }
-  }, [product])
+  }, [owned, product])
 
   return (
-    <article className="product-card">
-      {isNew && <span className="badge product-badge badge-mint">New</span>}
+    <article className={`product-card ${menuOpen ? 'is-menu-open' : ''} ${isUnavailable ? 'is-unavailable' : ''}`}>
+      {badge && <span className={`badge product-badge ${badge.className}`}>{badge.label}</span>}
 
+      {owned ? (
+        <div className="card-menu" ref={menuRef}>
+          <button
+            className="favorite-btn card-menu-btn"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="Listing options"
+            onClick={event => {
+              event.preventDefault()
+              event.stopPropagation()
+              setMenuOpen(current => !current)
+            }}
+          >
+            <FiMoreHorizontal />
+          </button>
+
+          {menuOpen && (
+            <div className="avatar-menu card-menu-list" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={event => {
+                  event.preventDefault()
+                  setMenuOpen(false)
+                  onStatusChange?.('sold')
+                }}
+              >
+                <FiCheckCircle />
+                Mark as sold
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={event => {
+                  event.preventDefault()
+                  setMenuOpen(false)
+                  onStatusChange?.('reserved')
+                }}
+              >
+                <FiTag />
+                Mark as booked
+              </button>
+              <Link role="menuitem" to={`/product/${product.id}/edit`} onClick={() => setMenuOpen(false)}>
+                <FiEdit3 />
+                Edit listing
+              </Link>
+            </div>
+          )}
+        </div>
+      ) : (
       <button
         className={`favorite-btn ${liked ? 'is-liked' : ''}`}
         type="button"
@@ -57,6 +137,7 @@ export default function ProductCard({ product, initiallyLiked = false }) {
       >
         {liked ? <FaHeart /> : <FaRegHeart />}
       </button>
+      )}
 
       <Link to={`/product/${product.id}`} className="product-link">
         <div className="product-image">
@@ -72,7 +153,7 @@ export default function ProductCard({ product, initiallyLiked = false }) {
           <div className="spec-row">
             {product.mileage ? <span>{Number(product.mileage).toLocaleString('en-NZ')} km</span> : null}
             {product.sleeps ? <span><FiUsers size={13} /> Sleeps {product.sleeps}</span> : null}
-            {product.wof ? <span><FiShield size={13} /> WOF</span> : null}
+            {product.wofExpiry ? <span><FiShield size={13} /> WOF</span> : null}
           </div>
           <span className="muted-row">
             <FiMapPin size={14} />

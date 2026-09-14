@@ -1,0 +1,258 @@
+/* ==========================================================================
+   product-detail.css
+   Ficha del anuncio: visor de fotos, ampliacion a pantalla completa con
+   flechas y tira de miniaturas.
+   ========================================================================== */
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 26px;
+  align-items: start;
+}
+
+.media-viewer {
+  overflow: hidden;
+  border-radius: 22px;
+  background: #eee8dd;
+  box-shadow: var(--shadow-soft);
+}
+
+/* La foto principal abre el visor a pantalla completa. */
+.media-viewer-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: zoom-in;
+}
+
+.media-viewer-zoom {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  background: rgba(15, 20, 18, 0.55);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.media-viewer-button:hover .media-viewer-zoom,
+.media-viewer-button:focus-visible .media-viewer-zoom {
+  opacity: 1;
+}
+
+.media-viewer-count {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: white;
+  background: rgba(15, 20, 18, 0.55);
+  font-size: 0.76rem;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+}
+
+/* En movil no hay hover: la lupa se deja siempre visible. */
+@media (hover: none) {
+  .media-viewer-zoom {
+    opacity: 1;
+  }
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(6px, 2vw, 20px);
+  padding: clamp(12px, 3vw, 32px);
+  background: rgba(8, 14, 12, 0.92);
+  animation: lightboxIn 0.16s ease-out;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-figure {
+  grid-column: 2;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 0;
+  min-width: 0;
+}
+
+.lightbox-figure img {
+  max-width: 100%;
+  max-height: min(76vh, 900px);
+  border-radius: 16px;
+  object-fit: contain;
+}
+
+.lightbox-figure figcaption {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.lightbox-arrow,
+.lightbox-close {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  background: rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightbox-arrow:hover,
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.lightbox-arrow svg,
+.lightbox-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.lightbox-arrow-prev {
+  grid-column: 1;
+}
+
+.lightbox-arrow-next {
+  grid-column: 3;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: clamp(12px, 3vw, 24px);
+  right: clamp(12px, 3vw, 24px);
+  width: 42px;
+  height: 42px;
+}
+
+.lightbox-thumbs {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  max-width: 100%;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lightbox-thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.lightbox-thumb {
+  flex: 0 0 auto;
+  width: 62px;
+  height: 62px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.lightbox-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lightbox-thumb.is-active,
+.lightbox-thumb:hover {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .lightbox {
+    gap: 4px;
+    padding: 12px 6px 16px;
+  }
+
+  .lightbox-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .lightbox-arrow svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .lightbox-figure img {
+    max-height: 62vh;
+  }
+
+  .lightbox-thumbs {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox {
+    animation: none;
+  }
+}
+
+.media-viewer img {
+  width: 100%;
+  height: min(56vw, 520px);
+  min-height: 360px;
+  object-fit: cover;
+}
+
+.thumb-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.thumb {
+  width: 84px;
+  height: 84px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.thumb.is-active {
+  border-color: var(--accent);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

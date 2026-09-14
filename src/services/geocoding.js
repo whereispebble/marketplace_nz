@@ -1,7 +1,13 @@
-// Autocompletado de ubicaciones reales via Photon (OpenStreetMap), el mismo
-// proveedor de datos que el mapa. Se limita a Nueva Zelanda por bbox + pais.
-// Lo usan tanto el filtro de busqueda como el formulario de publicacion, para
-// que un anuncio se guarde con el mismo nombre de sitio por el que se busca.
+/**
+ * Geocodificacion de ubicaciones de Nueva Zelanda.
+ *
+ * Autocompletado de sitios reales via Photon (OpenStreetMap), el mismo
+ * proveedor de datos que el mapa. Se limita a Nueva Zelanda por bbox y pais.
+ *
+ * Lo usan tanto el filtro de busqueda como el formulario de publicacion, para
+ * que un anuncio se guarde con el mismo nombre de sitio por el que se busca y
+ * las dos pantallas no acaben con nomenclaturas distintas.
+ */
 const GEOCODER_URL = 'https://photon.komoot.io/api/'
 const NZ_BBOX = '166.0,-47.6,179.6,-34.0'
 

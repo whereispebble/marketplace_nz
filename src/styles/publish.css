@@ -1,0 +1,414 @@
+/* ==========================================================================
+   publish.css
+   Publicar un anuncio: pasos del asistente, secciones del formulario,
+   subida y ordenacion de fotos y previsualizacion.
+   ========================================================================== */
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: clamp(8px, 1.5vh, 22px) 0;
+}
+
+.stepper-wide {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Resumen del paso abierto: solo se usa en movil, donde las cuatro pastillas
+   se comen media pantalla antes de llegar al formulario. */
+.stepper-compact {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin: clamp(8px, 1.5vh, 22px) 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  color: white;
+  background: var(--ink);
+}
+
+.stepper-compact .step-number {
+  color: var(--ink);
+  background: white;
+}
+
+.stepper-compact-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stepper-compact-text strong {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.stepper-progress {
+  width: 64px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  overflow: hidden;
+}
+
+.stepper-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(8px, 1.4vh, 12px) 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.62);
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.step-number {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 11px;
+  background: #eee8dd;
+}
+
+.step.is-active,
+.step.is-done {
+  color: white;
+  border-color: transparent;
+  background: var(--ink);
+}
+
+.step.is-active .step-number,
+.step.is-done .step-number {
+  color: var(--ink);
+  background: white;
+}
+
+.field-shell {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field-group > span {
+  color: var(--ink);
+  font-size: clamp(0.79rem, 1.9vh, 0.88rem);
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.field-error {
+  border-color: rgba(239, 71, 111, 0.72);
+  background: rgba(239, 71, 111, 0.06);
+}
+
+.field-error:focus {
+  border-color: rgba(239, 71, 111, 0.82);
+  box-shadow: 0 0 0 4px rgba(239, 71, 111, 0.12);
+}
+
+.field-message {
+  color: #a8193c;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+/* El paso de detalles se agrupa por bloques para que no sea un muro de
+   campos. Los obligatorios llevan asterisco. */
+.publish-sections {
+  gap: clamp(18px, 2.6vh, 26px);
+}
+
+.publish-section {
+  display: grid;
+  gap: clamp(9px, 1.4vh, 14px);
+  padding-top: clamp(12px, 1.8vh, 18px);
+  border-top: 1px solid var(--line);
+}
+
+.publish-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.publish-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.publish-section-head h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 950;
+}
+
+.publish-section-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Asterisco de campo obligatorio. */
+.field-required {
+  margin-left: 3px;
+  color: var(--rose);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.publish-toggle {
+  align-self: end;
+  min-height: 44px;
+}
+
+.publish-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field-group-wide {
+  grid-column: span 2;
+}
+
+.geo-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: clamp(58px, 9vh, 74px);
+  padding: clamp(8px, 1.4vh, 12px) 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.geo-card svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.geo-card strong,
+.geo-card span {
+  display: block;
+}
+
+.geo-card strong {
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.geo-card span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.geo-card.is-ready {
+  border-color: rgba(20, 188, 125, 0.36);
+  background: rgba(20, 188, 125, 0.08);
+}
+
+.geo-card.is-ready svg {
+  color: var(--accent-dark);
+}
+
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: clamp(38px, 5.6vh, 48px);
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  font-weight: 850;
+}
+
+.toggle-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.upload-zone {
+  display: grid;
+  min-height: 210px;
+  place-items: center;
+  padding: 28px;
+  border: 1.5px dashed rgba(20, 188, 125, 0.55);
+  border-radius: 20px;
+  background: rgba(20, 188, 125, 0.07);
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+}
+
+.preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.preview-tile {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+.sortable-preview-row {
+  align-items: flex-start;
+}
+
+.sortable-preview-tile {
+  width: 148px;
+  height: 132px;
+  padding-bottom: 36px;
+  cursor: grab;
+}
+
+.sortable-preview-tile:active {
+  cursor: grabbing;
+}
+
+.preview-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.sortable-preview-tile img {
+  height: 96px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-soft);
+}
+
+.photo-order,
+.drag-handle {
+  position: absolute;
+  top: 8px;
+}
+
+.photo-order {
+  left: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: white;
+  background: rgba(23, 23, 23, 0.78);
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.drag-handle {
+  right: 8px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.9);
+  cursor: grab;
+}
+
+.photo-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.photo-actions .icon-btn {
+  width: 100%;
+  height: 30px;
+  border-radius: 10px;
+}
+
+.photo-actions .icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  transform: none;
+}
+
+.publish-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.preview-summary {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+}
+
+.preview-summary-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: clamp(8px, 1.6vh, 14px) 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: clamp(0.82rem, 1.9vh, 0.92rem);
+}
+
+.preview-summary-field {
+  align-items: center;
+}
+
+.preview-summary-field select {
+  max-width: 190px;
+}
+
+
+.preview-summary-row span {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.preview-summary-row strong {
+  min-width: 0;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.preview-summary > .section-subtitle {
+  padding: clamp(10px, 1.8vh, 16px) 16px;
+  margin: 0;
+  font-size: clamp(0.8rem, 1.9vh, 0.9rem);
+}
+
+.publish-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.publish-actions-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}

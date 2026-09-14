@@ -1,0 +1,59 @@
+seguridad, division del codigo y sesion de prueba
+
+Seguridad e integridad
+- Politicas RLS para las 11 tablas: cada usuario accede solo a lo suyo y de
+  los demas solo ve anuncios publicados, nunca borradores.
+- profiles deja de ser publica. Los datos que si son publicos salen por la
+  vista public_profiles, que no incluye ni email ni telefono.
+- Los favoritos dejan de guardarse en una clave global del navegador. Con
+  sesion viven en Supabase; sin ella son locales y se borran al entrar o
+  salir. Se acabo ver los guardados de otra persona.
+- Profile.jsx limpia su estado en cada carga, asi que el perfil de un
+  vendedor ya no deja datos suyos en pantalla al volver al propio.
+- Las rutas privadas pasan por RequireAuth.
+- El perfil se crea con un trigger en la base, no desde el navegador: ya no
+  pueden quedar cuentas sin perfil.
+- Restricciones de integridad en la base: estados validos, coordenadas en
+  rango, precio y kilometraje no negativos, un anuncio publicado no puede
+  estar incompleto, nadie puede denunciarse a si mismo.
+- Politicas de storage por carpeta: ya no se puede sobrescribir la foto de
+  otro conociendo la ruta.
+
+Arquitectura
+- Home.jsx pasa de 2065 a 743 lineas, repartido en 13 componentes y modulos
+  (hero, filtros, cabecera de resultados, mapa, paginacion, ordenacion).
+- El CSS pasa de un fichero de 4706 lineas a 19 hojas por seccion, cargadas
+  en el mismo orden desde index.css para no alterar la cascada.
+- Logica de filtrado y busqueda extraida a services/vehicleFilters.js.
+- Comentarios de cabecera en cada fichero y en cada metodo.
+
+Sesion de prueba para desarrollo
+- Panel DEV flotante para entrar y salir sin registrar una cuenta.
+- Los datos de ejemplo dependen de esa sesion, no del modo desarrollo: quien
+  entra con una cuenta real ve solo Supabase, aunque este vacio.
+- No llega al paquete de produccion: el import de los datos de ejemplo es
+  dinamico y el empaquetador elimina la rama entera.
+
+Filtros y busqueda
+- Tipo de vehiculo como primer filtro.
+- Ubicaciones reales con geocodificador de Nueva Zelanda, en vez de
+  sugerencias sacadas de los propios anuncios.
+- Fuera el radio: la ubicacion ordena los resultados en vez de recortarlos.
+- Control de ordenacion fuera del panel, con 10 criterios.
+- Filtros nuevos a partir del estudio de la competencia.
+
+Interfaz
+- Altura del hero en movil ajustada a una fila de tarjetas, y estable al
+  aplicar filtros.
+- Grid y Map como un unico boton partido por el centro de la pantalla.
+- Etiqueta de estado solo en vendido y reservado, dentro de la tarjeta.
+- Etiqueta "New" solo durante la primera semana desde la publicacion.
+- Formulario de publicacion reordenado: solo obligatorios los campos
+  necesarios y extras de camper solo para vehiculos camperizados.
+
+Base de datos
+- supabase/2026-09-align-with-frontend.sql alinea el esquema con el front:
+  columnas que faltaban, "vehicleType" en vez de vehicle_type, sort_order en
+  product_images, favoritos con copia del anuncio y tabla user_reports.
+- Se retiran products.category, que duplicaba "vehicleType", y products.wof,
+  texto libre que no se podia filtrar y que sustituye "wofExpiry".

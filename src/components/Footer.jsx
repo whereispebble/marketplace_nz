@@ -1,3 +1,8 @@
+/**
+ * Pie de pagina comun a todas las pantallas.
+ * Solo contiene enlaces de navegacion y legales; no hace ninguna consulta.
+ */
+
 import { Link } from 'react-router-dom'
 import { FiHeart, FiMail, FiMessageCircle } from 'react-icons/fi'
 import logo from '../assets/swapy-logo.svg'

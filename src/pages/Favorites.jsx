@@ -1,3 +1,10 @@
+/**
+ * Vehiculos guardados.
+ *
+ * Con sesion iniciada salen de la tabla favorites del usuario; sin sesion, de
+ * la copia local del navegador, que se borra al entrar o salir de una cuenta.
+ */
+
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiHeart } from 'react-icons/fi'

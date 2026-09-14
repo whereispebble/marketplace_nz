@@ -1,21 +1,40 @@
-import { useEffect, useRef, useState } from 'react'
+/**
+ * Mensajes entre comprador y vendedor.
+ *
+ * Lista de conversaciones a la izquierda y la conversacion abierta a la
+ * derecha; en movil se alterna entre las dos. Una conversacion solo la ven sus
+ * dos participantes: lo garantizan las politicas RLS de chats y messages.
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCheck, FiSend, FiTag, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCheck, FiMessageSquare, FiSend, FiTag, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
-import { MOCK_VEHICLES } from '../data/mockVehicles'
+import { loadMockVehicles } from '../services/devData'
 
-const MOCK_CHATS = MOCK_VEHICLES.map((vehicle, index) => ({
-  id: index + 1,
-  sellerId: vehicle.seller?.id,
-  product: vehicle,
-  other_user: vehicle.seller?.name || 'Seller',
-  last_message: index === 0
-    ? 'Is it still available to view this weekend?'
-    : 'Hi, I am interested in this listing.',
-  last_message_at: index === 0 ? '10:30' : 'New',
-  unread: index === 0 ? 2 : 0,
-}))
+/**
+ * Conversaciones de ejemplo a partir de los anuncios de prueba.
+ * Solo se usan en desarrollo: en produccion la bandeja arranca vacia hasta que
+ * haya conversaciones reales en la base de datos.
+ *
+ * @returns {Promise<object[]>}
+ */
+async function buildMockChats() {
+  const vehicles = await loadMockVehicles()
+
+  return vehicles.map((vehicle, index) => ({
+    id: index + 1,
+    sellerId: vehicle.seller?.id,
+    product: vehicle,
+    other_user: vehicle.seller?.name || 'Seller',
+    last_message: index === 0
+      ? 'Is it still available to view this weekend?'
+      : 'Hi, I am interested in this listing.',
+    last_message_at: index === 0 ? '10:30' : 'New',
+    unread: index === 0 ? 2 : 0,
+  }))
+}
 
 const MOCK_MESSAGES = [
   { id: 1, sender_id: 'other', content: 'Hi, is the Hiace still available?', created_at: '10:28' },
@@ -30,25 +49,37 @@ function formatPrice(value) {
 }
 
 export default function Chat() {
-  const { chatId } = useParams()
-  const initialChat = MOCK_CHATS.find(chat => (
-    String(chat.id) === String(chatId)
-    || String(chat.sellerId) === String(chatId)
-    || String(chat.product.id) === String(chatId)
-  )) || MOCK_CHATS[0]
-  const [chats] = useState(MOCK_CHATS)
-  const [messages, setMessages] = useState(MOCK_MESSAGES)
-  const [selectedChatId, setSelectedChatId] = useState(initialChat.id)
-  const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId))
+  const { chatId, sellerId } = useParams()
+
+  // Conversacion directa desde el perfil de alguien: no va sobre un anuncio
+  // concreto, asi que la cabecera solo lleva a la persona.
+  const directChat = useMemo(() => {
+    if (!sellerId) return null
+    return {
+      id: `user-${sellerId}`,
+      sellerId,
+      product: null,
+      direct: true,
+      other_user: 'Seller',
+      last_message: 'New conversation',
+      last_message_at: 'Now',
+      unread: 0,
+    }
+  }, [sellerId])
+
+  const [chats, setChats] = useState(() => (directChat ? [directChat] : []))
+  const [messages, setMessages] = useState([])
+  const [selectedChatId, setSelectedChatId] = useState(directChat?.id || null)
+  const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId || sellerId))
   const [newMessage, setNewMessage] = useState('')
   const [offerAmount, setOfferAmount] = useState('')
   const [offers, setOffers] = useState({})
   const [currentUser, setCurrentUser] = useState(null)
   const messagesRef = useRef(null)
-  const selectedChat = chats.find(chat => chat.id === selectedChatId) || initialChat
-  const selectedOffer = offers[selectedChat.id]
-  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat.product.price
-  const sellerUserId = selectedChat.product.user_id || selectedChat.product.seller_id || selectedChat.sellerId
+  const selectedChat = chats.find(chat => chat.id === selectedChatId) || chats[0] || null
+  const selectedOffer = selectedChat ? offers[selectedChat.id] : null
+  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat?.product?.price
+  const sellerUserId = selectedChat?.product?.user_id || selectedChat?.product?.seller_id || selectedChat?.sellerId
   const isSeller = Boolean(currentUser?.id && sellerUserId && String(currentUser.id) === String(sellerUserId))
 
   useEffect(() => {
@@ -63,13 +94,39 @@ export default function Chat() {
     return () => { ignore = true }
   }, [])
 
+  // Conversaciones de ejemplo, solo en desarrollo. En produccion no se carga
+  // nada y la bandeja se queda vacia hasta que haya conversaciones reales.
+  useEffect(() => {
+    let ignore = false
+
+    async function loadChats() {
+      const mockChats = await buildMockChats()
+      if (ignore || mockChats.length === 0) return
+
+      const allChats = directChat ? [directChat, ...mockChats] : mockChats
+      setChats(allChats)
+      setMessages(directChat ? [] : MOCK_MESSAGES)
+
+      // Si la direccion apunta a una conversacion concreta, se abre esa.
+      const requested = mockChats.find(chat => (
+        String(chat.id) === String(chatId)
+        || String(chat.sellerId) === String(chatId)
+        || String(chat.product?.id) === String(chatId)
+      ))
+      setSelectedChatId(current => current || requested?.id || allChats[0]?.id || null)
+    }
+
+    loadChats()
+    return () => { ignore = true }
+  }, [chatId, directChat])
+
   useEffect(() => {
     if (!messagesRef.current) return
     messagesRef.current.scrollTop = messagesRef.current.scrollHeight
   }, [messages, selectedChat])
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !selectedChat) return
     const msg = {
       id: messages.length + 1,
       sender_id: 'me',
@@ -85,6 +142,7 @@ export default function Chat() {
   }
 
   const handleMakeOffer = () => {
+    if (!selectedChat) return
     const amount = Number(String(offerAmount).replace(/[^0-9.]/g, ''))
     if (!Number.isFinite(amount) || amount <= 0) return
 
@@ -100,6 +158,7 @@ export default function Chat() {
   }
 
   const handleOfferDecision = status => {
+    if (!selectedChat) return
     setOffers(current => ({
       ...current,
       [selectedChat.id]: {
@@ -133,10 +192,12 @@ export default function Chat() {
                     setMobileChatOpen(true)
                   }}
                 >
-                  <img src={chat.product.image} alt="" />
+                  {chat.product
+                    ? <img src={chat.product.image} alt="" />
+                    : <span className="avatar chat-avatar">{chat.other_user?.[0]?.toUpperCase() || 'U'}</span>}
                   <span style={{ minWidth: 0 }}>
                     <strong style={{ display: 'block' }}>{chat.other_user}</strong>
-                    <span className="section-subtitle" style={{ display: 'block', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.product.title}</span>
+                    <span className="section-subtitle" style={{ display: 'block', margin: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.product ? chat.product.title : 'Direct message'}</span>
                     <span style={{ color: chat.unread ? 'var(--ink)' : 'var(--muted)', fontWeight: chat.unread ? 850 : 500 }}>{chat.last_message}</span>
                   </span>
                   <span style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
@@ -149,22 +210,40 @@ export default function Chat() {
           </aside>
 
           <section className="panel chat-main">
+            {!selectedChat && (
+              <div className="empty-state">
+                <div>
+                  <FiMessageSquare size={42} />
+                  <h2>No conversations yet</h2>
+                  <p>When you message a seller about a listing, it will show up here.</p>
+                </div>
+              </div>
+            )}
+
             {selectedChat && (
               <div className="panel-pad chat-product" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
                 <button className="icon-btn mobile-chat-back" type="button" onClick={() => setMobileChatOpen(false)} aria-label="Back to chats">
                   <FiArrowLeft />
                 </button>
-                <img src={selectedChat.product.image} alt="" />
+                {selectedChat.product
+                  ? <img src={selectedChat.product.image} alt="" />
+                  : <span className="avatar chat-avatar">{selectedChat.other_user?.[0]?.toUpperCase() || 'U'}</span>}
                 <div>
                   <strong>{selectedChat.other_user}</strong>
-                  <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
-                  <p className="chat-price-line">
-                    {selectedOffer?.status === 'accepted' ? 'Agreed price' : 'Listing price'}: <strong>{formatPrice(agreedPrice)}</strong>
-                  </p>
+                  {selectedChat.product ? (
+                    <>
+                      <p className="section-subtitle" style={{ marginTop: 2 }}>Re: {selectedChat.product.title}</p>
+                      <p className="chat-price-line">
+                        {selectedOffer?.status === 'accepted' ? 'Agreed price' : 'Listing price'}: <strong>{formatPrice(agreedPrice)}</strong>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="section-subtitle" style={{ marginTop: 2 }}>Direct message</p>
+                  )}
                 </div>
                 <div className="chat-product-actions">
-                  <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary">View listing<FiArrowRight /></Link>
-                  {!isSeller && (
+                  {selectedChat.product && <Link to={`/product/${selectedChat.product.id}`} className="btn btn-secondary">View listing<FiArrowRight /></Link>}
+                  {selectedChat.product && !isSeller && (
                     <div className="offer-inline">
                       <input
                         className="field"
@@ -185,7 +264,11 @@ export default function Chat() {
               </div>
             )}
 
+            {selectedChat && (
             <div className="messages" ref={messagesRef}>
+              {messages.length === 0 && (
+                <p className="chat-empty">Say hi to {selectedChat.other_user}. This conversation is not tied to any listing.</p>
+              )}
               {messages.map(message => (
                 <div className={`message ${message.sender_id === 'me' ? 'is-me' : ''}`} key={message.id}>
                   <div className="bubble">
@@ -195,7 +278,7 @@ export default function Chat() {
                 </div>
               ))}
 
-              {selectedOffer && (
+              {selectedOffer && selectedChat.product && (
                 <div className="message is-me">
                   <div className={`offer-card offer-${selectedOffer.status}`}>
                     <div className="offer-card-head">
@@ -220,12 +303,14 @@ export default function Chat() {
                     )}
                     {selectedOffer.status === 'pending' && !isSeller && <p>Pending seller response.</p>}
                     {selectedOffer.status === 'accepted' && <p>This agreed price is visible only in this conversation.</p>}
-                    {selectedOffer.status === 'declined' && <p>The listing price remains {formatPrice(selectedChat.product.price)} for this buyer.</p>}
+                    {selectedOffer.status === 'declined' && <p>The listing price remains {formatPrice(selectedChat.product?.price)} for this buyer.</p>}
                   </div>
                 </div>
               )}
             </div>
+            )}
 
+            {selectedChat && (
             <div className="chat-compose">
               <input
                 className="field"
@@ -239,6 +324,7 @@ export default function Chat() {
                 <FiSend />
               </button>
             </div>
+            )}
           </section>
         </section>
       </main>

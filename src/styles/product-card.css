@@ -1,0 +1,211 @@
+/* ==========================================================================
+   product-card.css
+   Tarjeta de anuncio: imagen, precio, especificaciones, boton de favorito y
+   distintivo de estado (solo vendido o reservado).
+   ========================================================================== */
+
+.product-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 1px 0 rgba(33, 28, 20, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(20, 188, 125, 0.45);
+  box-shadow: var(--shadow);
+}
+
+.product-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-image {
+  position: relative;
+  aspect-ratio: 8 / 5;
+  overflow: hidden;
+  background: #eee8dd;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.product-card:hover .product-image img {
+  transform: scale(1.045);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: #f1ede5;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.badge-accent {
+  color: white;
+  background: var(--accent);
+}
+
+/* Fila del distintivo de estado en la ficha del anuncio. */
+.detail-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Distintivos de la tarjeta. Solo se pinta uno, en la esquina superior
+   izquierda, y el estado manda sobre "New".
+
+   "New" se muestra durante la primera semana desde la publicacion y luego
+   desaparece solo, sin que nadie tenga que quitarlo a mano. */
+.badge-new {
+  color: white;
+  background: var(--mint);
+}
+
+.badge-sold {
+  color: white;
+  background: var(--ink);
+}
+
+.badge-booked {
+  color: white;
+  background: var(--blue);
+}
+
+.product-card.is-unavailable .product-image img {
+  filter: saturate(0.55);
+  opacity: 0.72;
+}
+
+.product-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.product-card .product-badge .badge {
+  min-height: 23px;
+  padding: 0 9px;
+  font-size: 0.67rem;
+}
+
+.favorite-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 33px;
+  height: 33px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  color: #3d403b;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 26px rgba(33, 28, 20, 0.18);
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.favorite-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.favorite-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  color: var(--accent-dark);
+  border-color: rgba(20, 188, 125, 0.45);
+  background: white;
+  box-shadow: 0 14px 32px rgba(33, 28, 20, 0.2);
+}
+
+.favorite-btn.is-liked {
+  color: white;
+  border-color: rgba(20, 188, 125, 0.72);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+}
+
+.product-info {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px 12px 11px;
+}
+
+.product-title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-price {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 950;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.spec-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.spec-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.muted-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}

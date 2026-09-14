@@ -1,117 +1,14 @@
-export const VEHICLE_TYPES = [
-  { id: 'all', name: 'All vehicles' },
-  { id: 'campervan', name: 'Campervans' },
-  { id: 'motorhome', name: 'Motorhomes' },
-  { id: 'van', name: 'Van conversions' },
-  { id: '4x4', name: '4x4 campers' },
-  { id: 'car', name: 'Cars soon' },
-]
-
-// Marcas: lista exacta de la API publica de Trade Me
-// (https://api.trademe.co.nz/v1/Categories/UsedCars.json), 99 entradas.
-// Modelos: catalogo curado de los mas vendidos en Nueva Zelanda para las marcas
-// principales. Las marcas sin modelos listados dejan el campo como texto libre.
-export const NZ_VEHICLE_CATALOG = [
-  { make: 'Alfa Romeo', models: ['Giulia', 'Giulietta', 'Stelvio', 'Tonale'] },
-  { make: 'Arcfox', models: [] },
-  { make: 'Aston Martin', models: [] },
-  { make: 'Audi', models: ['A1', 'A3', 'A4', 'A5', 'A6', 'e-tron', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT'] },
-  { make: 'Austin', models: [] },
-  { make: 'BAIC', models: [] },
-  { make: 'Bentley', models: [] },
-  { make: 'BMW', models: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '7 Series', 'i3', 'i4', 'iX', 'X1', 'X3', 'X5', 'X7'] },
-  { make: 'Buick', models: [] },
-  { make: 'BYD', models: ['Atto 3', 'Dolphin', 'Seal', 'Sealion', 'Shark'] },
-  { make: 'Cadillac', models: [] },
-  { make: 'Chery', models: [] },
-  { make: 'Chevrolet', models: ['Camaro', 'Colorado', 'Corvette', 'Silverado'] },
-  { make: 'Chrysler', models: ['300C', 'Grand Voyager', 'Voyager'] },
-  { make: 'Citroen', models: ['Berlingo', 'C3', 'C4', 'C5', 'Dispatch', 'Jumper', 'Relay'] },
-  { make: 'Cupra', models: [] },
-  { make: 'Daewoo', models: [] },
-  { make: 'Daihatsu', models: ['Charade', 'Hijet', 'Mira', 'Move', 'Terios'] },
-  { make: 'Daimler', models: [] },
-  { make: 'DENZA', models: [] },
-  { make: 'DFSK', models: [] },
-  { make: 'Dodge', models: ['Journey', 'Nitro', 'Ram'] },
-  { make: 'Dongfeng', models: [] },
-  { make: 'DS Automobiles', models: [] },
-  { make: 'Farizon', models: [] },
-  { make: 'Ferrari', models: [] },
-  { make: 'Fiat', models: ['500', 'Doblo', 'Ducato', 'Scudo', 'Talento'] },
-  { make: 'Ford', models: ['Econovan', 'Escape', 'Everest', 'Explorer', 'Fiesta', 'Focus', 'Mondeo', 'Mustang', 'Ranger', 'Territory', 'Tourneo', 'Transit', 'Transit Connect', 'Transit Custom'] },
-  { make: 'Forthing', models: [] },
-  { make: 'Foton', models: [] },
-  { make: 'GAC', models: [] },
-  { make: 'Geely', models: [] },
-  { make: 'Genesis', models: [] },
-  { make: 'GMC', models: [] },
-  { make: 'GWM', models: ['Cannon', 'Haval H6', 'Ora', 'Tank 300', 'Tank 500'] },
-  { make: 'HAVAL', models: ['H2', 'H6', 'H9', 'Jolion'] },
-  { make: 'Holden', models: ['Astra', 'Barina', 'Captiva', 'Colorado', 'Commodore', 'Cruze', 'Trailblazer', 'Trax'] },
-  { make: 'Honda', models: ['Accord', 'City', 'Civic', 'CR-V', 'Fit', 'Freed', 'HR-V', 'Jazz', 'Odyssey', 'Stepwgn'] },
-  { make: 'Humber', models: [] },
-  { make: 'Hummer', models: [] },
-  { make: 'Hyundai', models: ['Elantra', 'H-1', 'i20', 'i30', 'Ioniq', 'iLoad', 'iMax', 'Kona', 'Santa Fe', 'Staria', 'Tucson'] },
-  { make: 'INEOS', models: [] },
-  { make: 'INFINITI', models: ['Q50', 'QX50', 'QX60'] },
-  { make: 'Isuzu', models: ['Bighorn', 'D-Max', 'Elf', 'Fargo', 'MU-X', 'N-Series'] },
-  { make: 'Iveco', models: ['Daily'] },
-  { make: 'JAC', models: [] },
-  { make: 'JAECOO', models: [] },
-  { make: 'Jaguar', models: ['E-Pace', 'F-Pace', 'XE', 'XF', 'XJ'] },
-  { make: 'Jeep', models: ['Cherokee', 'Compass', 'Grand Cherokee', 'Wrangler'] },
-  { make: 'KGM', models: [] },
-  { make: 'Kia', models: ['Carnival', 'Cerato', 'EV6', 'Niro', 'Picanto', 'Rio', 'Seltos', 'Sorento', 'Sportage', 'Stonic'] },
-  { make: 'Lamborghini', models: [] },
-  { make: 'Lancia', models: [] },
-  { make: 'Land Rover', models: ['Defender', 'Discovery', 'Discovery Sport', 'Freelander', 'Range Rover', 'Range Rover Evoque', 'Range Rover Sport'] },
-  { make: 'LDV', models: ['Deliver 9', 'eDeliver 9', 'G10', 'T60', 'V80'] },
-  { make: 'Leapmotor', models: [] },
-  { make: 'Lexus', models: ['CT', 'ES', 'IS', 'NX', 'RX', 'UX'] },
-  { make: 'Lotus', models: [] },
-  { make: 'Mahindra', models: ['Pik-Up', 'Scorpio', 'XUV700'] },
-  { make: 'Maserati', models: [] },
-  { make: 'Mazda', models: ['Atenza', 'Axela', 'Biante', 'Bongo', 'BT-50', 'CX-3', 'CX-5', 'CX-8', 'CX-9', 'Demio', 'Mazda2', 'Mazda3', 'Mazda6', 'MPV', 'Premacy'] },
-  { make: 'McLaren', models: [] },
-  { make: 'Mercedes-Benz', models: ['A-Class', 'C-Class', 'E-Class', 'GLA', 'GLC', 'GLE', 'Sprinter', 'V-Class', 'Valente', 'Vito'] },
-  { make: 'MG', models: ['HS', 'MG3', 'MG4', 'MG5', 'ZS'] },
-  { make: 'MINI', models: ['Clubman', 'Cooper', 'Countryman'] },
-  { make: 'Mitsubishi', models: ['ASX', 'Delica', 'Eclipse Cross', 'L300', 'Lancer', 'Outlander', 'Pajero', 'Pajero Sport', 'Triton'] },
-  { make: 'Morgan', models: [] },
-  { make: 'Morris', models: [] },
-  { make: 'Nio', models: [] },
-  { make: 'Nissan', models: ['Caravan', 'Dualis', 'e-NV200', 'Elgrand', 'Juke', 'Leaf', 'Navara', 'Note', 'NV200', 'NV350', 'Pathfinder', 'Qashqai', 'Serena', 'Skyline', 'Tiida', 'X-Trail'] },
-  { make: 'OMODA', models: [] },
-  { make: 'Opel', models: ['Astra', 'Combo', 'Vivaro'] },
-  { make: 'Peugeot', models: ['208', '2008', '308', '3008', '5008', 'Boxer', 'Expert', 'Partner', 'Traveller'] },
-  { make: 'Polestar', models: ['Polestar 2', 'Polestar 3'] },
-  { make: 'Pontiac', models: [] },
-  { make: 'Porsche', models: ['911', 'Cayenne', 'Macan', 'Panamera'] },
-  { make: 'Ram', models: ['1500', '2500', '3500'] },
-  { make: 'Renault', models: ['Captur', 'Clio', 'Kangoo', 'Koleos', 'Master', 'Megane', 'Trafic'] },
-  { make: 'Riley', models: [] },
-  { make: 'Rolls-Royce', models: [] },
-  { make: 'Rover', models: [] },
-  { make: 'Saab', models: [] },
-  { make: 'SEAT', models: ['Ibiza', 'Leon'] },
-  { make: 'Skoda', models: ['Fabia', 'Karoq', 'Kodiaq', 'Octavia', 'Superb'] },
-  { make: 'Smart', models: [] },
-  { make: 'Ssangyong', models: ['Korando', 'Musso', 'Rexton', 'Tivoli'] },
-  { make: 'Studebaker', models: [] },
-  { make: 'Subaru', models: ['BRZ', 'Forester', 'Impreza', 'Legacy', 'Levorg', 'Outback', 'WRX', 'XV'] },
-  { make: 'Suzuki', models: ['Baleno', 'Every', 'Ignis', 'Jimny', 'S-Cross', 'Swift', 'Vitara'] },
-  { make: 'Tesla', models: ['Model 3', 'Model S', 'Model X', 'Model Y'] },
-  { make: 'Toyota', models: ['Alphard', 'Aqua', 'Auris', 'Camry', 'Corolla', 'Estima', 'Hiace', 'Highlander', 'Hilux', 'Land Cruiser', 'Land Cruiser Prado', 'LiteAce', 'Noah', 'Prius', 'RAV4', 'Regius', 'Sienta', 'TownAce', 'Vitz', 'Voxy', 'Yaris', 'Yaris Cross'] },
-  { make: 'Triumph', models: [] },
-  { make: 'TVR', models: [] },
-  { make: 'Vauxhall', models: [] },
-  { make: 'Volkswagen', models: ['Amarok', 'Caddy', 'California', 'Caravelle', 'Crafter', 'Golf', 'ID.4', 'Multivan', 'Passat', 'Polo', 'Tiguan', 'Touareg', 'Transporter'] },
-  { make: 'Volvo', models: ['EX30', 'S60', 'V40', 'V60', 'XC40', 'XC60', 'XC90'] },
-  { make: 'XPENG', models: [] },
-  { make: 'Zeekr', models: [] },
-  { make: 'Other', models: [] },
-]
+/**
+ * Anuncios de ejemplo.
+ *
+ * SOLO PARA DESARROLLO. Nunca deben aparecer en produccion: un comprador no
+ * puede ver anuncios de vehiculos que no existen.
+ *
+ * Este modulo no se importa de forma directa en ninguna pantalla. Se carga con
+ * un import dinamico desde services/devData.js, y solo mientras esta activa la
+ * sesion de prueba. Asi el empaquetador lo deja fuera del paquete de
+ * produccion, en lugar de incluir 27 KB de datos falsos que nadie va a usar.
+ */
 
 const FEATURED_MOCK_VEHICLES = [
   {
@@ -125,7 +22,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 38500,
     mileage: 168000,
     condition: 'Excellent',
-    wof: 'Valid until Sep 2026',
     sleeps: 2,
     belts: 3,
     selfContained: true,
@@ -133,7 +29,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Auckland',
     lat: -36.8485,
     lng: 174.7633,
-    category: 'campervan',
     image: 'https://images.unsplash.com/photo-1533591380348-14193f1de18f?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1533591380348-14193f1de18f?auto=format&fit=crop&w=1200&q=80',
@@ -155,7 +50,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 72900,
     mileage: 94000,
     condition: 'Very good',
-    wof: 'Valid until Jan 2027',
     sleeps: 2,
     belts: 2,
     selfContained: true,
@@ -163,7 +57,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Otago',
     lat: -45.0312,
     lng: 168.6626,
-    category: 'van',
     image: 'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1527786356703-4b100091cd2c?auto=format&fit=crop&w=1200&q=80',
@@ -185,7 +78,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 89500,
     mileage: 76000,
     condition: 'Excellent',
-    wof: 'Valid until Nov 2026',
     sleeps: 4,
     belts: 4,
     selfContained: true,
@@ -193,7 +85,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Canterbury',
     lat: -43.5321,
     lng: 172.6362,
-    category: 'motorhome',
     image: 'https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1200&q=80',
@@ -215,7 +106,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 24900,
     mileage: 201000,
     condition: 'Good',
-    wof: 'Valid until Jul 2026',
     sleeps: 2,
     belts: 5,
     selfContained: false,
@@ -223,7 +113,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Nelson Tasman',
     lat: -41.2706,
     lng: 173.2840,
-    category: '4x4',
     image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
@@ -244,7 +133,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 46900,
     mileage: 112000,
     condition: 'Very good',
-    wof: 'Valid until Aug 2026',
     sleeps: 2,
     belts: 3,
     selfContained: true,
@@ -252,7 +140,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Wellington',
     lat: -41.2865,
     lng: 174.7762,
-    category: 'campervan',
     image: 'https://images.unsplash.com/photo-1594495894542-a46cc73e081a?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1594495894542-a46cc73e081a?auto=format&fit=crop&w=1200&q=80',
@@ -273,7 +160,6 @@ const FEATURED_MOCK_VEHICLES = [
     price: 18900,
     mileage: 238000,
     condition: 'Needs work',
-    wof: 'Valid until May 2026',
     sleeps: 2,
     belts: 3,
     selfContained: false,
@@ -281,7 +167,6 @@ const FEATURED_MOCK_VEHICLES = [
     region: 'Bay of Plenty',
     lat: -38.1368,
     lng: 176.2497,
-    category: 'campervan',
     image: 'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=900&q=80',
     images: [
       'https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&w=1200&q=80',
@@ -366,7 +251,6 @@ const MOCK_IMAGE_POOL = [
 ]
 
 const MOCK_CONDITIONS = ['Excellent', 'Very good', 'Good', 'Needs work', 'Project vehicle']
-const MOCK_WOF_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function createGeneratedVehicles() {
   return Array.from({ length: 72 }, (_, index) => {
@@ -399,7 +283,6 @@ function createGeneratedVehicles() {
       price,
       mileage,
       condition: MOCK_CONDITIONS[index % MOCK_CONDITIONS.length],
-      wof: `Valid until ${MOCK_WOF_MONTHS[index % MOCK_WOF_MONTHS.length]} 2027`,
       sleeps: template.sleeps,
       belts: template.belts,
       selfContained: template.selfContained,
@@ -407,7 +290,6 @@ function createGeneratedVehicles() {
       region: place.region,
       lat: Number((place.lat + suburbOffset).toFixed(5)),
       lng: Number((place.lng - suburbOffset).toFixed(5)),
-      category: template.vehicleType,
       image,
       images: [image, secondaryImage, MOCK_IMAGE_POOL[(index + 5) % MOCK_IMAGE_POOL.length]],
       description: `${year} ${template.model} listed in ${place.location}. Includes ${roadTripTone}. Good option for buyers comparing WOF, mileage, sleeping capacity and location before viewing.`,
@@ -471,8 +353,6 @@ function withMockSpecs(vehicles) {
       batteryAh: certified ? 80 + ((index % 7) * 20) : (index % 4) * 25,
       solarW: certified ? 100 + ((index % 6) * 60) : (index % 5) * 40,
       toiletType: certified ? 'fixed' : (index % 3 === 0 ? 'portable' : 'none'),
-      // La verde exige inodoro fijo; la amarilla solo vale en sitios NZMCA.
-      scCertification: certified ? (index % 4 === 0 ? 'yellow' : 'green') : '',
       scExpiry: certified ? isoDateInMonths(index % 11 === 0 ? -3 : 6 + (index % 30)) : null,
       ...vehicle,
     }

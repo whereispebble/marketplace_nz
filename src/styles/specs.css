@@ -1,0 +1,150 @@
+/* ==========================================================================
+   specs.css
+   Bloques de datos: cuadros de estadisticas, especificaciones del vehiculo y
+   ficha tecnica con los avisos de WOF y rego.
+   ========================================================================== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.stat-box {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  text-align: center;
+}
+
+.stat-box strong {
+  display: block;
+  font-weight: 950;
+}
+
+.stat-box span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.vehicle-spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vehicle-spec {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.vehicle-spec span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.vehicle-spec strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.95rem;
+}
+
+/* Etiquetas cortas con los rasgos del vehiculo, bajo la descripcion. */
+.spec-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.spec-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+/* Ficha tecnica completa, agrupada por bloques. */
+.spec-sheet {
+  display: grid;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.spec-sheet-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.spec-sheet-group dl {
+  margin: 0;
+}
+
+.spec-sheet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.spec-sheet-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.spec-sheet-row dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.spec-sheet-row dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.spec-flag {
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.spec-flag-expired {
+  color: #8c1d18;
+  background: #fdecea;
+}
+
+.spec-flag-soon {
+  color: #8a5300;
+  background: #fdf1dc;
+}
+
+/* La columna de la derecha acompana al scroll en escritorio. */
+@media (min-width: 901px) {
+  .detail-sidebar {
+    position: sticky;
+    top: 88px;
+  }
+}

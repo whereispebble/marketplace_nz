@@ -1,3 +1,9 @@
+/**
+ * Pagina "Como funciona".
+ * Contenido estatico: pasos para comprar y vender, preguntas frecuentes y un
+ * formulario de contacto.
+ */
+
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FiArrowRight, FiCheck, FiChevronDown, FiMail, FiSearch, FiShield, FiTag, FiTruck } from 'react-icons/fi'
