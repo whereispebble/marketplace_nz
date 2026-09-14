@@ -1,0 +1,125 @@
+/* ==========================================================================
+   map.css
+   Mapa de resultados (Leaflet) con sus marcadores y ventanas emergentes, mas
+   el mapa ilustrado de la portada.
+   ========================================================================== */
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.search-results-main .map-layout {
+  display: block;
+}
+
+
+.street-map {
+  /* Leaflet posiciona sus paneles con z-index 400-1000. Sin un contexto de
+     apilamiento propio se pintan por encima del header, la navegacion movil y
+     los modales. Con position + z-index: 0 quedan confinados aqui dentro. */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  min-height: min(72vh, 720px);
+  overflow: hidden;
+}
+
+.street-map-canvas {
+  width: 100%;
+  min-height: min(72vh, 720px);
+  height: 100%;
+  background: #d8ece3;
+}
+
+.map-error {
+  position: absolute;
+  inset: auto 18px 18px;
+  z-index: 500;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #8a142f;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-soft);
+  font-weight: 800;
+}
+
+/* Punto de la ubicacion elegida en el filtro: late suavemente para que se
+   distinga de los marcadores de anuncio. */
+.swapy-map-focus {
+  animation: focusPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes focusPulse {
+  0%, 100% { stroke-opacity: 1; }
+  50% { stroke-opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swapy-map-focus {
+    animation: none;
+  }
+}
+
+.swapy-map-marker {
+  display: grid;
+  place-items: center;
+}
+
+.swapy-map-marker span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 2px solid white;
+  border-radius: 999px;
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 12px 24px rgba(10, 143, 93, 0.28);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px;
+  color: var(--ink);
+}
+
+.leaflet-popup-content p {
+  margin: 4px 0 8px;
+  color: var(--muted);
+}
+
+.leaflet-popup-content a {
+  color: var(--accent-dark);
+  font-weight: 900;
+}
+
+.map-popup-image {
+  display: block;
+  width: 100%;
+  height: 120px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #eee8dd;
+}
+
+.map-popup-body strong {
+  display: block;
+  line-height: 1.25;
+}
+
+.map-popup-price {
+  margin: 4px 0 0 !important;
+  color: var(--ink) !important;
+  font-weight: 900;
+}
+
+.map-popup-meta {
+  font-size: 0.82rem;
+}

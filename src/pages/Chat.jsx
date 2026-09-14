@@ -1,21 +1,40 @@
+/**
+ * Mensajes entre comprador y vendedor.
+ *
+ * Lista de conversaciones a la izquierda y la conversacion abierta a la
+ * derecha; en movil se alterna entre las dos. Una conversacion solo la ven sus
+ * dos participantes: lo garantizan las politicas RLS de chats y messages.
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCheck, FiSend, FiTag, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCheck, FiMessageSquare, FiSend, FiTag, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
-import { MOCK_VEHICLES } from '../data/mockVehicles'
+import { loadMockVehicles } from '../services/devData'
 
-const MOCK_CHATS = MOCK_VEHICLES.map((vehicle, index) => ({
-  id: index + 1,
-  sellerId: vehicle.seller?.id,
-  product: vehicle,
-  other_user: vehicle.seller?.name || 'Seller',
-  last_message: index === 0
-    ? 'Is it still available to view this weekend?'
-    : 'Hi, I am interested in this listing.',
-  last_message_at: index === 0 ? '10:30' : 'New',
-  unread: index === 0 ? 2 : 0,
-}))
+/**
+ * Conversaciones de ejemplo a partir de los anuncios de prueba.
+ * Solo se usan en desarrollo: en produccion la bandeja arranca vacia hasta que
+ * haya conversaciones reales en la base de datos.
+ *
+ * @returns {Promise<object[]>}
+ */
+async function buildMockChats() {
+  const vehicles = await loadMockVehicles()
+
+  return vehicles.map((vehicle, index) => ({
+    id: index + 1,
+    sellerId: vehicle.seller?.id,
+    product: vehicle,
+    other_user: vehicle.seller?.name || 'Seller',
+    last_message: index === 0
+      ? 'Is it still available to view this weekend?'
+      : 'Hi, I am interested in this listing.',
+    last_message_at: index === 0 ? '10:30' : 'New',
+    unread: index === 0 ? 2 : 0,
+  }))
+}
 
 const MOCK_MESSAGES = [
   { id: 1, sender_id: 'other', content: 'Hi, is the Hiace still available?', created_at: '10:28' },
@@ -36,37 +55,31 @@ export default function Chat() {
   // concreto, asi que la cabecera solo lleva a la persona.
   const directChat = useMemo(() => {
     if (!sellerId) return null
-    const seller = MOCK_VEHICLES.find(vehicle => String(vehicle.seller?.id) === String(sellerId))?.seller
     return {
       id: `user-${sellerId}`,
       sellerId,
       product: null,
       direct: true,
-      other_user: seller?.name || 'Seller',
+      other_user: 'Seller',
       last_message: 'New conversation',
       last_message_at: 'Now',
       unread: 0,
     }
   }, [sellerId])
 
-  const initialChat = directChat || MOCK_CHATS.find(chat => (
-    String(chat.id) === String(chatId)
-    || String(chat.sellerId) === String(chatId)
-    || String(chat.product.id) === String(chatId)
-  )) || MOCK_CHATS[0]
-  const [chats] = useState(() => (directChat ? [directChat, ...MOCK_CHATS] : MOCK_CHATS))
-  const [messages, setMessages] = useState(directChat ? [] : MOCK_MESSAGES)
-  const [selectedChatId, setSelectedChatId] = useState(initialChat.id)
+  const [chats, setChats] = useState(() => (directChat ? [directChat] : []))
+  const [messages, setMessages] = useState([])
+  const [selectedChatId, setSelectedChatId] = useState(directChat?.id || null)
   const [mobileChatOpen, setMobileChatOpen] = useState(Boolean(chatId || sellerId))
   const [newMessage, setNewMessage] = useState('')
   const [offerAmount, setOfferAmount] = useState('')
   const [offers, setOffers] = useState({})
   const [currentUser, setCurrentUser] = useState(null)
   const messagesRef = useRef(null)
-  const selectedChat = chats.find(chat => chat.id === selectedChatId) || initialChat
-  const selectedOffer = offers[selectedChat.id]
-  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat.product?.price
-  const sellerUserId = selectedChat.product?.user_id || selectedChat.product?.seller_id || selectedChat.sellerId
+  const selectedChat = chats.find(chat => chat.id === selectedChatId) || chats[0] || null
+  const selectedOffer = selectedChat ? offers[selectedChat.id] : null
+  const agreedPrice = selectedOffer?.status === 'accepted' ? selectedOffer.amount : selectedChat?.product?.price
+  const sellerUserId = selectedChat?.product?.user_id || selectedChat?.product?.seller_id || selectedChat?.sellerId
   const isSeller = Boolean(currentUser?.id && sellerUserId && String(currentUser.id) === String(sellerUserId))
 
   useEffect(() => {
@@ -81,13 +94,39 @@ export default function Chat() {
     return () => { ignore = true }
   }, [])
 
+  // Conversaciones de ejemplo, solo en desarrollo. En produccion no se carga
+  // nada y la bandeja se queda vacia hasta que haya conversaciones reales.
+  useEffect(() => {
+    let ignore = false
+
+    async function loadChats() {
+      const mockChats = await buildMockChats()
+      if (ignore || mockChats.length === 0) return
+
+      const allChats = directChat ? [directChat, ...mockChats] : mockChats
+      setChats(allChats)
+      setMessages(directChat ? [] : MOCK_MESSAGES)
+
+      // Si la direccion apunta a una conversacion concreta, se abre esa.
+      const requested = mockChats.find(chat => (
+        String(chat.id) === String(chatId)
+        || String(chat.sellerId) === String(chatId)
+        || String(chat.product?.id) === String(chatId)
+      ))
+      setSelectedChatId(current => current || requested?.id || allChats[0]?.id || null)
+    }
+
+    loadChats()
+    return () => { ignore = true }
+  }, [chatId, directChat])
+
   useEffect(() => {
     if (!messagesRef.current) return
     messagesRef.current.scrollTop = messagesRef.current.scrollHeight
   }, [messages, selectedChat])
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !selectedChat) return
     const msg = {
       id: messages.length + 1,
       sender_id: 'me',
@@ -103,6 +142,7 @@ export default function Chat() {
   }
 
   const handleMakeOffer = () => {
+    if (!selectedChat) return
     const amount = Number(String(offerAmount).replace(/[^0-9.]/g, ''))
     if (!Number.isFinite(amount) || amount <= 0) return
 
@@ -118,6 +158,7 @@ export default function Chat() {
   }
 
   const handleOfferDecision = status => {
+    if (!selectedChat) return
     setOffers(current => ({
       ...current,
       [selectedChat.id]: {
@@ -169,6 +210,16 @@ export default function Chat() {
           </aside>
 
           <section className="panel chat-main">
+            {!selectedChat && (
+              <div className="empty-state">
+                <div>
+                  <FiMessageSquare size={42} />
+                  <h2>No conversations yet</h2>
+                  <p>When you message a seller about a listing, it will show up here.</p>
+                </div>
+              </div>
+            )}
+
             {selectedChat && (
               <div className="panel-pad chat-product" style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--line)' }}>
                 <button className="icon-btn mobile-chat-back" type="button" onClick={() => setMobileChatOpen(false)} aria-label="Back to chats">
@@ -213,6 +264,7 @@ export default function Chat() {
               </div>
             )}
 
+            {selectedChat && (
             <div className="messages" ref={messagesRef}>
               {messages.length === 0 && (
                 <p className="chat-empty">Say hi to {selectedChat.other_user}. This conversation is not tied to any listing.</p>
@@ -256,7 +308,9 @@ export default function Chat() {
                 </div>
               )}
             </div>
+            )}
 
+            {selectedChat && (
             <div className="chat-compose">
               <input
                 className="field"
@@ -270,6 +324,7 @@ export default function Chat() {
                 <FiSend />
               </button>
             </div>
+            )}
           </section>
         </section>
       </main>

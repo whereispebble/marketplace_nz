@@ -1,0 +1,279 @@
+/* ==========================================================================
+   how-it-works.css
+   Pagina "Como funciona": cabecera con foto, tarjetas de pasos, preguntas
+   frecuentes y formulario de contacto.
+   ========================================================================== */
+
+.photo-shell {
+  position: relative;
+}
+
+/* La foto queda fija detras del contenido, atenuada para que el texto siga
+   leyendose. z-index 0 la mantiene por debajo del header (50) y del contenido. */
+.photo-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* En How it works se ancla abajo para que se vea la carretera, no solo el cielo. */
+.how-shell .photo-background {
+  background-position: center bottom;
+}
+
+.photo-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(12, 20, 18, 0.42) 0%, rgba(12, 20, 18, 0.55) 45%, rgba(12, 20, 18, 0.68) 100%);
+}
+
+.photo-shell .topbar,
+.photo-shell .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Texto directo sobre la foto: en blanco. */
+.photo-shell .page-title,
+.photo-shell .how-section > .section-title {
+  color: white;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+}
+
+.photo-shell > .container > .section-header .section-subtitle,
+.photo-shell .how-hero .section-subtitle,
+.photo-shell .how-section > .section-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* Los pasos pendientes tienen que leerse sobre la foto; el activo conserva su
+   fondo oscuro. */
+.photo-shell .step:not(.is-active):not(.is-done) {
+  background: white;
+}
+
+/* Las cajas son opacas y mantienen el texto oscuro. */
+.photo-shell .panel,
+.photo-shell .faq-item {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: white;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+.photo-shell .btn-secondary {
+  background: white;
+}
+
+.how-hero {
+  display: grid;
+  justify-items: start;
+  gap: clamp(8px, 1.2vh, 14px);
+  max-width: 760px;
+  margin-top: clamp(12px, 2.4vh, 56px);
+  margin-bottom: clamp(18px, 3vh, 40px);
+}
+
+/* El titular de How it works manda sobre la foto, asi que va mas grande que el
+   resto de page-title de la aplicacion. */
+.how-hero .page-title {
+  max-width: 15ch;
+  font-size: clamp(1.6rem, 2.3vw + 0.9vh, 3.2rem);
+  line-height: 1.05;
+}
+
+.how-section {
+  display: grid;
+  justify-items: start;
+  gap: clamp(12px, 2vh, 16px);
+  margin-bottom: clamp(26px, 4.4vh, 40px);
+}
+
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.how-card {
+  display: grid;
+  align-content: start;
+  gap: clamp(6px, 1.1vh, 8px);
+}
+
+.how-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.how-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.how-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(30px, 4.6vh, 36px);
+  height: clamp(30px, 4.6vh, 36px);
+  border-radius: 12px;
+  color: var(--accent-dark);
+  background: var(--surface-soft);
+}
+
+.faq-list {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.faq-item {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+}
+
+.faq-item.is-open {
+  border-color: rgba(20, 188, 125, 0.45);
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.faq-question svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+  transition: transform 0.18s ease;
+}
+
+.faq-item.is-open .faq-question svg {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.request-form {
+  display: grid;
+  gap: 14px;
+  width: min(680px, 100%);
+}
+
+.request-form textarea.field {
+  min-height: 120px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.request-form .btn {
+  justify-self: start;
+}
+
+.request-error {
+  margin: 0;
+  color: #c0392b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.request-sent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(680px, 100%);
+}
+
+.request-sent svg {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: var(--accent-dark);
+}
+
+.request-sent p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.request-sent .btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* En escritorio el perfil es un boton neutro: no debe competir con las
+   llamadas a la accion reales de la pagina. En movil se mantiene el estilo de
+   la barra inferior fija, por eso la regla va limitada por media query. */
+@media (min-width: 641px) {
+  .nav-profile-btn.btn-primary {
+    min-height: 34px;
+    padding: 0 14px;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    background: white;
+    box-shadow: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .nav-profile-btn.btn-primary:hover {
+    border-color: rgba(20, 188, 125, 0.45);
+    background: var(--surface-soft);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .nav-profile-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 900px) {
+  .how-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .request-sent {
+    flex-wrap: wrap;
+  }
+
+  .request-sent .btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ---------- Footer ---------- */

@@ -1,3 +1,9 @@
+/**
+ * Paginas legales.
+ * Un mismo componente sirve la politica de privacidad y los terminos de uso
+ * segun el prop document.
+ */
+
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'

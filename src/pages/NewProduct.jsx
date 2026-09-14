@@ -1,3 +1,16 @@
+/**
+ * Publicar o editar un anuncio.
+ *
+ * Asistente de cuatro pasos: datos del vehiculo, detalles de NZ, fotos y
+ * previsualizacion. Solo son obligatorios titulo, marca y modelo, precio, tipo,
+ * condicion, ubicacion y una foto; el resto son campos que mejoran la ficha y
+ * hacen que el anuncio aparezca en mas filtros.
+ *
+ * Los bloques de camper (layout, medidas, deposito, certificacion) solo se
+ * muestran para vehiculos habitables, y sus datos se limpian si se cambia a un
+ * tipo que no lo es, para no publicar informacion oculta que no corresponde.
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiMapPin, FiMove, FiX } from 'react-icons/fi'
@@ -6,7 +19,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
 import LocationField from '../components/LocationField'
-import { NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/mockVehicles'
+import { NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/nzVehicleCatalog'
 // Misma foto que el hero de la home, asi que ya viene de cache al navegar
 import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
@@ -140,7 +153,7 @@ export default function NewProduct() {
         model: data.model || '',
         description: data.description || '',
         price: data.price ?? '',
-        vehicleType: data.vehicleType || data.category || '',
+        vehicleType: data.vehicleType || '',
         condition: data.condition || '',
         transmission: data.transmission || '',
         year: data.year ?? '',
@@ -192,7 +205,6 @@ export default function NewProduct() {
     description: form.description || 'The seller has not added a description yet.',
     price: Number(form.price || 0),
     vehicleType: form.vehicleType,
-    category: form.vehicleType,
     condition: form.condition || 'Used',
     transmission: form.transmission,
     year: form.year ? Number(form.year) : null,
@@ -381,7 +393,6 @@ export default function NewProduct() {
       model: form.model.trim(),
       description: form.description.trim(),
       price: form.price ? Number(form.price) : null,
-      category: form.vehicleType,
       vehicleType: form.vehicleType,
       condition: form.condition,
       transmission: form.transmission || null,

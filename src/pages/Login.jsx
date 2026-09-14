@@ -1,18 +1,48 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+/**
+ * Pagina de inicio de sesion.
+ *
+ * La contrasena no se guarda ni se procesa aqui: se manda por HTTPS a Supabase
+ * Auth, que la compara contra su hash bcrypt y devuelve un token. Esta pagina
+ * nunca ve ni almacena credenciales.
+ */
+
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, supabase } from '../services/supabase'
+import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
+  // Pagina a la que queria entrar el usuario antes de que RequireAuth lo
+  // mandara aqui. Sin eso, tras identificarse acabaria siempre en la portada.
+  const redirectTo = location.state?.from || '/'
+  const { user, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  /**
+   * Con sesion ya iniciada esta pantalla no pinta nada, asi que se sale de
+   * ella. Cubre tres casos: volver al login teniendo sesion, identificarse con
+   * un proveedor externo (que no pasa por handleLogin) y activar la sesion de
+   * prueba de desarrollo desde aqui.
+   */
+  useEffect(() => {
+    if (sessionLoading || !user) return
+    navigate(redirectTo, { replace: true })
+  }, [user, sessionLoading, navigate, redirectTo])
+
+  /**
+   * Identifica al usuario con email y contrasena.
+   * Los errores de Supabase se traducen a un mensaje legible sin revelar si el
+   * correo existe o no, para no dar pistas a quien pruebe cuentas ajenas.
+   */
   const handleLogin = async () => {
     if (!email || !password) { setError('Please fill in all fields'); return }
     setLoading(true)
@@ -29,9 +59,13 @@ export default function Login() {
       setLoading(false)
       return
     }
-    navigate('/')
+    navigate(redirectTo, { replace: true })
   }
 
+  /**
+   * Identificacion con un proveedor externo (Google o Facebook).
+   * @param {'google'|'facebook'} provider
+   */
   const handleOAuthLogin = async provider => {
     setLoading(true)
     setError('')

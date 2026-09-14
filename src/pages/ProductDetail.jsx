@@ -1,31 +1,61 @@
+/**
+ * Ficha de un anuncio.
+ *
+ * Muestra las fotos con visor a pantalla completa, la ficha tecnica, los avisos
+ * de WOF y rego, y los datos del vendedor. Si el anuncio no esta en Supabase
+ * (por ejemplo uno de ejemplo) cae en los datos locales.
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FiChevronLeft, FiChevronRight, FiEye, FiHeart, FiMapPin, FiMaximize2, FiMessageCircle, FiShield, FiStar, FiUsers, FiX } from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiEye, FiHeart, FiMapPin, FiMaximize2, FiMessageCircle, FiSearch, FiShield, FiStar, FiUsers, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { MOCK_VEHICLES, VEHICLE_TYPES } from '../data/mockVehicles'
+import { VEHICLE_TYPES } from '../data/nzVehicleCatalog'
+import { findMockVehicle } from '../services/devData'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
+import { listingStatusBadge } from '../constants/listingStatus'
 
 export default function ProductDetail() {
   const { id } = useParams()
-  const fallbackVehicle = MOCK_VEHICLES.find(vehicle => String(vehicle.id) === String(id)) || MOCK_VEHICLES[0]
-  const [product, setProduct] = useState(fallbackVehicle)
+  // El anuncio empieza vacio: se pinta cuando llega el de la base de datos.
+  const [product, setProduct] = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [liked, setLiked] = useState(false)
   const [savingFavorite, setSavingFavorite] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const sellerId = product.seller_id || product.seller?.id || 'seller'
-  const sellerName = product.seller?.name || 'Private seller'
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const sellerId = product?.seller_id || product?.seller?.id || 'seller'
+  const sellerName = product?.seller?.name || 'Private seller'
 
   useEffect(() => {
     let ignore = false
 
     async function loadProduct() {
-      const { data, error } = await supabase.from('products').select('*').eq('id', id).single()
-      if (!ignore && !error && data) setProduct(data)
-      if (!ignore) setLoading(false)
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (ignore) return
+
+      if (!error && data) {
+        setProduct(data)
+        setLoading(false)
+        return
+      }
+
+      // En desarrollo se puede abrir un anuncio de ejemplo; en produccion, si
+      // no esta en la base de datos es que no existe o no se puede ver.
+      const mockVehicle = await findMockVehicle(id)
+      if (ignore) return
+
+      if (mockVehicle) setProduct(mockVehicle)
+      else setNotFound(true)
+      setLoading(false)
     }
 
     loadProduct()
@@ -36,6 +66,7 @@ export default function ProductDetail() {
     let ignore = false
 
     async function loadFavoriteState() {
+      if (!product) return
       const saved = await isFavorite(product)
       if (!ignore) setLiked(saved)
     }
@@ -53,75 +84,83 @@ export default function ProductDetail() {
   // los rasgos del vehiculo y la ficha tecnica completa agrupada por bloques.
   // La localizacion va aparte, fuera de los cuadraditos.
   const essentialSpecs = useMemo(() => cleanSpecs([
-    { label: 'Year', value: product.year },
-    { label: 'Mileage', value: numberWithUnit(product.mileage, 'km') },
-    { label: 'Vehicle type', value: vehicleTypeName(product.vehicleType || product.category) },
-    { label: 'Sleeps', value: product.sleeps, icon: <FiUsers /> },
-    { label: 'Transmission', value: product.transmission },
-    { label: 'Self-contained', value: product.selfContained ? 'Yes' : 'No', icon: <FiShield /> },
+    { label: 'Year', value: product?.year },
+    { label: 'Mileage', value: numberWithUnit(product?.mileage, 'km') },
+    { label: 'Vehicle type', value: vehicleTypeName(product?.vehicleType) },
+    { label: 'Sleeps', value: product?.sleeps, icon: <FiUsers /> },
+    { label: 'Transmission', value: product?.transmission },
+    { label: 'Self-contained', value: product?.selfContained ? 'Yes' : 'No', icon: <FiShield /> },
   ]), [product])
 
   const highlights = useMemo(() => ([
-    vehicleTypeName(product.vehicleType || product.category),
-    product.condition,
-    product.fuel,
-    product.transmission,
-    product.drivetrain,
-    product.layout,
-    TOILET_LABELS[product.toiletType],
-    product.selfContained ? 'Self-contained' : '',
-    Number(product.solarW) > 0 ? 'Solar' : '',
+    vehicleTypeName(product?.vehicleType),
+    product?.condition,
+    product?.fuel,
+    product?.transmission,
+    product?.drivetrain,
+    product?.layout,
+    TOILET_LABELS[product?.toiletType],
+    product?.selfContained ? 'Self-contained' : '',
+    Number(product?.solarW) > 0 ? 'Solar' : '',
   ].filter(Boolean)), [product])
 
   const specGroups = useMemo(() => ([
     {
       title: 'Vehicle',
       rows: cleanSpecs([
-        { label: 'Make', value: product.make },
-        { label: 'Model', value: product.model },
-        { label: 'Year', value: product.year },
-        { label: 'Mileage', value: numberWithUnit(product.mileage, 'km') },
-        { label: 'Condition', value: product.condition },
-        { label: 'Transmission', value: product.transmission },
-        { label: 'Fuel', value: product.fuel },
-        { label: 'Drivetrain', value: product.drivetrain },
-        { label: 'Engine', value: numberWithUnit(product.engineCc, 'cc') },
-        { label: 'Seats', value: product.seats },
-        { label: 'Doors', value: product.doors },
+        { label: 'Make', value: product?.make },
+        { label: 'Model', value: product?.model },
+        { label: 'Year', value: product?.year },
+        { label: 'Mileage', value: numberWithUnit(product?.mileage, 'km') },
+        { label: 'Condition', value: product?.condition },
+        { label: 'Transmission', value: product?.transmission },
+        { label: 'Fuel', value: product?.fuel },
+        { label: 'Drivetrain', value: product?.drivetrain },
+        { label: 'Engine', value: numberWithUnit(product?.engineCc, 'cc') },
+        { label: 'Seats', value: product?.seats },
+        { label: 'Doors', value: product?.doors },
       ]),
     },
     {
       title: 'New Zealand paperwork',
       rows: cleanSpecs([
-        { label: 'WOF expiry', value: formatDate(product.wofExpiry), status: expiryStatus(product.wofExpiry) },
-        { label: 'Rego expiry', value: formatDate(product.regoExpiry), status: expiryStatus(product.regoExpiry) },
+        { label: 'WOF expiry', value: formatDate(product?.wofExpiry), status: expiryStatus(product?.wofExpiry) },
+        { label: 'Rego expiry', value: formatDate(product?.regoExpiry), status: expiryStatus(product?.regoExpiry) },
       ]),
     },
     {
       title: 'Camper layout',
       rows: cleanSpecs([
-        { label: 'Sleeps', value: product.sleeps },
-        { label: 'Seat belts', value: product.belts },
-        { label: 'Layout', value: product.layout },
-        { label: 'Length', value: numberWithUnit(product.lengthM, 'm') },
-        { label: 'Weight', value: numberWithUnit(product.weightKg, 'kg') },
+        { label: 'Sleeps', value: product?.sleeps },
+        { label: 'Seat belts', value: product?.belts },
+        { label: 'Layout', value: product?.layout },
+        { label: 'Length', value: numberWithUnit(product?.lengthM, 'm') },
+        { label: 'Weight', value: numberWithUnit(product?.weightKg, 'kg') },
       ]),
     },
     {
       title: 'Off-grid and self-containment',
       rows: cleanSpecs([
-        { label: 'Fresh water', value: numberWithUnit(product.freshWaterL, 'L') },
-        { label: 'Grey water', value: numberWithUnit(product.greyWaterL, 'L') },
-        { label: 'Battery', value: numberWithUnit(product.batteryAh, 'Ah') },
-        { label: 'Solar', value: numberWithUnit(product.solarW, 'W') },
-        { label: 'Toilet', value: TOILET_LABELS[product.toiletType] },
-        { label: 'Self-contained', value: product.selfContained ? 'Yes' : 'No' },
-        { label: 'Self-contained expiry', value: formatDate(product.scExpiry), status: expiryStatus(product.scExpiry) },
+        { label: 'Fresh water', value: numberWithUnit(product?.freshWaterL, 'L') },
+        { label: 'Grey water', value: numberWithUnit(product?.greyWaterL, 'L') },
+        { label: 'Battery', value: numberWithUnit(product?.batteryAh, 'Ah') },
+        { label: 'Solar', value: numberWithUnit(product?.solarW, 'W') },
+        { label: 'Toilet', value: TOILET_LABELS[product?.toiletType] },
+        { label: 'Self-contained', value: product?.selfContained ? 'Yes' : 'No' },
+        { label: 'Self-contained expiry', value: formatDate(product?.scExpiry), status: expiryStatus(product?.scExpiry) },
       ]),
     },
   ].filter(group => group.rows.length > 0)), [product])
 
-  const images = useMemo(() => product.images?.length ? product.images : [product.image || fallbackVehicle.images[0]], [fallbackVehicle.images, product])
+  // Distintivo de estado: null mientras el anuncio siga disponible.
+  const statusBadge = listingStatusBadge(product)
+
+  // Si el anuncio no trae fotos se usa un marcador, para no romper el visor.
+  const images = useMemo(() => {
+    if (product?.images?.length) return product.images
+    if (product?.image) return [product.image]
+    return ['https://placehold.co/640x480/f1ede5/171717?text=Swapy']
+  }, [product])
 
   // Las flechas dan la vuelta al llegar al final para que no haya callejon sin
   // salida en una galeria de dos o tres fotos.
@@ -131,7 +170,28 @@ export default function ProductDetail() {
     return (
       <div className="app-shell">
         <Navbar compact />
-        <div className="loading-state"><div><div className="spinner" />Loading vehicle...</div></div>
+        <div className="loading-state loading-state-full"><div><div className="spinner" />Loading vehicle...</div></div>
+      </div>
+    )
+  }
+
+  // Anuncio inexistente, borrado, o que este visitante no puede ver. Se dice
+  // claramente en vez de pintar una ficha a medias.
+  if (notFound || !product) {
+    return (
+      <div className="app-shell">
+        <Navbar compact />
+        <main className="container page-section">
+          <div className="empty-state panel">
+            <div>
+              <FiSearch size={42} />
+              <h2>This listing is no longer available</h2>
+              <p>It may have been sold or removed by the seller.</p>
+              <Link to="/" className="btn btn-primary">Browse vehicles</Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
       </div>
     )
   }
@@ -144,7 +204,7 @@ export default function ProductDetail() {
         <div className="muted-row" style={{ marginBottom: 18 }}>
           <Link to="/" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Home</Link>
           <span>/</span>
-          <span>{product.vehicleType || product.category || 'Vehicle'}</span>
+          <span>{product.vehicleType || 'Vehicle'}</span>
         </div>
 
         <section className="detail-grid">
@@ -215,11 +275,11 @@ export default function ProductDetail() {
 
           <aside className="sidebar-stack detail-sidebar">
             <section className="panel panel-pad">
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                <span className={`badge ${statusBadgeClass(product.status)}`}>
-                  {formatStatus(product.status)}
-                </span>
-              </div>
+              {statusBadge && (
+                <div className="detail-status-row">
+                  <span className={`badge ${statusBadge.className}`}>{statusBadge.label}</span>
+                </div>
+              )}
               <h1 className="page-title">{product.title}</h1>
               <p className="product-price" style={{ fontSize: '2.4rem', marginTop: 16 }}>
                 NZ${Number(product.price || 0).toLocaleString('en-NZ')}
@@ -408,20 +468,6 @@ function Spec({ label, value, icon }) {
       <strong>{value}</strong>
     </div>
   )
-}
-
-function formatStatus(status) {
-  if (status === 'available') return 'Active'
-  if (status === 'reserved') return 'Booked'
-  if (!status) return 'Active'
-  return status.charAt(0).toUpperCase() + status.slice(1)
-}
-
-// Solo tres estados visibles en la ficha: activo, reservado y vendido.
-function statusBadgeClass(status) {
-  if (status === 'reserved') return 'badge-accent'
-  if (status === 'sold') return ''
-  return 'badge-mint'
 }
 
 const TOILET_LABELS = {

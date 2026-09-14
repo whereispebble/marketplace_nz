@@ -1,13 +1,20 @@
+/**
+ * Campo de ubicacion con sugerencias reales.
+ *
+ * Las sugerencias no salen de los anuncios existentes: se piden al
+ * geocodificador mientras se escribe, asi que se puede publicar o buscar en
+ * cualquier punto del pais aunque todavia no haya ningun anuncio alli.
+ *
+ * Lo comparten el filtro de busqueda y el formulario de publicacion. La fila
+ * "My location", que usa la geolocalizacion del dispositivo, solo aparece si se
+ * pasa la funcion onUseMyLocation.
+ */
+
 import { useEffect, useRef, useState } from 'react'
 import { FiNavigation } from 'react-icons/fi'
 import { searchPlaces } from '../services/geocoding'
 
-// Campo de ubicacion con sugerencias reales de NZ: no salen de los anuncios,
-// se piden al geocodificador mientras se escribe. Lo comparten el filtro de
-// busqueda y el formulario de publicacion, para que un anuncio se guarde con
-// el mismo nombre de sitio por el que luego se busca.
-//
-// La fila "My location" solo aparece si se pasa onUseMyLocation.
+
 export default function LocationField({
   idPrefix,
   label = 'Location',

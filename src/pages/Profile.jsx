@@ -1,12 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+/**
+ * Perfil de usuario.
+ *
+ * Sirve dos pantallas con el mismo componente:
+ *   /profile              perfil propio, con edicion, guardados y gestion de anuncios
+ *   /profile/:sellerId    perfil publico de un vendedor, solo sus anuncios publicados
+ *
+ * Lo que NUNCA debe cruzarse entre ambas: los guardados y los datos de contacto
+ * son privados del dueno de la cuenta. El perfil publico se lee de la vista
+ * public_profiles, que no expone email ni telefono.
+ */
+
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FiCamera, FiEdit3, FiFlag, FiLogOut, FiMapPin, FiMessageCircle, FiMoreHorizontal, FiPackage, FiStar, FiTrash2 } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
+import { getCurrentUser, signOut } from '../services/session'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { MOCK_VEHICLES } from '../data/mockVehicles'
 import ProductCard from '../components/ProductCard'
 import { getFavoriteProducts } from '../services/favorites'
+import { PUBLIC_LISTING_STATUSES } from '../constants/listingStatus'
+import { DEV_PROFILE, isDevSessionActive } from '../services/devAuth'
+import { loadDevListings } from '../services/devData'
 
 const REPORT_REASONS = [
   'Scam or fraud',
@@ -16,97 +31,164 @@ const REPORT_REASONS = [
   'Other',
 ]
 
-const MOCK_PROFILE = {
-  username: 'Alex M.',
-  email: 'alex@email.com',
-  location: 'Auckland',
-  phone: '+64 21 123 4567',
-  bio: 'Weekend traveller and campervan seller focused on tidy, road-ready NZ vehicles with clear WOF and self-contained details.',
-  rating: 4.8,
-  total_sales: 23,
-  joined: '2022',
+/** Perfil vacio mientras se cargan los datos reales. */
+const EMPTY_PROFILE = {
+  username: '',
+  email: '',
+  location: '',
+  phone: '',
+  bio: '',
+  avatar_url: null,
+  rating: 0,
+  total_sales: 0,
+  joined: '',
 }
-
-const MOCK_LISTINGS = MOCK_VEHICLES.slice(0, 3).map((vehicle, index) => ({
-  ...vehicle,
-  status: index === 2 ? 'sold' : 'available',
-}))
 
 export default function Profile() {
   const navigate = useNavigate()
+  // sellerId solo llega en /profile/:sellerId, es decir en un perfil ajeno.
   const { sellerId } = useParams()
   const isPublicProfile = Boolean(sellerId)
-  const sellerVehicle = useMemo(() => (
-    MOCK_VEHICLES.find(vehicle => String(vehicle.seller?.id) === String(sellerId))
-  ), [sellerId])
-  const [profile, setProfile] = useState(MOCK_PROFILE)
-  const [listings, setListings] = useState(() => (
-    sellerId
-      ? MOCK_VEHICLES.filter(vehicle => String(vehicle.seller?.id) === String(sellerId)).map(vehicle => ({ ...vehicle, status: 'available' }))
-      : MOCK_LISTINGS
-  ))
+
+  // Datos del perfil que se esta mostrando y copia editable del formulario.
+  const [profile, setProfile] = useState(EMPTY_PROFILE)
+  const [form, setForm] = useState(EMPTY_PROFILE)
+  const [listings, setListings] = useState([])
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileError, setProfileError] = useState('')
+
+  // Pestana visible y estado del formulario de edicion.
   const [activeTab, setActiveTab] = useState('listings')
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(MOCK_PROFILE)
+
+  // Guardados: solo se cargan en el perfil propio y nunca en uno ajeno.
   const [saved, setSaved] = useState([])
   const [savedLoading, setSavedLoading] = useState(false)
+
+  // Menu de los tres puntos y formulario de denuncia de un perfil ajeno.
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportReason, setReportReason] = useState(REPORT_REASONS[0])
   const [reportDetails, setReportDetails] = useState('')
   const [reportSent, setReportSent] = useState(false)
   const [reportBusy, setReportBusy] = useState(false)
+
+  // Cambio de la foto de perfil.
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState('')
+
   const avatarInputRef = useRef(null)
   const avatarMenuRef = useRef(null)
   const moreMenuRef = useRef(null)
 
+  /**
+   * Carga el perfil que toca segun la ruta.
+   *
+   * Lo primero que hace es vaciar el estado anterior. Sin eso, al pasar del
+   * perfil de un vendedor al propio (por ejemplo pulsando "Profile" en el
+   * menu) se quedaban en pantalla los datos del vendedor mientras llegaban
+   * los nuevos, y con ellos aparecia la pestana de guardados: era el fallo
+   * que hacia parecer que se veian los favoritos de otra persona.
+   */
   useEffect(() => {
     let ignore = false
 
+    setProfile(EMPTY_PROFILE)
+    setForm(EMPTY_PROFILE)
+    setListings([])
+    setSaved([])
+    setActiveTab('listings')
+    setEditing(false)
+    setProfileError('')
+    setProfileLoading(true)
+
     async function loadProfile() {
+      // --- Perfil ajeno: vista publica, sin email ni telefono --------------
       if (isPublicProfile) {
-        if (sellerVehicle?.seller) {
-          const sellerListings = MOCK_VEHICLES.filter(vehicle => String(vehicle.seller?.id) === String(sellerId))
-          const seller = sellerVehicle.seller
-          setProfile({
-            username: seller.name,
-            email: '',
-            location: sellerVehicle.location,
-            phone: '',
-            bio: `${seller.name} listings on Swapy, focused on clear vehicle details, WOF status and New Zealand-ready handovers.`,
-            rating: seller.rating,
-            total_sales: seller.sales,
-            joined: seller.joined,
-          })
-          setForm({
-            username: seller.name,
-            email: '',
-            location: sellerVehicle.location,
-            phone: '',
-            bio: `${seller.name} listings on Swapy, focused on clear vehicle details, WOF status and New Zealand-ready handovers.`,
-            rating: seller.rating,
-            total_sales: seller.sales,
-            joined: seller.joined,
-          })
-          setListings(sellerListings.map(vehicle => ({ ...vehicle, status: 'available' })))
+        const { data: publicProfile, error } = await supabase
+          .from('public_profiles')
+          .select('*')
+          .eq('id', sellerId)
+          .maybeSingle()
+
+        if (ignore) return
+
+        if (error || !publicProfile) {
+          setProfileError('This profile is not available.')
+          setProfileLoading(false)
+          return
         }
+
+        // Solo los anuncios publicados. Los borradores del vendedor no se ven
+        // ni aqui ni consultando la API: la politica RLS tambien los filtra.
+        const { data: sellerListings } = await supabase
+          .from('products')
+          .select('*')
+          .eq('user_id', sellerId)
+          .in('status', PUBLIC_LISTING_STATUSES)
+          .order('created_at', { ascending: false })
+
+        if (ignore) return
+        setProfile({ ...EMPTY_PROFILE, ...publicProfile })
+        setListings(sellerListings || [])
+        setProfileLoading(false)
         return
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (!ignore && data) { setProfile(data); setForm(data) }
-      const { data: prods } = await supabase.from('products').select('*').eq('user_id', user.id)
-      if (!ignore && prods?.length) setListings(prods)
+      // --- Perfil propio ---------------------------------------------------
+      const user = await getCurrentUser()
+      if (ignore) return
+
+      if (!user) {
+        // RequireAuth ya deberia haber redirigido; esto cubre el caso de que
+        // la sesion caduque con la pagina abierta.
+        navigate('/login', { replace: true })
+        return
+      }
+
+      // Sesion de prueba de desarrollo: no hay fila en la base de datos, asi
+      // que se pintan un perfil y unos anuncios de ejemplo. Esta rama no
+      // existe en el paquete de produccion (ver services/devAuth.js).
+      if (isDevSessionActive()) {
+        const devListings = await loadDevListings()
+        if (ignore) return
+
+        setProfile(DEV_PROFILE)
+        setForm(DEV_PROFILE)
+        setListings(devListings)
+        setProfileLoading(false)
+        return
+      }
+
+      const { data: ownProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (ignore) return
+
+      // Si el perfil aun no existe se usa el correo de la sesion como base.
+      const resolvedProfile = { ...EMPTY_PROFILE, email: user.email || '', ...(ownProfile || {}) }
+      setProfile(resolvedProfile)
+      setForm(resolvedProfile)
+
+      // Aqui si entran todos los estados: el dueno ve tambien sus borradores.
+      const { data: ownListings } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (ignore) return
+      setListings(ownListings || [])
+      setProfileLoading(false)
     }
 
     loadProfile()
     return () => { ignore = true }
-  }, [isPublicProfile, sellerId, sellerVehicle])
+  }, [isPublicProfile, sellerId, navigate])
 
   // El menu de la foto se cierra al pulsar fuera, como cualquier desplegable.
   useEffect(() => {
@@ -168,21 +250,47 @@ export default function Profile() {
   // Al abrir el perfil de otra persona la pestana de guardados no existe.
   const currentTab = isPublicProfile && activeTab === 'saved' ? 'listings' : activeTab
 
-  // Marcar vendido o reservado desde la propia tarjeta del anuncio.
+  /**
+   * Marca un anuncio propio como vendido o reservado desde su tarjeta.
+   * El filtro por user_id es defensa en capas: la politica RLS ya impide
+   * actualizar un anuncio ajeno, pero asi la consulta tampoco lo intenta.
+   * @param {string} listingId id del anuncio
+   * @param {string} status nuevo estado
+   */
   const handleListingStatus = async (listingId, status) => {
+    const user = await getCurrentUser()
+    if (!user) return
+
     setListings(current => current.map(item => (item.id === listingId ? { ...item, status } : item)))
-    await supabase.from('products').update({ status }).eq('id', listingId)
+    await supabase
+      .from('products')
+      .update({ status })
+      .eq('id', listingId)
+      .eq('user_id', user.id)
   }
 
+  /**
+   * Envia una denuncia sobre el perfil que se esta viendo.
+   * Requiere sesion: la politica de user_reports exige que reporter_id sea el
+   * usuario identificado, asi que una denuncia anonima se rechazaria.
+   */
   const handleReport = async () => {
     setReportBusy(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
+
+    if (!user) {
+      setReportBusy(false)
+      navigate('/login', { replace: true })
+      return
+    }
+
     await supabase.from('user_reports').insert({
       reported_user_id: sellerId,
-      reporter_id: user?.id || null,
+      reporter_id: user.id,
       reason: reportReason,
       details: reportDetails.trim() || null,
     })
+
     setReportBusy(false)
     setReportSent(true)
   }
@@ -194,8 +302,13 @@ export default function Profile() {
     setReportDetails('')
   }
 
+  /**
+   * Guarda (o borra, con null) la URL de la foto de perfil.
+   * @param {string|null} avatarUrl
+   * @returns {Promise<boolean>} true si se guardo
+   */
   const persistAvatar = async avatarUrl => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
       setAvatarError('Sign in again to change your photo.')
       return false
@@ -231,7 +344,7 @@ export default function Profile() {
     }
 
     setAvatarBusy(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     if (!user) {
       setAvatarError('Sign in again to change your photo.')
       setAvatarBusy(false)
@@ -262,17 +375,75 @@ export default function Profile() {
     setAvatarMenuOpen(false)
   }
 
+  /**
+   * Guarda los cambios del perfil propio.
+   * Solo se mandan los campos que el usuario puede editar: la reputacion y el
+   * numero de ventas los calcula el sistema, no el navegador.
+   */
   const handleSave = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('profiles').update({ username: form.username, location: form.location, phone: form.phone, bio: form.bio }).eq('id', user.id)
-    setProfile(form)
+    const user = await getCurrentUser()
+    if (!user) {
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        username: form.username,
+        location: form.location,
+        phone: form.phone,
+        bio: form.bio,
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      setProfileError(error.message)
+      return
+    }
+
+    setProfile(current => ({ ...current, ...form }))
     setEditing(false)
   }
 
+  /**
+   * Cierra la sesion. signOut borra ademas los guardados que quedasen en el
+   * navegador, para que no los herede quien use el equipo despues.
+   */
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/login')
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
+  // Mientras llegan los datos no se pinta el perfil: si no, se vería un
+  // esqueleto con los campos vacíos que parece una cuenta sin rellenar.
+  if (profileLoading) {
+    return (
+      <div className="app-shell">
+        <Navbar compact />
+        <div className="loading-state"><div><div className="spinner" />Loading profile...</div></div>
+        <Footer />
+      </div>
+    )
+  }
+
+  // Perfil inexistente o sin permiso para verlo.
+  if (profileError) {
+    return (
+      <div className="app-shell">
+        <Navbar compact />
+        <main className="container page-section">
+          <div className="empty-state panel">
+            <div>
+              <FiPackage size={42} />
+              <h2>{profileError}</h2>
+              <Link to="/" className="btn btn-primary">Browse vehicles</Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
   }
 
   return (
@@ -347,7 +518,11 @@ export default function Profile() {
               ) : (
                 <>
                   <h1 className="page-title">{profile.username}</h1>
-                  <p className="muted-row" style={{ marginTop: 10 }}><FiMapPin />{profile.location || 'No location'} · {profile.email}</p>
+                  <p className="muted-row" style={{ marginTop: 10 }}>
+                    <FiMapPin />
+                    {profile.location || 'No location'}
+                    {!isPublicProfile && profile.email ? ` · ${profile.email}` : ''}
+                  </p>
                   <p className="section-subtitle" style={{ maxWidth: 650 }}>{profile.bio || 'No bio yet.'}</p>
                 </>
               )}
@@ -419,16 +594,12 @@ export default function Profile() {
           ) : (
             <div className="products-grid profile-products-grid">
               {listings.map(item => (
-                <div className="profile-listing" key={item.id}>
-                  <ProductCard
-                    product={item}
-                    owned={!isPublicProfile}
-                    onStatusChange={status => handleListingStatus(item.id, status)}
-                  />
-                  <div className="profile-listing-actions">
-                    <span className={`badge ${['active', 'available'].includes(item.status) ? 'badge-mint' : ''}`}>{formatStatus(item.status)}</span>
-                  </div>
-                </div>
+                <ProductCard
+                  key={item.id}
+                  product={item}
+                  owned={!isPublicProfile}
+                  onStatusChange={status => handleListingStatus(item.id, status)}
+                />
               ))}
             </div>
           )
@@ -494,13 +665,6 @@ export default function Profile() {
       <Footer />
     </div>
   )
-}
-
-function formatStatus(status) {
-  if (status === 'available') return 'Active'
-  if (status === 'reserved') return 'Booked'
-  if (!status) return 'Draft'
-  return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
 function Empty({ title, action, to }) {

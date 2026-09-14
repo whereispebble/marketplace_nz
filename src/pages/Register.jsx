@@ -1,16 +1,63 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+/**
+ * Pagina de registro.
+ *
+ * Crea la cuenta en Supabase Auth. El perfil asociado lo crea un trigger de la
+ * base de datos (handle_new_user), no esta pagina: asi no queda una cuenta sin
+ * perfil si el navegador se cierra entre las dos llamadas.
+ *
+ * La contrasena viaja por HTTPS y la cifra Supabase con bcrypt; aqui solo se
+ * valida su forma antes de mandarla.
+ */
+
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi'
 import { getAuthErrorMessage, supabase } from '../services/supabase'
+import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
 
+/**
+ * Comprueba los campos del formulario antes de mandarlos.
+ *
+ * Estas reglas son una primera barrera para dar un mensaje claro al momento.
+ * La exigencia real la impone Supabase Auth con la longitud minima y la
+ * comprobacion de contrasenas filtradas configuradas en el panel.
+ *
+ * @param {{username: string, email: string, password: string, confirmPassword: string}} form
+ * @returns {string} mensaje de error, o cadena vacia si todo es correcto
+ */
+function validatePassword(form) {
+  if (!form.username.trim() || !form.email.trim() || !form.password) {
+    return 'Please fill in all fields'
+  }
+  if (form.password !== form.confirmPassword) {
+    return 'Passwords do not match'
+  }
+  if (form.password.length < 8) {
+    return 'Password must be at least 8 characters'
+  }
+  if (!/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+    return 'Password must include at least one letter and one number'
+  }
+  return ''
+}
+
 export default function Register() {
+  const navigate = useNavigate()
+  const { user, loading: sessionLoading } = useSession()
   const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false })
+
+  // Con sesion iniciada no tiene sentido seguir en el registro. Tambien cubre
+  // el caso de activar la sesion de prueba de desarrollo desde esta pantalla.
+  useEffect(() => {
+    if (sessionLoading || !user || success) return
+    navigate('/', { replace: true })
+  }, [user, sessionLoading, success, navigate])
 
   const handleChange = event => setForm({ ...form, [event.target.name]: event.target.value })
 
@@ -32,23 +79,26 @@ export default function Register() {
     }
   }
 
+  /**
+   * Crea la cuenta.
+   *
+   * El nombre de usuario viaja dentro de options.data y el trigger de la base
+   * lo copia al perfil. Esta pagina ya no inserta en profiles: hacerlo desde el
+   * navegador dejaba cuentas sin perfil cuando la segunda llamada fallaba.
+   */
   const handleRegister = async () => {
-    if (!form.username || !form.email || !form.password) { setError('Please fill in all fields'); return }
-    if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return }
-    if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
+    const validationError = validatePassword(form)
+    if (validationError) { setError(validationError); return }
+
     setLoading(true)
     setError('')
     try {
-      const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password })
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: { username: form.username.trim() } },
+      })
       if (error) { setError(getAuthErrorMessage(error)); setLoading(false); return }
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({ id: data.user.id, username: form.username, email: form.email })
-        if (profileError) {
-          setError(getAuthErrorMessage(profileError))
-          setLoading(false)
-          return
-        }
-      }
     } catch (authError) {
       setError(getAuthErrorMessage(authError))
       setLoading(false)

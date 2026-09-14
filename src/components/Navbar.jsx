@@ -1,3 +1,11 @@
+/**
+ * Barra superior de navegacion.
+ *
+ * En escritorio muestra los enlaces de seccion y los accesos de cuenta; en
+ * movil deja solo el logo, Buy y Sell centrados, y un boton que abre el menu
+ * lateral con el resto. El prop compact la reduce en las paginas interiores.
+ */
+
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { FiFileText, FiHeart, FiHome, FiMail, FiMenu, FiPlus, FiShield, FiUser, FiX } from 'react-icons/fi'

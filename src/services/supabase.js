@@ -1,3 +1,15 @@
+/**
+ * Cliente de Supabase.
+ *
+ * Lee la URL y la clave publica de las variables de entorno de Vite. Esa clave
+ * es la anonima y esta pensada para viajar al navegador: lo que protege los
+ * datos son las politicas RLS, no la clave. La clave de servicio NUNCA debe
+ * aparecer en este proyecto.
+ *
+ * Si faltan las variables se devuelve un cliente simulado para que la
+ * aplicacion arranque igualmente con los datos de ejemplo, en vez de romperse.
+ */
+
 import { createClient } from '@supabase/supabase-js'
 
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
