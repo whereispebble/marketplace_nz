@@ -13,13 +13,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiMapPin, FiMove, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMapPin, FiMove, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
 import LocationField from '../components/LocationField'
 import { NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/nzVehicleCatalog'
+import { findDevListing, saveDevListing } from '../services/devData'
+import { DEV_USER, isDevSessionActive } from '../services/devAuth'
 // Misma foto que el hero de la home, asi que ya viene de cache al navegar
 import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
@@ -52,7 +54,7 @@ const TOILET_TYPES = [
 ]
 // La tarjeta verde es la unica valida para freedom camping desde el 6/6/2026.
 const LISTING_STATUSES = [
-  { id: 'active', name: 'Active' },
+  { id: 'available', name: 'Active' },
   { id: 'reserved', name: 'Booked' },
   { id: 'draft', name: 'Draft' },
   { id: 'paused', name: 'Paused' },
@@ -105,7 +107,7 @@ export default function NewProduct() {
     region: '',
     lat: null,
     lng: null,
-    listingStatus: 'active',
+    listingStatus: 'available',
   })
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -113,6 +115,7 @@ export default function NewProduct() {
   const [generalError, setGeneralError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [step, setStep] = useState(1)
+  const [openEditSection, setOpenEditSection] = useState('basics')
   const [draggedImageId, setDraggedImageId] = useState('')
   const imagesRef = useRef(images)
   // Una ubicacion vale cuando viene del geocodificador: solo entonces hay
@@ -138,13 +141,18 @@ export default function NewProduct() {
     let ignore = false
 
     async function loadListing() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { navigate('/login'); return }
+      const isDevListing = isDevSessionActive()
+      const { data: { user: supabaseUser } } = isDevListing
+        ? { data: { user: DEV_USER } }
+        : await supabase.auth.getUser()
+      if (!supabaseUser) { navigate('/login'); return }
 
-      const { data, error } = await supabase.from('products').select('*').eq('id', editingId).single()
+      const { data, error } = isDevListing
+        ? { data: await findDevListing(editingId), error: null }
+        : await supabase.from('products').select('*').eq('id', editingId).single()
       if (ignore) return
       if (error || !data) { setGeneralError('This listing could not be loaded.'); setLoadingListing(false); return }
-      if (data.user_id !== user.id) { navigate(`/product/${editingId}`); return }
+      if (data.user_id !== supabaseUser.id) { navigate(`/product/${editingId}`); return }
 
       setForm(current => ({
         ...current,
@@ -181,7 +189,7 @@ export default function NewProduct() {
         region: data.region || '',
         lat: data.lat ?? null,
         lng: data.lng ?? null,
-        listingStatus: data.status === 'available' ? 'active' : (data.status || 'active'),
+        listingStatus: data.status || 'available',
       }))
 
       const storedImages = (data.images?.length ? data.images : [data.image]).filter(Boolean)
@@ -419,8 +427,8 @@ export default function NewProduct() {
       selfContained: form.selfContained,
       location: city.location || form.location.trim(),
       region: city.region || '',
-      lat: city.lat || null,
-      lng: city.lng || null,
+      lat: city.lat ?? null,
+      lng: city.lng ?? null,
       status: statusOverride || form.listingStatus,
     }
   }
@@ -436,13 +444,18 @@ export default function NewProduct() {
     setLoading(true)
     setGeneralError('')
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { navigate('/login'); return }
+    const isDevListing = isEditing && isDevSessionActive()
+    const { data: { user } } = isDevListing
+      ? { data: { user: DEV_USER } }
+      : await supabase.auth.getUser()
+    if (!user) { setLoading(false); navigate('/login'); return }
 
     const payload = createPayload(statusOverride)
     let listing
 
-    if (isEditing) {
+    if (isDevListing) {
+      listing = { id: editingId, user_id: DEV_USER.id, ...payload }
+    } else if (isEditing) {
       const { data, error } = await supabase.from('products').update(payload).eq('id', editingId).eq('user_id', user.id).select().single()
       if (error) { setGeneralError(error.message); setLoading(false); return }
       listing = data
@@ -452,11 +465,16 @@ export default function NewProduct() {
       listing = data
     }
 
-    // Las fotos que ya estaban se conservan con su URL; solo se suben las nuevas.
+    // Las fotos existentes conservan su URL; las nuevas se suben. Al terminar,
+    // se reescribe la lista ordenada del MISMO anuncio, no se crea otro.
     const finalUrls = []
     for (const [index, image] of images.entries()) {
       if (!image.file) {
         finalUrls.push(image.url || image.preview)
+        continue
+      }
+      if (isDevListing) {
+        finalUrls.push(await fileToDataUrl(image.file))
         continue
       }
       const ext = image.file.name.split('.').pop()
@@ -470,15 +488,37 @@ export default function NewProduct() {
       if (upload) {
         const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path)
         finalUrls.push(urlData.publicUrl)
-        await supabase.from('product_images').insert({
-          product_id: listing.id,
-          image_url: urlData.publicUrl,
-          sort_order: index,
-        })
       }
     }
 
-    await supabase.from('products').update({ image: finalUrls[0] || null, images: finalUrls }).eq('id', listing.id)
+    if (isDevListing) {
+      saveDevListing(editingId, { ...payload, image: finalUrls[0] || null, images: finalUrls })
+      setLoading(false)
+      navigate(`/product/${editingId}`)
+      return
+    }
+
+    // product_images es una proyeccion de `images`: se reemplaza completa para
+    // que borrar, reordenar o añadir fotos deje ambas tablas sincronizadas.
+    const { error: deleteImagesError } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('product_id', listing.id)
+    if (deleteImagesError) { setGeneralError(deleteImagesError.message); setLoading(false); return }
+
+    if (finalUrls.length > 0) {
+      const { error: insertImagesError } = await supabase.from('product_images').insert(
+        finalUrls.map((image_url, sort_order) => ({ product_id: listing.id, image_url, sort_order })),
+      )
+      if (insertImagesError) { setGeneralError(insertImagesError.message); setLoading(false); return }
+    }
+
+    const { error: coverError } = await supabase
+      .from('products')
+      .update({ image: finalUrls[0] || null, images: finalUrls })
+      .eq('id', listing.id)
+      .eq('user_id', user.id)
+    if (coverError) { setGeneralError(coverError.message); setLoading(false); return }
 
     setLoading(false)
     navigate(statusOverride === 'draft' ? '/profile' : `/product/${listing.id}`)
@@ -505,15 +545,25 @@ export default function NewProduct() {
             <h1 className="page-title">{isEditing ? 'Edit listing' : 'List a vehicle'}</h1>
             <p className="section-subtitle">
               {isEditing
-                ? 'Update the details, photos and status of your listing. Changes go live as soon as you save.'
+                ? 'Review the live preview and update any detail of your listing in one place. Changes go live when you save.'
                 : 'Create a NZ-ready listing with a map-ready city, ordered photos and a final preview before publishing.'}
             </p>
           </div>
         </div>
 
-        {/* En movil no caben cuatro pastillas: se muestra solo el paso abierto
-            con su posicion y una barra de progreso. */}
-        <div className="stepper-compact">
+        {isEditing && (
+          <div className="edit-listing-summary panel">
+            {images[0]?.preview && <img src={images[0].preview} alt="" />}
+            <div>
+              <span className="edit-listing-label">Live preview</span>
+              <strong>{form.title || 'Untitled listing'}</strong>
+              <span>{formatPrice(form.price)} · {LISTING_STATUSES.find(status => status.id === form.listingStatus)?.name || 'Active'} · {images.length} photo{images.length === 1 ? '' : 's'}</span>
+            </div>
+          </div>
+        )}
+
+        {/* En movil no caben cuatro pastillas durante la publicación. */}
+        {!isEditing && <div className="stepper-compact">
           <span className="step-number">{step}</span>
           <div className="stepper-compact-text">
             <strong>{STEPS[step - 1]}</strong>
@@ -521,9 +571,9 @@ export default function NewProduct() {
           <div className="stepper-progress" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step}>
             <span style={{ width: `${(step / STEPS.length) * 100}%` }} />
           </div>
-        </div>
+        </div>}
 
-        <div className="stepper stepper-wide">
+        {!isEditing && <div className="stepper stepper-wide">
           {STEPS.map((label, index) => {
             const number = index + 1
             return (
@@ -538,12 +588,13 @@ export default function NewProduct() {
               </button>
             )
           })}
-        </div>
+        </div>}
 
         {generalError && <div className="alert" style={{ marginBottom: 16 }}>{generalError}</div>}
 
         <section className="panel panel-pad">
-          {step === 1 && (
+          {(isEditing || step === 1) && (
+            <EditSection editing={isEditing} title="Title, price and description" description="The essentials buyers see first." isOpen={openEditSection === 'basics'} onToggle={() => setOpenEditSection('basics')}>
             <div className="form-grid">
               <FieldError errors={fieldErrors} name="title">
                 <label className="field-group">
@@ -593,9 +644,11 @@ export default function NewProduct() {
                 <textarea className="field" name="description" placeholder="Engine, layout, service history, solar, heater, water, storage, known issues..." value={form.description} onChange={handleChange} />
               </label>
             </div>
+            </EditSection>
           )}
 
-          {step === 2 && (
+          {(isEditing || step === 2) && (
+            <EditSection editing={isEditing} title="Vehicle details" description="Location, condition, paperwork and technical specifications." isOpen={openEditSection === 'details'} onToggle={() => setOpenEditSection('details')}>
             <div className="form-grid publish-sections">
               <section className="publish-section">
                 <header className="publish-section-head">
@@ -771,9 +824,11 @@ export default function NewProduct() {
                 </p>
               )}
             </div>
+            </EditSection>
           )}
 
-          {step === 3 && (
+          {(isEditing || step === 3) && (
+            <EditSection editing={isEditing} title="Photos" description="The first photo is the cover. Drag to reorder them." isOpen={openEditSection === 'photos'} onToggle={() => setOpenEditSection('photos')}>
             <div>
               <FieldError errors={fieldErrors} name="images">
                 <label className="upload-zone">
@@ -818,9 +873,11 @@ export default function NewProduct() {
                 </div>
               )}
             </div>
+            </EditSection>
           )}
 
-          {step === 4 && (
+          {(isEditing || step === 4) && (
+            <EditSection editing={isEditing} title="Preview and status" description="Check how the listing looks and choose its visibility." isOpen={openEditSection === 'preview'} onToggle={() => setOpenEditSection('preview')}>
             <div className="publish-preview-layout">
               <div>
                 <h2 className="section-title" style={{ fontSize: '1.35rem', marginBottom: 14 }}>Preview</h2>
@@ -853,24 +910,34 @@ export default function NewProduct() {
                 <p className="section-subtitle">{previewProduct.description}</p>
               </div>
             </div>
+            </EditSection>
           )}
 
-          <div className="publish-actions">
-            {step > 1 ? (
+          <div className={`publish-actions ${isEditing ? 'edit-listing-actions' : ''}`}>
+            {isEditing ? (
+              <button className="btn btn-secondary" type="button" disabled={loading} onClick={() => navigate(`/product/${editingId}`)}>
+                Cancel
+              </button>
+            ) : step > 1 ? (
               <button className="btn btn-secondary" type="button" onClick={() => { setStep(step - 1); setGeneralError('') }}>
                 <FiArrowLeft />Back
               </button>
             ) : <span />}
 
             <div className="publish-actions-right">
-              <button className="btn btn-secondary" type="button" disabled={loading || !form.title.trim()} onClick={() => handleSubmit('draft')}>
+              {!isEditing && <button className="btn btn-secondary" type="button" disabled={loading || !form.title.trim()} onClick={() => handleSubmit('draft')}>
                 Save draft
-              </button>
-              {step < 4 ? (
+              </button>}
+              {isEditing ? (
+                <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
+                  {loading ? 'Saving...' : 'Save changes'}
+                  {loading ? null : <FiCheck />}
+                </button>
+              ) : step < 4 ? (
                 <button className="btn btn-primary" type="button" onClick={handleNext}>Next<FiArrowRight /></button>
               ) : (
                 <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
-                  {loading ? 'Saving...' : isEditing ? 'Save changes' : form.listingStatus === 'active' ? 'Publish listing' : 'Save listing'}
+                  {loading ? 'Saving...' : form.listingStatus === 'available' ? 'Publish listing' : 'Save listing'}
                   {loading ? null : <FiCheck />}
                 </button>
               )}
@@ -882,6 +949,37 @@ export default function NewProduct() {
       <Footer />
     </div>
   )
+}
+
+function EditSection({ editing, title, description, isOpen, onToggle, children }) {
+  if (!editing) return children
+
+  return (
+    <section className={`edit-form-section ${isOpen ? 'is-open' : ''}`}>
+      <button
+        className="edit-form-section-head"
+        type="button"
+        aria-expanded={isOpen}
+        onClick={onToggle}
+      >
+        <span>
+          <strong>{title}</strong>
+          <small>{description}</small>
+        </span>
+        <FiChevronDown aria-hidden="true" />
+      </button>
+      {isOpen && <div className="edit-form-section-body">{children}</div>}
+    </section>
+  )
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('The image could not be read.'))
+    reader.onload = () => resolve(String(reader.result))
+    reader.readAsDataURL(file)
+  })
 }
 
 function FieldError({ errors, name, children, className = '' }) {

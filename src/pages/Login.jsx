@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
-import { getAuthErrorMessage, supabase } from '../services/supabase'
+import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
 
@@ -72,7 +72,7 @@ export default function Login() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: getAuthRedirectUrl() },
       })
       if (error) {
         setError(getAuthErrorMessage(error))

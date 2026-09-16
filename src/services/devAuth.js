@@ -7,17 +7,15 @@
  * ---------------------------------------------------------------------------
  * POR QUE ESTO NO ES UN AGUJERO DE SEGURIDAD
  * ---------------------------------------------------------------------------
- * 1. Solo existe en desarrollo. import.meta.env.DEV vale false en `npm run
- *    build`, asi que el empaquetador borra este codigo del paquete final: en
- *    produccion no queda ni la funcion ni el usuario falso.
- * 2. Viene activado en desarrollo para que funcione nada mas clonar el
- *    proyecto, sin configurar nada. Se puede apagar con VITE_DEV_LOGIN=false.
+ * 1. Esta disponible tanto en desarrollo como en el despliegue para facilitar
+ *    las demostraciones. Se puede apagar con VITE_DEV_LOGIN=false.
+ * 2. NO es una cuenta de Supabase: el usuario falso no recibe ningun token.
  * 3. NO da acceso a datos reales. El usuario de prueba no existe en Supabase,
  *    asi que no tiene token: cualquier consulta a la base de datos sigue siendo
  *    una peticion anonima y las politicas RLS la tratan como tal. Esto engana a
  *    la interfaz, no al servidor. Es justo lo que se quiere para maquetar.
  *
- * Cuando se pase a datos reales basta con quitar VITE_DEV_LOGIN del .env.
+ * Cuando se pase a datos reales, define VITE_DEV_LOGIN=false en Vercel.
  */
 
 /**
@@ -27,8 +25,9 @@
  * tiene la sesion de prueba disponible sin tener que anadir nada a su .env, que
  * es un fichero que no viaja con el proyecto.
  */
-export const DEV_LOGIN_ENABLED = import.meta.env.DEV
-  && import.meta.env.VITE_DEV_LOGIN !== 'false'
+// Se mantiene activo tambien en el despliegue de Vercel. Puede apagarse en
+// cualquier entorno definiendo VITE_DEV_LOGIN=false.
+export const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN !== 'false'
 
 /** Clave de sesion del navegador; se borra al cerrar la pestana. */
 const DEV_SESSION_KEY = 'swapy:dev-session'
