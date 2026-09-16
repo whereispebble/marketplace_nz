@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaHeart, FaRegHeart } from 'react-icons/fa'
-import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiShield, FiTag, FiUsers } from 'react-icons/fi'
+import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiPauseCircle, FiPlayCircle, FiShield, FiTag, FiUsers } from 'react-icons/fi'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 import { listingBadge, listingStatusBadge } from '../constants/listingStatus'
 
@@ -113,6 +113,33 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
                 <FiTag />
                 Mark as booked
               </button>
+              {product.status === 'paused' ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={event => {
+                    event.preventDefault()
+                    setMenuOpen(false)
+                    onStatusChange?.('available')
+                  }}
+                >
+                  <FiPlayCircle />
+                  Reactivate listing
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={event => {
+                    event.preventDefault()
+                    setMenuOpen(false)
+                    onStatusChange?.('paused')
+                  }}
+                >
+                  <FiPauseCircle />
+                  Pause listing
+                </button>
+              )}
               <Link role="menuitem" to={`/product/${product.id}/edit`} onClick={() => setMenuOpen(false)}>
                 <FiEdit3 />
                 Edit listing

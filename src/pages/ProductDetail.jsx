@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FiChevronLeft, FiChevronRight, FiEye, FiHeart, FiMapPin, FiMaximize2, FiMessageCircle, FiSearch, FiShield, FiStar, FiUsers, FiX } from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiEdit3, FiEye, FiHeart, FiMapPin, FiMaximize2, FiMessageCircle, FiSearch, FiShield, FiStar, FiUsers, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -16,9 +16,11 @@ import { VEHICLE_TYPES } from '../data/nzVehicleCatalog'
 import { findMockVehicle } from '../services/devData'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 import { listingStatusBadge } from '../constants/listingStatus'
+import { useSession } from '../services/session'
 
 export default function ProductDetail() {
   const { id } = useParams()
+  const { user } = useSession()
   // El anuncio empieza vacio: se pinta cuando llega el de la base de datos.
   const [product, setProduct] = useState(null)
   const [selectedImage, setSelectedImage] = useState(0)
@@ -29,6 +31,7 @@ export default function ProductDetail() {
   const [notFound, setNotFound] = useState(false)
   const sellerId = product?.seller_id || product?.seller?.id || 'seller'
   const sellerName = product?.seller?.name || 'Private seller'
+  const isOwner = Boolean(user?.id && product?.user_id && String(user.id) === String(product.user_id))
 
   useEffect(() => {
     let ignore = false
@@ -295,11 +298,16 @@ export default function ProductDetail() {
                 ))}
               </div>
 
-              <Link className="btn btn-primary btn-full" to={`/chats/${sellerId}`} style={{ marginTop: 18 }} aria-label={`Contact ${sellerName} about ${product.title}`}>
+              {isOwner ? (
+                <Link className="btn btn-primary btn-full" to={`/product/${product.id}/edit`} style={{ marginTop: 18 }}>
+                  <FiEdit3 />
+                  Manage listing
+                </Link>
+              ) : <Link className="btn btn-primary btn-full" to={`/chats/${sellerId}`} style={{ marginTop: 18 }} aria-label={`Contact ${sellerName} about ${product.title}`}>
                 <FiMessageCircle />
                 Contact seller
-              </Link>
-              <button
+              </Link>}
+              {!isOwner && <button
                 className="btn btn-secondary btn-full"
                 type="button"
                 disabled={savingFavorite}
@@ -315,7 +323,7 @@ export default function ProductDetail() {
               >
                 <FiHeart fill={liked ? 'currentColor' : 'none'} />
                 {liked ? 'Saved' : 'Save vehicle'}
-              </button>
+              </button>}
             </section>
 
             <section className="panel panel-pad">

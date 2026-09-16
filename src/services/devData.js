@@ -13,20 +13,47 @@
  * prueba en la misma sesion del navegador, cambiando con el panel DEV.
  *
  * ---------------------------------------------------------------------------
- * POR QUE NO LLEGAN AL PAQUETE DE PRODUCCION
+ * DISPONIBILIDAD EN EL DESPLIEGUE
  * ---------------------------------------------------------------------------
- * isDevSessionActive() devuelve false de inmediato cuando DEV_LOGIN_ENABLED es
- * false, y esa constante se apoya en import.meta.env.DEV, que vale false en
- * `npm run build`. El empaquetador lo resuelve en tiempo de compilacion y
- * elimina la rama, incluido el import dinamico de data/mockVehicles.js.
+ * Los datos se cargan tambien en Vercel, pero exclusivamente despues de
+ * activar la sesion de prueba. Define VITE_DEV_LOGIN=false para ocultar por
+ * completo este modo en cualquier entorno.
  *
- * Por eso la carga es con import() y no con un import normal arriba: un import
- * estatico se incluiria siempre, aunque nunca se ejecutara, y se llevaria 27 KB
- * de datos falsos al paquete final. Comprobado empaquetando: en produccion el
- * punto de entrada no referencia ese fichero en ningun sitio.
+ * La carga es dinamica para que los datos no se descarguen hasta que hagan
+ * falta.
  */
 
 import { DEV_USER, isDevSessionActive } from './devAuth'
+
+// Cambios hechos sobre anuncios de prueba. sessionStorage hace que duren durante
+// la pestaña actual, pero nunca llegan a Supabase ni a otros usuarios.
+const DEV_LISTING_OVERRIDES_KEY = 'swapy:dev-listing-overrides'
+
+function readDevListingOverrides() {
+  try {
+    return JSON.parse(sessionStorage.getItem(DEV_LISTING_OVERRIDES_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function applyDevListingOverrides(vehicles) {
+  const overrides = readDevListingOverrides()
+  return vehicles.map(vehicle => ({ ...vehicle, ...(overrides[String(vehicle.id)] || {}) }))
+}
+
+/** Guarda cambios de una ficha de prueba únicamente en la sesión actual. */
+export function saveDevListing(id, changes) {
+  if (!isDevSessionActive()) return
+  try {
+    const overrides = readDevListingOverrides()
+    overrides[String(id)] = { ...(overrides[String(id)] || {}), ...changes }
+    sessionStorage.setItem(DEV_LISTING_OVERRIDES_KEY, JSON.stringify(overrides))
+  } catch {
+    // Si el navegador bloquea el almacenamiento, la edición sigue visible en
+    // la pantalla actual pero no se conservará al navegar.
+  }
+}
 
 /**
  * Indica si ahora mismo corresponde usar datos de ejemplo.
@@ -47,19 +74,10 @@ export function isMockDataEnabled() {
  * @returns {Promise<object[]>}
  */
 export async function loadMockVehicles() {
-  // Corte en tiempo de compilacion. isMockDataEnabled() se decide durante la
-  // ejecucion (depende de la sesion de prueba), asi que el empaquetador no
-  // puede demostrar por si solo que lo de abajo sea inalcanzable. Esta linea si
-  // la resuelve: import.meta.env.DEV se sustituye por false al compilar, todo
-  // lo que sigue queda muerto y se elimina, incluido el import dinamico.
-  // Escrita asi, literal y en el propio if, y no a traves de una constante
-  // intermedia: algunos empaquetadores no propagan la constante y se dejarian
-  // el import dentro. En desarrollo manda isMockDataEnabled().
-  if (!import.meta.env.DEV) return []
   if (!isMockDataEnabled()) return []
 
   const { MOCK_VEHICLES } = await import('../data/mockVehicles')
-  return MOCK_VEHICLES
+  return applyDevListingOverrides(MOCK_VEHICLES)
 }
 
 /**
@@ -87,7 +105,7 @@ export async function findMockVehicle(id) {
  */
 export async function withMockVehicles(products = []) {
   const realProducts = products.filter(Boolean)
-  if (!import.meta.env.DEV || !isMockDataEnabled()) return realProducts
+  if (!isMockDataEnabled()) return realProducts
 
   const mockVehicles = await loadMockVehicles()
   const realIds = new Set(realProducts.map(product => String(product.id)))
@@ -103,10 +121,18 @@ export async function withMockVehicles(products = []) {
  */
 export async function loadDevListings() {
   const vehicles = await loadMockVehicles()
+  const overrides = readDevListingOverrides()
 
   return vehicles.slice(0, 4).map((vehicle, index) => ({
     ...vehicle,
     user_id: DEV_USER.id,
     status: index === 3 ? 'sold' : index === 2 ? 'reserved' : 'available',
+    ...(overrides[String(vehicle.id)] || {}),
   }))
+}
+
+/** Obtiene uno de los anuncios propios de la sesión de prueba para editarlo. */
+export async function findDevListing(id) {
+  const listings = await loadDevListings()
+  return listings.find(listing => String(listing.id) === String(id)) || null
 }

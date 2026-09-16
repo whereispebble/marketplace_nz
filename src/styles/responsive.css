@@ -328,6 +328,18 @@
     display: flex;
   }
 
+  .edit-section-nav.stepper-wide {
+    display: grid;
+    grid-template-columns: repeat(4, max-content);
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .edit-section-nav .step {
+    white-space: nowrap;
+  }
+
   /* Titulo en la primera linea y los tres controles en la segunda. Las dos
      columnas laterales son 1fr iguales, asi que la central (Grid/Map) queda
      centrada y su union cae justo en el eje de la pantalla. */

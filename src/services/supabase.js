@@ -21,12 +21,28 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseKey)
 const connectionErrorMessage = 'Could not connect to Supabase. Check that the Supabase URL is correct, the Supabase project is active, and the site URL is allowed in Supabase Auth settings.'
 
+/**
+ * URL que Supabase usa al terminar el login OAuth.
+ * En Vercel `VITE_VERCEL_URL` puede ser un hostname sin protocolo, por eso se
+ * normaliza aquí. En el navegador la URL actual es el fallback más fiable para
+ * localhost y para dominios personalizados.
+ */
+export function getAuthRedirectUrl() {
+  const configuredUrl = import.meta.env.VITE_SITE_URL || import.meta.env.VITE_VERCEL_URL
+  const browserUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  let url = configuredUrl || browserUrl || 'http://localhost:5173'
+  if (!url.startsWith('http')) url = `https://${url}`
+  return url.endsWith('/') ? url : `${url}/`
+}
+
 function createMockQuery() {
   const result = { data: null, error: null }
   const query = {
     select: () => query,
     order: () => query,
     eq: () => query,
+    ilike: () => query,
+    limit: () => query,
     insert: () => query,
     upsert: () => query,
     update: () => query,

@@ -98,6 +98,85 @@
   background: white;
 }
 
+/* Al editar no hay una secuencia obligatoria: cada bloque abre directamente. */
+.edit-listing-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: clamp(8px, 1.5vh, 18px) 0;
+  padding: 10px 12px;
+}
+
+.edit-listing-summary img {
+  width: 58px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.edit-listing-summary strong,
+.edit-listing-summary span {
+  display: block;
+}
+
+.edit-listing-summary .edit-listing-label {
+  margin: 0 0 3px;
+  color: var(--accent-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edit-listing-summary strong { font-weight: 950; }
+.edit-listing-summary span { margin-top: 3px; color: var(--muted); font-size: 0.85rem; font-weight: 750; }
+
+.edit-form-section {
+  border-bottom: 1px solid var(--line);
+}
+
+.edit-form-section:first-child {
+  border-top: 1px solid var(--line);
+}
+
+.edit-form-section-head {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.edit-form-section-head strong,
+.edit-form-section-head small {
+  display: block;
+}
+
+.edit-form-section-head strong { font-size: 1rem; font-weight: 950; }
+.edit-form-section-head small { margin-top: 4px; color: var(--muted); font-size: 0.82rem; font-weight: 650; }
+.edit-form-section-head svg { flex: 0 0 auto; transition: transform 0.2s ease; }
+.edit-form-section.is-open .edit-form-section-head svg { transform: rotate(180deg); }
+
+.edit-form-section-body {
+  padding: 0 0 22px;
+}
+
+.edit-listing-actions {
+  position: sticky;
+  bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-soft);
+}
+
 .field-shell {
   display: grid;
   gap: 7px;

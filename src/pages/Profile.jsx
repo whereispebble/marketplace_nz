@@ -21,7 +21,7 @@ import ProductCard from '../components/ProductCard'
 import { getFavoriteProducts } from '../services/favorites'
 import { PUBLIC_LISTING_STATUSES } from '../constants/listingStatus'
 import { DEV_PROFILE, isDevSessionActive } from '../services/devAuth'
-import { loadDevListings } from '../services/devData'
+import { loadDevListings, saveDevListing } from '../services/devData'
 
 const REPORT_REASONS = [
   'Scam or fraud',
@@ -261,12 +261,19 @@ export default function Profile() {
     const user = await getCurrentUser()
     if (!user) return
 
+    const previousListings = listings
     setListings(current => current.map(item => (item.id === listingId ? { ...item, status } : item)))
-    await supabase
+    if (isDevSessionActive()) {
+      saveDevListing(listingId, { status })
+      return
+    }
+
+    const { error } = await supabase
       .from('products')
       .update({ status })
       .eq('id', listingId)
       .eq('user_id', user.id)
+    if (error) setListings(previousListings)
   }
 
   /**

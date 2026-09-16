@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi'
-import { getAuthErrorMessage, supabase } from '../services/supabase'
+import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
 
@@ -43,6 +43,21 @@ function validatePassword(form) {
   return ''
 }
 
+/**
+ * Comprueba si un nombre ya está publicado en un perfil. El índice único de la
+ * base de datos sigue siendo la protección definitiva ante registros a la vez.
+ */
+async function usernameIsTaken(username) {
+  const { data, error } = await supabase
+    .from('public_profiles')
+    .select('id')
+    .ilike('username', username.trim())
+    .limit(1)
+
+  if (error) throw error
+  return (data || []).length > 0
+}
+
 export default function Register() {
   const navigate = useNavigate()
   const { user, loading: sessionLoading } = useSession()
@@ -67,7 +82,7 @@ export default function Register() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: getAuthRedirectUrl() },
       })
       if (error) {
         setError(getAuthErrorMessage(error))
@@ -93,12 +108,27 @@ export default function Register() {
     setLoading(true)
     setError('')
     try {
-      const { error } = await supabase.auth.signUp({
+      const username = form.username.trim()
+      if (await usernameIsTaken(username)) {
+        setError('This username is already registered. Please choose another one.')
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { username: form.username.trim() } },
+        options: { data: { username } },
       })
       if (error) { setError(getAuthErrorMessage(error)); setLoading(false); return }
+
+      // Con la confirmación de email activada, Supabase responde correctamente
+      // pero devuelve `identities` vacío cuando el email ya tiene una cuenta.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setError('This email is already registered. Please sign in instead.')
+        setLoading(false)
+        return
+      }
     } catch (authError) {
       setError(getAuthErrorMessage(authError))
       setLoading(false)
