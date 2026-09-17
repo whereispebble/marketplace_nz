@@ -349,7 +349,7 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 
 - OpenStreetMap devolvía imágenes 403 porque `vercel.json` enviaba `Referrer-Policy: no-referrer`; el servidor de teselas exige un referente válido para identificar sitios web.
 - La política pasa a `strict-origin-when-cross-origin`: las teselas reciben únicamente el origen público de Swapy, mientras las rutas y parámetros de navegación continúan ocultos a dominios externos.
-- Leaflet usa la URL canónica vigente `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, sin los subdominios históricos `{s}`. La atribución visible se mantiene.
+- Como el dominio desplegado continuó recibiendo 403 después de corregir el referente, la home deja de solicitar teselas a los servidores comunitarios de OSM. Leaflet usa CARTO Positron (`basemaps.cartocdn.com`) como mapa base para los marcadores y conserva atribuciones visibles a OpenStreetMap y CARTO.
 ### Variables de Supabase en Vercel (2026-09-17)
 
 - El despliegue del commit `368684d` se detuvo correctamente porque el entorno de Vercel no proporcionó una URL HTTPS y una clave pública de Supabase válidas al build.
