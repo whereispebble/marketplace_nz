@@ -8,36 +8,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { distanceKm } from '../../services/vehicleFilters'
+import { hasCoordinates } from '../../services/validation'
 
+import 'leaflet/dist/leaflet.css'
+let leafletPromise
+let leaflet
 function loadLeaflet() {
-  if (window.L) return Promise.resolve(window.L)
-  if (leafletPromise) return leafletPromise
-
-  leafletPromise = new Promise((resolve, reject) => {
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link')
-      link.id = 'leaflet-css'
-      link.rel = 'stylesheet'
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-      document.head.appendChild(link)
-    }
-
-    const existingScript = document.getElementById('leaflet-js')
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.L), { once: true })
-      existingScript.addEventListener('error', reject, { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.id = 'leaflet-js'
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-    script.async = true
-    script.onload = () => resolve(window.L)
-    script.onerror = reject
-    document.body.appendChild(script)
-  })
-
+  if (!leafletPromise) {
+    leafletPromise = import('leaflet').then(module => {
+      leaflet = module.default
+      return leaflet
+    }).catch(error => { leafletPromise = null; throw error })
+  }
   return leafletPromise
 }
 
@@ -92,7 +74,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
         markerLayerRef.current = L.layerGroup().addTo(map)
         leafletMapRef.current = map
         setMapReady(true)
-        setTimeout(() => map.invalidateSize(), 120)
+        if (!ignore) map.invalidateSize()
       } catch {
         if (!ignore) setMapError('Map service could not load. Check your connection and try again.')
       }
@@ -111,10 +93,10 @@ export default function VehicleMap({ vehicles, focusPoint }) {
 
   const focusLat = Number(focusPoint?.lat)
   const focusLng = Number(focusPoint?.lng)
-  const hasFocus = Number.isFinite(focusLat) && Number.isFinite(focusLng)
+  const hasFocus = hasCoordinates(focusPoint)
 
   useEffect(() => {
-    const L = window.L
+    const L = leaflet
     const map = leafletMapRef.current
     const layer = markerLayerRef.current
     if (!mapReady || !L || !map || !layer) return
@@ -123,7 +105,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
     const bounds = []
 
     vehicles.forEach(vehicle => {
-      if (!vehicle.lat || !vehicle.lng) return
+      if (!hasCoordinates(vehicle)) return
       const marker = L.marker([vehicle.lat, vehicle.lng], {
         icon: L.divIcon({
           className: 'swapy-map-marker',
@@ -168,7 +150,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
       // El encuadre cubre la ubicacion elegida y los anuncios mas cercanos, no
       // todo el pais: asi se ve el sitio buscado y algo de oferta alrededor.
       const nearest = vehicles
-        .filter(vehicle => vehicle.lat && vehicle.lng)
+        .filter(hasCoordinates)
         .map(vehicle => ({ vehicle, distance: distanceKm(focus, vehicle) }))
         .filter(entry => entry.distance !== null)
         .sort((first, second) => first.distance - second.distance)

@@ -13,15 +13,19 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMapPin, FiMove, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMove, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import LoadingScreen from '../components/LoadingScreen'
 import ProductCard from '../components/ProductCard'
 import LocationField from '../components/LocationField'
 import { NZ_VEHICLE_CATALOG, VEHICLE_TYPES } from '../data/nzVehicleCatalog'
 import { findDevListing, saveDevListing } from '../services/devData'
 import { DEV_USER, isDevSessionActive } from '../services/devAuth'
+import { hasCoordinates } from '../services/validation'
+import { isNewZealandCoordinate } from '../services/geocoding'
+import { assertPublicationSchema, getPublicationErrorMessage } from '../services/publicationSchema'
 // Misma foto que el hero de la home, asi que ya viene de cache al navegar
 import sellBackground from '../assets/new-zealand-sea.webp.jpg'
 
@@ -53,13 +57,17 @@ const TOILET_TYPES = [
   { id: 'fixed', name: 'Fixed toilet' },
 ]
 // La tarjeta verde es la unica valida para freedom camping desde el 6/6/2026.
-const LISTING_STATUSES = [
+const NEW_LISTING_STATUSES = [
   { id: 'available', name: 'Active' },
-  { id: 'reserved', name: 'Booked' },
   { id: 'draft', name: 'Draft' },
-  { id: 'paused', name: 'Paused' },
-  { id: 'sold', name: 'Sold' },
 ]
+const LISTING_STATUS_NAMES = {
+  available: 'Active',
+  reserved: 'Booked',
+  draft: 'Draft',
+  paused: 'Paused',
+  sold: 'Sold',
+}
 const STEPS = ['Vehicle', 'NZ details', 'Photos', 'Preview']
 function fieldErrorClass(errors, field) {
   return errors[field] ? 'field field-error' : 'field'
@@ -73,6 +81,8 @@ export default function NewProduct() {
   const navigate = useNavigate()
   const { id: editingId } = useParams()
   const isEditing = Boolean(editingId)
+  const [locating, setLocating] = useState(false)
+  const locationRequest = useRef(0)
   const [form, setForm] = useState({
     title: '',
     make: '',
@@ -118,10 +128,12 @@ export default function NewProduct() {
   const [openEditSection, setOpenEditSection] = useState('basics')
   const [draggedImageId, setDraggedImageId] = useState('')
   const imagesRef = useRef(images)
+  const pendingListingId = useRef(null)
+  const submitLock = useRef(false)
   // Una ubicacion vale cuando viene del geocodificador: solo entonces hay
   // coordenadas con las que colocar el anuncio en el mapa.
   const selectedCity = useMemo(() => (
-    Number.isFinite(Number(form.lat)) && Number.isFinite(Number(form.lng))
+    hasCoordinates({ lat: form.lat, lng: form.lng })
       ? { location: form.location, region: form.region, lat: Number(form.lat), lng: Number(form.lng) }
       : null
   ), [form.location, form.region, form.lat, form.lng])
@@ -197,7 +209,7 @@ export default function NewProduct() {
       setLoadingListing(false)
     }
 
-    loadListing()
+    loadListing().catch(() => { if (!ignore) { setGeneralError('Could not load this listing. Please reload.'); setLoadingListing(false) } })
     return () => { ignore = true }
   }, [editingId, navigate])
 
@@ -284,6 +296,8 @@ export default function NewProduct() {
   // Escribir a mano invalida las coordenadas anteriores: hay que volver a
   // elegir una sugerencia para que el anuncio se pueda situar en el mapa.
   const handleLocationChange = value => {
+    locationRequest.current += 1
+    setLocating(false)
     setForm(current => ({ ...current, location: value, region: '', lat: null, lng: null }))
     setFieldErrors(current => {
       if (!current.location) return current
@@ -294,9 +308,11 @@ export default function NewProduct() {
   }
 
   const handleLocationSelect = place => {
+    locationRequest.current += 1
+    setLocating(false)
     setForm(current => ({
       ...current,
-      location: place.name,
+      location: place.isAddress ? place.label : place.name,
       region: place.region || '',
       lat: place.lat,
       lng: place.lng,
@@ -307,6 +323,29 @@ export default function NewProduct() {
       delete next.location
       return next
     })
+  }
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setFieldErrors(current => ({ ...current, location: 'Location is unavailable on this device. Search for a town, city or street address.' }))
+      return
+    }
+    const request = ++locationRequest.current
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(position => {
+      if (request !== locationRequest.current) return
+      setLocating(false)
+      const { latitude: lat, longitude: lng } = position.coords
+      if (!isNewZealandCoordinate({ lat, lng })) {
+        setFieldErrors(current => ({ ...current, location: 'Choose a location in New Zealand. Search for an address or place.' }))
+        return
+      }
+      handleLocationSelect({ name: 'Current location', lat, lng, source: 'gps' })
+    }, () => {
+      if (request !== locationRequest.current) return
+      setLocating(false)
+      setFieldErrors(current => ({ ...current, location: 'Could not access your position. Allow location access or search for a town, city or street address.' }))
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
   }
 
   const handleImages = event => {
@@ -372,7 +411,7 @@ export default function NewProduct() {
       if (!form.vehicleType) nextErrors.vehicleType = 'Choose the type of vehicle.'
       if (!form.condition) nextErrors.condition = 'Choose the vehicle condition.'
       if (!form.location.trim()) nextErrors.location = 'Choose where the vehicle is located.'
-      if (form.location.trim() && !selectedCity) nextErrors.location = 'Pick one of the suggested places so the listing can appear on the map.'
+      if (!selectedCity) nextErrors.location = 'Select a matching location from the suggestions or use My location.'
       if (form.mileage && Number(form.mileage) < 0) nextErrors.mileage = 'Mileage cannot be negative.'
       if (form.sleeps && Number(form.sleeps) < 0) nextErrors.sleeps = 'Sleeps cannot be negative.'
       if (form.belts && Number(form.belts) < 0) nextErrors.belts = 'Seat belts cannot be negative.'
@@ -434,35 +473,41 @@ export default function NewProduct() {
   }
 
   const handleSubmit = async (statusOverride = form.listingStatus) => {
+    if (submitLock.current) return
     if (!validateStep(3, statusOverride)) {
+      if (isEditing) setOpenEditSection(!form.title.trim() || !form.price ? 'basics' : (!selectedCity ? 'details' : 'photos'))
       if (!form.title.trim() || (statusOverride !== 'draft' && (!form.make.trim() || !form.model.trim() || !form.price))) setStep(1)
       else if (statusOverride !== 'draft' && (!form.vehicleType || !form.condition || !form.location.trim() || !selectedCity)) setStep(2)
       else setStep(3)
       return
     }
 
+    submitLock.current = true
     setLoading(true)
     setGeneralError('')
-
-    const isDevListing = isEditing && isDevSessionActive()
+    try {
+    const isDevListing = isDevSessionActive()
     const { data: { user } } = isDevListing
       ? { data: { user: DEV_USER } }
       : await supabase.auth.getUser()
     if (!user) { setLoading(false); navigate('/login'); return }
 
+    if (!isDevListing) await assertPublicationSchema(supabase)
+
     const payload = createPayload(statusOverride)
     let listing
 
     if (isDevListing) {
-      listing = { id: editingId, user_id: DEV_USER.id, ...payload }
-    } else if (isEditing) {
-      const { data, error } = await supabase.from('products').update(payload).eq('id', editingId).eq('user_id', user.id).select().single()
-      if (error) { setGeneralError(error.message); setLoading(false); return }
-      listing = data
+      listing = { id: editingId || pendingListingId.current || `dev-${crypto.randomUUID()}`, user_id: DEV_USER.id, ...payload }
+      pendingListingId.current = listing.id
+    } else if (isEditing || pendingListingId.current) {
+      listing = { id: editingId || pendingListingId.current }
     } else {
-      const { data, error } = await supabase.from('products').insert({ ...payload, user_id: user.id }).select().single()
-      if (error) { setGeneralError(error.message); setLoading(false); return }
+      // Reserve a private draft; retries reuse it rather than duplicating listings.
+      const { data, error } = await supabase.from('products').insert({ title: payload.title, status: 'draft', user_id: user.id }).select().single()
+      if (error) throw error
       listing = data
+      pendingListingId.current = listing.id
     }
 
     // Las fotos existentes conservan su URL; las nuevas se suben. Al terminar,
@@ -477,7 +522,8 @@ export default function NewProduct() {
         finalUrls.push(await fileToDataUrl(image.file))
         continue
       }
-      const ext = image.file.name.split('.').pop()
+      const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[image.file.type]
+      if (!ext || image.file.size > 8 * 1024 * 1024) throw new Error('Use JPEG, PNG or WebP images under 8 MB.')
       const path = `${listing.id}/${Date.now()}-${index}.${ext}`
       const { data: upload, error: uploadError } = await supabase.storage.from('product-images').upload(path, image.file)
       if (uploadError) {
@@ -492,43 +538,35 @@ export default function NewProduct() {
     }
 
     if (isDevListing) {
-      saveDevListing(editingId, { ...payload, image: finalUrls[0] || null, images: finalUrls })
+      saveDevListing(listing.id, { ...payload, user_id: DEV_USER.id, image: finalUrls[0] || null, images: finalUrls })
       setLoading(false)
-      navigate(`/product/${editingId}`)
+      navigate(`/product/${listing.id}`)
       return
     }
 
-    // product_images es una proyeccion de `images`: se reemplaza completa para
-    // que borrar, reordenar o añadir fotos deje ambas tablas sincronizadas.
-    const { error: deleteImagesError } = await supabase
-      .from('product_images')
-      .delete()
-      .eq('product_id', listing.id)
-    if (deleteImagesError) { setGeneralError(deleteImagesError.message); setLoading(false); return }
-
-    if (finalUrls.length > 0) {
-      const { error: insertImagesError } = await supabase.from('product_images').insert(
-        finalUrls.map((image_url, sort_order) => ({ product_id: listing.id, image_url, sort_order })),
-      )
-      if (insertImagesError) { setGeneralError(insertImagesError.message); setLoading(false); return }
-    }
-
+    // A database trigger updates product_images in the same transaction.
     const { error: coverError } = await supabase
       .from('products')
-      .update({ image: finalUrls[0] || null, images: finalUrls })
+      .update({ ...payload, image: finalUrls[0] || null, images: finalUrls })
       .eq('id', listing.id)
-      .eq('user_id', user.id)
-    if (coverError) { setGeneralError(coverError.message); setLoading(false); return }
+      .eq('user_id', user.id).select('id').single()
+    if (coverError) throw coverError
 
     setLoading(false)
     navigate(statusOverride === 'draft' ? '/profile' : `/product/${listing.id}`)
+    } catch (error) {
+      setGeneralError(getPublicationErrorMessage(error))
+    } finally {
+      submitLock.current = false
+      setLoading(false)
+    }
   }
 
   if (loadingListing) {
     return (
       <div className="app-shell">
         <Navbar compact />
-        <div className="loading-state"><div><div className="spinner" />Loading listing...</div></div>
+        <LoadingScreen fullPage label="Loading listing" />
       </div>
     )
   }
@@ -557,7 +595,7 @@ export default function NewProduct() {
             <div>
               <span className="edit-listing-label">Live preview</span>
               <strong>{form.title || 'Untitled listing'}</strong>
-              <span>{formatPrice(form.price)} · {LISTING_STATUSES.find(status => status.id === form.listingStatus)?.name || 'Active'} · {images.length} photo{images.length === 1 ? '' : 's'}</span>
+              <span>{formatPrice(form.price)} · {LISTING_STATUS_NAMES[form.listingStatus] || 'Active'} · {images.length} photo{images.length === 1 ? '' : 's'}</span>
             </div>
           </div>
         )}
@@ -675,12 +713,14 @@ export default function NewProduct() {
                       </select>
                     </label>
                   </FieldError>
-                  <FieldError errors={fieldErrors} name="location" className="field-group-wide">
+                  <FieldError errors={fieldErrors} name="location" className="field-group-wide publish-location">
                     <LocationField
                       idPrefix="publish"
                       label="Location"
-                      placeholder="Where is the vehicle? Town or city"
-                      hint="Pick one of the suggestions so the listing can appear on the map."
+                      placeholder="NZ address, place or GPS coordinates"
+                      hint="Select a town, city or street address from the suggestions."
+                      onUseMyLocation={handleUseMyLocation}
+                      locating={locating}
                       required
                       invalid={Boolean(fieldErrors.location)}
                       value={form.location}
@@ -689,13 +729,7 @@ export default function NewProduct() {
                       onSelect={handleLocationSelect}
                     />
                   </FieldError>
-                  <div className={`geo-card ${selectedCity ? 'is-ready' : ''}`}>
-                    <FiMapPin />
-                    <div>
-                      <strong>{selectedCity ? [selectedCity.location, selectedCity.region].filter(Boolean).join(', ') : 'Map position pending'}</strong>
-                      <span>{selectedCity ? `${selectedCity.lat.toFixed(4)}, ${selectedCity.lng.toFixed(4)}` : 'Pick a suggested place to put this listing on the map.'}</span>
-                    </div>
-                  </div>
+
                 </div>
               </section>
 
@@ -799,21 +833,23 @@ export default function NewProduct() {
                       {TOILET_TYPES.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
                     </select>
                   </label>
-                  <label className="toggle-row publish-toggle">
-                    <input type="checkbox" name="selfContained" checked={form.selfContained} onChange={handleChange} />
-                    Self-contained
-                  </label>
-                  <label className="field-group">
-                    <span>Self-contained expiry</span>
-                    <input
-                      className="field"
-                      name="scExpiry"
-                      type="date"
-                      value={form.scExpiry}
-                      onChange={handleChange}
-                      disabled={!form.selfContained}
-                    />
-                  </label>
+                  <div className="self-contained-controls">
+                    <label className="field-group">
+                      <span>Self-contained expiry</span>
+                      <input
+                        className="field"
+                        name="scExpiry"
+                        type="date"
+                        value={form.scExpiry}
+                        onChange={handleChange}
+                        disabled={!form.selfContained}
+                      />
+                    </label>
+                    <label className="toggle-row publish-toggle">
+                      <input type="checkbox" name="selfContained" checked={form.selfContained} onChange={handleChange} />
+                      Self-contained
+                    </label>
+                  </div>
                 </div>
               </section>
               )}
@@ -881,27 +917,30 @@ export default function NewProduct() {
             <div className="publish-preview-layout">
               <div>
                 <h2 className="section-title" style={{ fontSize: '1.35rem', marginBottom: 14 }}>Preview</h2>
-                <ProductCard product={previewProduct} />
+                <ProductCard product={previewProduct} preview />
               </div>
 
               <div className="panel preview-summary">
-                <label className="preview-summary-row preview-summary-field">
-                  <span>Status</span>
-                  <select className="field" name="listingStatus" value={form.listingStatus} onChange={handleChange}>
-                    {LISTING_STATUSES.map(status => <option key={status.id} value={status.id}>{status.name}</option>)}
-                  </select>
-                </label>
+                {isEditing ? (
+                  <div className="preview-summary-row">
+                    <span>Status</span>
+                    <strong>{LISTING_STATUS_NAMES[form.listingStatus] || 'Active'}</strong>
+                  </div>
+                ) : (
+                  <label className="preview-summary-row preview-summary-field">
+                    <span>Status</span>
+                    <select className="field" name="listingStatus" value={form.listingStatus} onChange={handleChange}>
+                      {NEW_LISTING_STATUSES.map(status => <option key={status.id} value={status.id}>{status.name}</option>)}
+                    </select>
+                  </label>
+                )}
                 <div className="preview-summary-row">
                   <span>Price</span>
                   <strong>{formatPrice(form.price)}</strong>
                 </div>
                 <div className="preview-summary-row">
                   <span>Location</span>
-                  <strong>{selectedCity ? `${selectedCity.location}, ${selectedCity.region}` : form.location || '-'}</strong>
-                </div>
-                <div className="preview-summary-row">
-                  <span>Map coordinates</span>
-                  <strong>{selectedCity ? `${selectedCity.lat}, ${selectedCity.lng}` : '-'}</strong>
+                  <strong>{selectedCity ? [selectedCity.location, selectedCity.region].filter(Boolean).join(', ') : form.location || '-'}</strong>
                 </div>
                 <div className="preview-summary-row">
                   <span>Photos</span>

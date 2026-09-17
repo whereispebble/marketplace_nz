@@ -257,6 +257,14 @@
   min-height: 44px;
 }
 
+.self-contained-controls {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 14px;
+  align-items: end;
+}
+
 .publish-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -491,3 +499,9 @@
   gap: 10px;
   justify-content: flex-end;
 }
+
+/* Keep the location search as compact as the other publishing fields. */
+.publish-location { align-self: start; }
+.publish-location .location-autocomplete { gap: 8px; }
+.publish-location .location-autocomplete .field { height: 48px; min-height: 48px; }
+.publish-location .location-autocomplete > label { font-weight: 800; font-size: 0.86rem; }

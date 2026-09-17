@@ -12,11 +12,14 @@ import { FiChevronLeft, FiChevronRight, FiEdit3, FiEye, FiHeart, FiMapPin, FiMax
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import LoadingScreen from '../components/LoadingScreen'
 import { VEHICLE_TYPES } from '../data/nzVehicleCatalog'
-import { findMockVehicle } from '../services/devData'
+import { findMockVehicle, loadMockVehicles } from '../services/devData'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
-import { listingStatusBadge } from '../constants/listingStatus'
+import { LISTING_STATUS, listingStatusBadge } from '../constants/listingStatus'
 import { useSession } from '../services/session'
+import { isDevSessionActive } from '../services/devAuth'
+import { isUuid } from '../services/validation'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -27,9 +30,13 @@ export default function ProductDetail() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [liked, setLiked] = useState(false)
   const [savingFavorite, setSavingFavorite] = useState(false)
+  const [favoriteError, setFavoriteError] = useState('')
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const sellerId = product?.seller_id || product?.seller?.id || 'seller'
+  const [relatedProducts, setRelatedProducts] = useState([])
+  // Los anuncios reales usan user_id como propietario. seller_id solo existe
+  // en algunos datos antiguos/mock.
+  const sellerId = product?.user_id || product?.seller_id || product?.seller?.id || 'seller'
   const sellerName = product?.seller?.name || 'Private seller'
   const isOwner = Boolean(user?.id && product?.user_id && String(user.id) === String(product.user_id))
 
@@ -37,23 +44,36 @@ export default function ProductDetail() {
     let ignore = false
 
     async function loadProduct() {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle()
+      setLoading(true)
+      setProduct(null)
+      setNotFound(false)
+      setSelectedImage(0)
+      setLightboxOpen(false)
+      const devMode = isDevSessionActive()
+      if (!devMode && !isUuid(id)) { setNotFound(true); setLoading(false); return }
+      const { data, error } = devMode
+        ? { data: null, error: null }
+        : await supabase.from('products').select('*').eq('id', id).maybeSingle()
 
       if (ignore) return
 
       if (!error && data) {
-        setProduct(data)
+        const ownerId = data.user_id || data.seller_id
+        const { data: seller } = await supabase.from('public_profiles')
+          .select('id, username, avatar_url, rating, total_sales, joined')
+          .eq('id', ownerId).maybeSingle()
+        if (ignore) return
+        setProduct({ ...data, seller: seller ? {
+          id: seller.id, name: seller.username || 'Private seller', avatar_url: seller.avatar_url,
+          rating: seller.rating, sales: seller.total_sales, joined: seller.joined,
+        } : null })
         setLoading(false)
         return
       }
 
       // En desarrollo se puede abrir un anuncio de ejemplo; en produccion, si
       // no esta en la base de datos es que no existe o no se puede ver.
-      const mockVehicle = await findMockVehicle(id)
+      const mockVehicle = devMode ? await findMockVehicle(id) : null
       if (ignore) return
 
       if (mockVehicle) setProduct(mockVehicle)
@@ -61,9 +81,31 @@ export default function ProductDetail() {
       setLoading(false)
     }
 
-    loadProduct()
+    loadProduct().catch(() => { if (!ignore) { setNotFound(true); setLoading(false) } })
     return () => { ignore = true }
   }, [id])
+
+  useEffect(() => {
+    if (!product) return undefined
+    let ignore = false
+
+    async function loadRelatedProducts() {
+      const candidates = isDevSessionActive()
+        ? await loadMockVehicles()
+        : (await supabase
+          .from('products')
+          .select('*')
+          .eq('status', LISTING_STATUS.AVAILABLE)
+          .neq('id', product.id)
+          .limit(80)).data || []
+
+      if (ignore) return
+      setRelatedProducts(rankRelatedProducts(product, candidates))
+    }
+
+    loadRelatedProducts().catch(() => { if (!ignore) setRelatedProducts([]) })
+    return () => { ignore = true }
+  }, [product])
 
   useEffect(() => {
     let ignore = false
@@ -170,12 +212,7 @@ export default function ProductDetail() {
   const showImage = step => setSelectedImage(current => (current + step + images.length) % images.length)
 
   if (loading) {
-    return (
-      <div className="app-shell">
-        <Navbar compact />
-        <div className="loading-state loading-state-full"><div><div className="spinner" />Loading vehicle...</div></div>
-      </div>
-    )
+    return <LoadingScreen fullPage label="Loading vehicle" />
   }
 
   // Anuncio inexistente, borrado, o que este visitante no puede ver. Se dice
@@ -210,6 +247,7 @@ export default function ProductDetail() {
           <span>{product.vehicleType || 'Vehicle'}</span>
         </div>
 
+        {favoriteError && <p role="alert">{favoriteError}</p>}
         <section className="detail-grid">
           <div>
             <button
@@ -303,7 +341,7 @@ export default function ProductDetail() {
                   <FiEdit3 />
                   Manage listing
                 </Link>
-              ) : <Link className="btn btn-primary btn-full" to={`/chats/${sellerId}`} style={{ marginTop: 18 }} aria-label={`Contact ${sellerName} about ${product.title}`}>
+              ) : <Link className="btn btn-primary btn-full" to={`/chats?productId=${encodeURIComponent(product.id)}&sellerId=${encodeURIComponent(sellerId)}`} style={{ marginTop: 18 }} aria-label={`Contact ${sellerName} about ${product.title}`}>
                 <FiMessageCircle />
                 Contact seller
               </Link>}
@@ -316,9 +354,12 @@ export default function ProductDetail() {
                 aria-label={liked ? `Remove ${product.title} from saved vehicles` : `Save ${product.title}`}
                 onClick={async () => {
                   setSavingFavorite(true)
-                  const nextLiked = await toggleFavorite(product)
-                  setLiked(nextLiked)
-                  setSavingFavorite(false)
+                  try {
+                    setFavoriteError('')
+                    setLiked(await toggleFavorite(product))
+                  } catch {
+                    setFavoriteError('Could not update saved vehicles. Please try again.')
+                  } finally { setSavingFavorite(false) }
                 }}
               >
                 <FiHeart fill={liked ? 'currentColor' : 'none'} />
@@ -329,7 +370,11 @@ export default function ProductDetail() {
             <section className="panel panel-pad">
               <h2 className="section-title" style={{ fontSize: '1.2rem', marginBottom: 16 }}>Seller</h2>
               <Link className="seller-row seller-link" to={`/profile/${sellerId}`} aria-label={`View ${sellerName} profile`}>
-                <div className="avatar">{sellerName?.[0] || 'U'}</div>
+                <div className="avatar">
+                  {product.seller?.avatar_url
+                    ? <img src={product.seller.avatar_url} alt={`${sellerName} profile`} />
+                    : (sellerName?.[0] || 'U')}
+                </div>
                 <div>
                   <strong>{sellerName}</strong>
                   <span className="muted-row" style={{ display: 'flex', marginTop: 4 }}><FiStar />{product.seller?.rating || 'New seller'} rating</span>
@@ -341,6 +386,24 @@ export default function ProductDetail() {
                 <div className="stat-box"><strong>{product.seller?.joined || '-'}</strong><span>Joined</span></div>
               </div>
             </section>
+
+            {relatedProducts.length > 0 && (
+              <section className="panel panel-pad related-listings">
+                <h2 className="section-title" style={{ fontSize: '1.2rem' }}>Related listings</h2>
+                <div className="related-listings-list">
+                  {relatedProducts.map(item => (
+                    <Link className="related-listing" to={`/product/${item.id}`} key={item.id}>
+                      <img src={item.image || item.images?.[0] || 'https://placehold.co/240x180/f1ede5/171717?text=Swapy'} alt="" />
+                      <span className="related-listing-copy">
+                        <strong>{item.title}</strong>
+                        <span>{vehicleTypeName(item.vehicleType)}{item.model ? ` · ${item.model}` : ''}</span>
+                        <b>NZ${Number(item.price || 0).toLocaleString('en-NZ')}</b>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="panel panel-pad">
               <span className="muted-row" style={{ alignItems: 'flex-start' }}>
@@ -482,6 +545,37 @@ const TOILET_LABELS = {
   none: 'No toilet',
   portable: 'Portable toilet',
   fixed: 'Fixed toilet',
+}
+
+const CAMPERISED_TYPES = new Set(['campervan', 'motorhome', 'van', 'car-camper'])
+
+function normaliseComparison(value) {
+  return String(value || '').trim().toLocaleLowerCase('en-NZ')
+}
+
+function comparableModel(vehicle) {
+  const model = normaliseComparison(vehicle?.model)
+  const make = normaliseComparison(vehicle?.make)
+  return make && model.startsWith(`${make} `) ? model.slice(make.length + 1) : model
+}
+
+function relatedScore(source, candidate) {
+  let score = 0
+  if (normaliseComparison(candidate.vehicleType) === normaliseComparison(source.vehicleType)) score += 100
+  if (CAMPERISED_TYPES.has(candidate.vehicleType) === CAMPERISED_TYPES.has(source.vehicleType)) score += 40
+  if (comparableModel(candidate) && comparableModel(candidate) === comparableModel(source)) score += 25
+  if (normaliseComparison(candidate.make) === normaliseComparison(source.make)) score += 10
+  return score
+}
+
+function rankRelatedProducts(source, candidates) {
+  return candidates
+    .filter(candidate => String(candidate.id) !== String(source.id) && candidate.status !== LISTING_STATUS.SOLD)
+    .map(candidate => ({ candidate, score: relatedScore(source, candidate) }))
+    .filter(item => item.score > 0)
+    .sort((left, right) => right.score - left.score || new Date(right.candidate.created_at || 0) - new Date(left.candidate.created_at || 0))
+    .slice(0, 3)
+    .map(item => item.candidate)
 }
 
 // WOF y rego caducados o a punto de caducar son lo primero que mira un

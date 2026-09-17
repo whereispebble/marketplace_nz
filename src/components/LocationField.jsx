@@ -18,7 +18,7 @@ import { searchPlaces } from '../services/geocoding'
 export default function LocationField({
   idPrefix,
   label = 'Location',
-  placeholder = 'Search a New Zealand town or city',
+  placeholder = 'NZ address, place or GPS coordinates',
   value,
   selected,
   hint,
@@ -34,18 +34,15 @@ export default function LocationField({
   const [status, setStatus] = useState('idle')
   const [highlighted, setHighlighted] = useState(-1)
   const containerRef = useRef(null)
-  const skipNextQuery = useRef(false)
+  const hasSelection = Boolean(selected)
   const listId = `${idPrefix}-location-suggestions`
   const withDeviceRow = typeof onUseMyLocation === 'function'
 
   useEffect(() => {
-    if (skipNextQuery.current) {
-      skipNextQuery.current = false
-      return undefined
-    }
-
     const query = value.trim()
-    if (query.length < 2) {
+    if (hasSelection || query.length < 2) {
+      // Reset obsolete remote suggestions when the search is cleared.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestions([])
       setStatus('idle')
       return undefined
@@ -57,10 +54,11 @@ export default function LocationField({
       setStatus('loading')
       try {
         const places = await searchPlaces(query, controller.signal)
+        if (controller.signal.aborted) return
         setSuggestions(places)
         setHighlighted(-1)
         setStatus(places.length === 0 ? 'empty' : 'idle')
-        setOpen(true)
+        // Keep results ready without reopening a dismissed field.
       } catch (error) {
         if (error.name === 'AbortError') return
         setSuggestions([])
@@ -73,7 +71,7 @@ export default function LocationField({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [value])
+  }, [value, hasSelection])
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -91,13 +89,12 @@ export default function LocationField({
   }
 
   const choose = place => {
-    skipNextQuery.current = true
     onSelect(place)
     close()
   }
 
   const chooseMyLocation = () => {
-    skipNextQuery.current = true
+    if (locating) return
     onUseMyLocation()
     close()
   }
@@ -126,11 +123,12 @@ export default function LocationField({
 
   return (
     <div className="field-group location-autocomplete" ref={containerRef}>
-      <span>
+      <label htmlFor={`${idPrefix}-location`}>
         {label}
         {required && <em className="field-required" title="Required" aria-hidden="true">*</em>}
-      </span>
+      </label>
       <input
+        id={`${idPrefix}-location`}
         className={invalid ? 'field field-error' : 'field'}
         placeholder={placeholder}
         value={value}
@@ -138,7 +136,7 @@ export default function LocationField({
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
-        onChange={event => onChange(event.target.value)}
+        onChange={event => { setSuggestions([]); setStatus('idle'); setHighlighted(-1); setOpen(true); onChange(event.target.value) }}
         onFocus={() => setOpen(true)}
         onKeyDown={handleKeyDown}
       />
@@ -163,7 +161,7 @@ export default function LocationField({
             </li>
           )}
           {status === 'loading' && <li className="location-suggestion-note">Searching...</li>}
-          {status === 'empty' && <li className="location-suggestion-note">No matching places in New Zealand</li>}
+          {status === 'empty' && <li className="location-suggestion-note">No matching places in New Zealand. Add a town or street, or enter NZ GPS coordinates.</li>}
           {status === 'error' && <li className="location-suggestion-note">Location search unavailable right now</li>}
           {suggestions.map((place, index) => (
             <li key={place.id}>

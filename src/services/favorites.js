@@ -13,9 +13,15 @@
 
 import { supabase } from './supabase'
 import { isDevSessionActive } from './devAuth'
+import { isUuid } from './validation'
 
 /** Clave del navegador para los guardados de un visitante sin cuenta. */
-const GUEST_FAVORITES_KEY = 'swapy:favorites:guest'
+const GUEST_FAVORITES_KEY = 'swapy:favorites:guest:v2'
+function localFavorites() {
+  return isDevSessionActive()
+    ? { storage: sessionStorage, key: 'swapy:favorites:dev' }
+    : { storage: localStorage, key: GUEST_FAVORITES_KEY }
+}
 
 /** Evento que emiten estas funciones para que la interfaz se refresque. */
 export const FAVORITES_UPDATED_EVENT = 'swapy:favorites-updated'
@@ -78,7 +84,8 @@ async function getCurrentUser() {
  */
 function readGuestFavorites() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(GUEST_FAVORITES_KEY) || '[]')
+    const { storage, key } = localFavorites()
+    const parsed = JSON.parse(storage.getItem(key) || '[]')
     return Array.isArray(parsed) ? parsed.filter(item => item?.id) : []
   } catch {
     // localStorage bloqueado o contenido corrupto: se trata como lista vacia.
@@ -93,7 +100,8 @@ function readGuestFavorites() {
 function writeGuestFavorites(favorites) {
   try {
     const byId = new Map(favorites.map(product => [String(product.id), product]))
-    localStorage.setItem(GUEST_FAVORITES_KEY, JSON.stringify([...byId.values()]))
+    const { storage, key } = localFavorites()
+    storage.setItem(key, JSON.stringify([...byId.values()]))
   } catch {
     // Sin almacenamiento disponible se pierde la lista, pero la app sigue.
   }
@@ -119,13 +127,14 @@ export function clearGuestFavorites() {
  * @param {string} userId id del usuario autenticado
  */
 export async function mergeGuestFavoritesIntoAccount(userId) {
-  const guestFavorites = readGuestFavorites()
+  if (isDevSessionActive() || !isUuid(userId)) return
+  const guestFavorites = readGuestFavorites().filter(product => isUuid(product.id))
   if (guestFavorites.length === 0) {
     clearGuestFavorites()
     return
   }
 
-  await supabase.from('favorites').upsert(
+  const { error } = await supabase.from('favorites').upsert(
     guestFavorites.map(product => ({
       user_id: userId,
       product_id: String(product.id),
@@ -134,7 +143,7 @@ export async function mergeGuestFavoritesIntoAccount(userId) {
     { onConflict: 'user_id,product_id' },
   )
 
-  clearGuestFavorites()
+  if (!error) clearGuestFavorites()
 }
 
 /**
@@ -191,15 +200,17 @@ export async function toggleFavorite(product) {
   const saved = await isFavorite(productId)
 
   if (saved) {
-    await supabase.from('favorites').delete().eq('user_id', user.id).eq('product_id', productId)
+    const { error } = await supabase.from('favorites').delete().eq('user_id', user.id).eq('product_id', productId)
+    if (error) throw new Error('Could not update saved vehicles. Please try again.')
     notifyChange()
     return false
   }
 
-  await supabase.from('favorites').upsert(
+  const { error } = await supabase.from('favorites').upsert(
     { user_id: user.id, product_id: productId, product_snapshot: productSnapshot(product) },
     { onConflict: 'user_id,product_id' },
   )
+  if (error) throw new Error('Could not save this vehicle. Please try again.')
   notifyChange()
   return true
 }
@@ -220,7 +231,13 @@ export async function getFavoriteProducts() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (error || !data) return []
+  if (error) throw new Error('Could not load saved vehicles.')
+  if (!data) return []
 
-  return data.map(favorite => favorite.product_snapshot).filter(Boolean)
+  const ids = data.map(favorite => favorite.product_id).filter(isUuid)
+  if (!ids.length) return []
+  const { data: products, error: productsError } = await supabase.from('products').select('*').in('id', ids)
+  if (productsError) throw new Error('Could not load saved vehicles.')
+  const byId = new Map((products || []).map(product => [product.id, product]))
+  return ids.map(id => byId.get(id)).filter(Boolean)
 }

@@ -12,14 +12,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaHeart, FaRegHeart } from 'react-icons/fa'
-import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiPauseCircle, FiPlayCircle, FiShield, FiTag, FiUsers } from 'react-icons/fi'
+import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiPauseCircle, FiPlayCircle, FiShield, FiTag, FiTrash2, FiUsers } from 'react-icons/fi'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 import { listingBadge, listingStatusBadge } from '../constants/listingStatus'
 
 // owned: es un anuncio propio, asi que en vez de guardarlo se gestiona.
-export default function ProductCard({ product, initiallyLiked = false, owned = false, onStatusChange }) {
+export default function ProductCard({ product, initiallyLiked = false, owned = false, preview = false, onStatusChange, onDelete }) {
   const [liked, setLiked] = useState(initiallyLiked)
   const [savingFavorite, setSavingFavorite] = useState(false)
+  const [favoriteError, setFavoriteError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   // Distintivo de la tarjeta: vendido, reservado, o "New" durante la primera
@@ -49,7 +50,7 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
   }, [menuOpen])
 
   useEffect(() => {
-    if (owned) return undefined
+    if (owned || preview) return undefined
     let ignore = false
 
     async function loadFavoriteState() {
@@ -64,10 +65,11 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
       ignore = true
       window.removeEventListener(FAVORITES_UPDATED_EVENT, loadFavoriteState)
     }
-  }, [owned, product])
+  }, [owned, preview, product])
 
   return (
     <article className={`product-card ${menuOpen ? 'is-menu-open' : ''} ${isUnavailable ? 'is-unavailable' : ''}`}>
+      {favoriteError && <p role="alert">{favoriteError}</p>}
       {badge && <span className={`badge product-badge ${badge.className}`}>{badge.label}</span>}
 
       {owned ? (
@@ -89,7 +91,7 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
 
           {menuOpen && (
             <div className="avatar-menu card-menu-list" role="menu">
-              <button
+              {product.status !== 'draft' && <button
                 type="button"
                 role="menuitem"
                 onClick={event => {
@@ -100,8 +102,8 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
               >
                 <FiCheckCircle />
                 Mark as sold
-              </button>
-              <button
+              </button>}
+              {product.status !== 'draft' && <button
                 type="button"
                 role="menuitem"
                 onClick={event => {
@@ -112,8 +114,8 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
               >
                 <FiTag />
                 Mark as booked
-              </button>
-              {product.status === 'paused' ? (
+              </button>}
+              {product.status !== 'available' ? (
                 <button
                   type="button"
                   role="menuitem"
@@ -124,7 +126,7 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
                   }}
                 >
                   <FiPlayCircle />
-                  Reactivate listing
+                  Activate listing
                 </button>
               ) : (
                 <button
@@ -144,6 +146,19 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
                 <FiEdit3 />
                 Edit listing
               </Link>
+              <button
+                className="is-danger"
+                type="button"
+                role="menuitem"
+                onClick={event => {
+                  event.preventDefault()
+                  setMenuOpen(false)
+                  onDelete?.()
+                }}
+              >
+                <FiTrash2 />
+                Delete listing
+              </button>
             </div>
           )}
         </div>
@@ -151,22 +166,25 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
       <button
         className={`favorite-btn ${liked ? 'is-liked' : ''}`}
         type="button"
-        disabled={savingFavorite}
+        disabled={savingFavorite || preview}
         aria-label={liked ? 'Remove from favorites' : 'Add to favorites'}
         onClick={async event => {
           event.preventDefault()
           event.stopPropagation()
           setSavingFavorite(true)
-          const nextLiked = await toggleFavorite(product)
-          setLiked(nextLiked)
-          setSavingFavorite(false)
+          try {
+                    setFavoriteError('')
+                    setLiked(await toggleFavorite(product))
+                  } catch {
+                    setFavoriteError('Could not update saved vehicles. Please try again.')
+                  } finally { setSavingFavorite(false) }
         }}
       >
         {liked ? <FaHeart /> : <FaRegHeart />}
       </button>
       )}
 
-      <Link to={`/product/${product.id}`} className="product-link">
+      <Link to={preview ? '#' : `/product/${product.id}`} onClick={event => { if (preview) event.preventDefault() }} tabIndex={preview ? -1 : undefined} className="product-link">
         <div className="product-image">
           <img
             src={product.image || 'https://placehold.co/640x480/f1ede5/171717?text=Swapy'}

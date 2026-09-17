@@ -51,7 +51,7 @@ async function usernameIsTaken(username) {
   const { data, error } = await supabase
     .from('public_profiles')
     .select('id')
-    .ilike('username', username.trim())
+    .ilike('username', username.trim().replace(/[\\%_]/g, value => `\\${value}`))
     .limit(1)
 
   if (error) throw error
@@ -122,13 +122,7 @@ export default function Register() {
       })
       if (error) { setError(getAuthErrorMessage(error)); setLoading(false); return }
 
-      // Con la confirmación de email activada, Supabase responde correctamente
-      // pero devuelve `identities` vacío cuando el email ya tiene una cuenta.
-      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        setError('This email is already registered. Please sign in instead.')
-        setLoading(false)
-        return
-      }
+      if (data?.session) { navigate('/', { replace: true }); return }
     } catch (authError) {
       setError(getAuthErrorMessage(authError))
       setLoading(false)
@@ -143,8 +137,8 @@ export default function Register() {
       <main className="form-shell">
         <section className="panel panel-pad auth-card" style={{ textAlign: 'center' }}>
           <FiCheckCircle size={54} color="var(--mint)" />
-          <h1 className="section-title" style={{ marginTop: 16 }}>Account created</h1>
-          <p className="section-subtitle">Check your email to confirm your account.</p>
+          <h1 className="section-title" style={{ marginTop: 16 }}>Check your email</h1>
+          <p className="section-subtitle">If this address can be registered, you will receive a confirmation email. If you already have an account, sign in.</p>
           <Link to="/login" className="btn btn-primary" style={{ marginTop: 18 }}>Go to login</Link>
         </section>
       </main>

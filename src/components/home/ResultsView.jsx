@@ -10,6 +10,7 @@ import { FiArrowRight, FiSearch } from 'react-icons/fi'
 import ProductCard from '../ProductCard'
 import PaginationBar from './PaginationBar'
 import VehicleMap from './VehicleMap'
+import LoadingScreen from '../LoadingScreen'
 
 /**
  * @param {object} props
@@ -26,6 +27,7 @@ import VehicleMap from './VehicleMap'
  */
 export default function ResultsView({
   loading,
+  error,
   vehicles,
   pageVehicles,
   viewMode,
@@ -39,15 +41,12 @@ export default function ResultsView({
   if (loading) {
     return (
       <div className="search-results-main">
-        <div className="loading-state">
-          <div>
-            <div className="spinner" />
-            Loading vehicles...
-          </div>
-        </div>
+        <LoadingScreen label="Loading vehicles" />
       </div>
     )
   }
+
+  if (error) return <div className="empty-state panel" role="alert"><p>{error}</p><button className="btn btn-primary" onClick={() => window.location.reload()}>Retry</button></div>
 
   if (vehicles.length === 0) {
     return (

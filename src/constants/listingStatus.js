@@ -33,8 +33,10 @@ export const PUBLIC_LISTING_STATUSES = [
  * Un estado que no este en esta tabla (available, draft o vacio) no pinta nada.
  */
 export const STATUS_BADGES = {
+  [LISTING_STATUS.DRAFT]: { label: 'Draft', className: 'badge-draft' },
   [LISTING_STATUS.SOLD]: { label: 'Sold', className: 'badge-sold' },
   [LISTING_STATUS.RESERVED]: { label: 'Booked', className: 'badge-booked' },
+  paused: { label: 'Paused', className: 'badge-paused' },
 }
 
 /** Un anuncio es "nuevo" durante su primera semana publicado. */

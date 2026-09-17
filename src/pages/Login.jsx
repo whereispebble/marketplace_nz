@@ -13,13 +13,14 @@ import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
+import { safeInternalPath } from '../services/validation'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   // Pagina a la que queria entrar el usuario antes de que RequireAuth lo
   // mandara aqui. Sin eso, tras identificarse acabaria siempre en la portada.
-  const redirectTo = location.state?.from || '/'
+  const redirectTo = safeInternalPath(location.state?.from)
   const { user, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -149,7 +150,8 @@ export default function Login() {
         </div>
 
         <p className="section-subtitle" style={{ textAlign: 'center' }}>
-          New here? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Create an account</Link>
+          New here? <Link to="/forgot-password">Forgot your password?</Link>
+            <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Create an account</Link>
         </p>
       </section>
     </main>

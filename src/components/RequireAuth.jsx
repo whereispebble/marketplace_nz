@@ -12,6 +12,7 @@
 
 import { Navigate, useLocation } from 'react-router-dom'
 import { useSession } from '../services/session'
+import LoadingScreen from './LoadingScreen'
 
 /**
  * @param {{children: React.ReactNode}} props pagina que se quiere proteger
@@ -23,19 +24,12 @@ export default function RequireAuth({ children }) {
   // Mientras se comprueba la sesion no se decide nada: redirigir aqui echaria
   // fuera a un usuario identificado cada vez que recarga la pagina.
   if (loading) {
-    return (
-      <div className="loading-state loading-state-full">
-        <div>
-          <div className="spinner" />
-          Checking your session...
-        </div>
-      </div>
-    )
+    return <LoadingScreen fullPage label="Checking your session" />
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   }
 
-  return children
+  return <div key={user.id} style={{ display: 'contents' }}>{children}</div>
 }

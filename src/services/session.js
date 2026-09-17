@@ -47,9 +47,17 @@ export async function signOut() {
   // la de prueba. Al reves, al apagar la de prueba quedaria un instante con la
   // sesion real todavia viva, la aplicacion te daria por identificado y te
   // devolveria a la portada antes de terminar de salir.
-  await supabase.auth.signOut()
+  const { error } = await supabase.auth.signOut({ scope: 'local' })
+  if (error) throw new Error('Could not sign out. Please try again.')
   setDevSession(false)
   clearGuestFavorites()
+  try {
+    localStorage.removeItem('swapy:saved-searches')
+    localStorage.removeItem('swapy:requests')
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith('swapy:home-state')) sessionStorage.removeItem(key)
+    }
+  } catch { /* Browser storage may be unavailable. */ }
 }
 
 /**
@@ -67,10 +75,12 @@ export function useSession() {
 
   useEffect(() => {
     let ignore = false
+    let authRevision = 0
 
     // Entrar o salir de la sesion de prueba se refleja al momento.
     const syncDevSession = () => {
       if (ignore) return
+      authRevision += 1
       setUser(isDevSessionActive() ? DEV_USER : null)
       setLoading(false)
     }
@@ -86,9 +96,10 @@ export function useSession() {
       setLoading(false)
     }, SESSION_TIMEOUT_MS)
 
+    const initialRevision = authRevision
     getCurrentUser()
       .then(currentUser => {
-        if (ignore) return
+        if (ignore || authRevision !== initialRevision) return
         setUser(currentUser)
       })
       .catch(() => {
@@ -106,6 +117,7 @@ export function useSession() {
       // Con la sesion de prueba activa mandan las funciones de devAuth, no
       // Supabase: si no, su primer aviso de "sin sesion" la echaria abajo.
       if (isDevSessionActive()) return
+      authRevision += 1
       const nextUser = sessionData?.user || null
       setUser(nextUser)
       setLoading(false)
@@ -113,7 +125,9 @@ export function useSession() {
       // Al identificarse, los guardados del visitante anonimo pasan a su
       // cuenta y la copia local desaparece.
       if (event === 'SIGNED_IN' && nextUser) {
-        mergeGuestFavoritesIntoAccount(nextUser.id)
+        setTimeout(() => {
+          if (!ignore && !isDevSessionActive()) mergeGuestFavoritesIntoAccount(nextUser.id).catch(() => {})
+        }, 0)
       }
 
       // Al salir no debe quedar nada del usuario anterior en el navegador.

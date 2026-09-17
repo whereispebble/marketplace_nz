@@ -10,7 +10,7 @@ import Footer from '../components/Footer'
 
 // Datos de la entidad. Hay que rellenarlos antes de publicar: la Fair Trading
 // Act exige que el consumidor sepa con quien contrata.
-export const LEGAL_ENTITY = {
+const LEGAL_ENTITY = {
   company: 'Swapy Limited',
   nzbn: 'NZBN pending',
   address: 'Registered office to be confirmed, New Zealand',

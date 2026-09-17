@@ -191,3 +191,44 @@ textarea.field {
     transform: rotate(360deg);
   }
 }
+
+.brand-loader {
+  display: grid;
+  min-height: 260px;
+  place-content: center;
+  justify-items: center;
+  gap: 9px;
+  color: var(--ink);
+}
+
+.brand-loader-full {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--surface-soft);
+}
+
+.brand-loader-mark,
+.brand-loader-mark svg {
+  width: 64px;
+  height: 64px;
+}
+
+.brand-loader-arrows {
+  transform-origin: 24px 24px;
+  animation: swapy-arrows-spin 1.15s cubic-bezier(.55,.08,.45,.92) infinite;
+}
+
+.brand-loader strong {
+  font-size: 1.55rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+@keyframes swapy-arrows-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader-arrows { animation: swapy-arrows-pulse 1.4s ease-in-out infinite alternate; }
+  @keyframes swapy-arrows-pulse { to { opacity: 0.55; } }
+}

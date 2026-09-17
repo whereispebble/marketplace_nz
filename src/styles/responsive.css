@@ -107,6 +107,12 @@
   }
 }
 
+@media (max-width: 620px) {
+  .self-contained-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding-bottom: env(safe-area-inset-bottom, 0px);
