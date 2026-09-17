@@ -66,7 +66,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
           map.setZoom(map.getZoom() + (event.deltaY < 0 ? 1 : -1))
         }, { passive: false })
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(map)

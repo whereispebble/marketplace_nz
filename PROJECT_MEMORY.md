@@ -345,3 +345,8 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - `Messages` y `Saved vehicles` muestran ahora el loader de Swapy a página completa mientras cargan sus datos iniciales, igual que `Profile`.
 - La cabecera, los contadores vacíos y los paneles del Inbox solo aparecen cuando la consulta ha terminado, evitando saltos visuales y estados vacíos momentáneos.
 - La página de `Messages` incluye el Footer global debajo del Inbox una vez cargado, igual que el resto de las páginas principales.
+### Teselas del mapa bloqueadas en Vercel (2026-09-17)
+
+- OpenStreetMap devolvía imágenes 403 porque `vercel.json` enviaba `Referrer-Policy: no-referrer`; el servidor de teselas exige un referente válido para identificar sitios web.
+- La política pasa a `strict-origin-when-cross-origin`: las teselas reciben únicamente el origen público de Swapy, mientras las rutas y parámetros de navegación continúan ocultos a dominios externos.
+- Leaflet usa la URL canónica vigente `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, sin los subdominios históricos `{s}`. La atribución visible se mantiene.
