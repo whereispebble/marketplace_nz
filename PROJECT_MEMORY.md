@@ -350,3 +350,9 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - OpenStreetMap devolvía imágenes 403 porque `vercel.json` enviaba `Referrer-Policy: no-referrer`; el servidor de teselas exige un referente válido para identificar sitios web.
 - La política pasa a `strict-origin-when-cross-origin`: las teselas reciben únicamente el origen público de Swapy, mientras las rutas y parámetros de navegación continúan ocultos a dominios externos.
 - Leaflet usa la URL canónica vigente `https://tile.openstreetmap.org/{z}/{x}/{y}.png`, sin los subdominios históricos `{s}`. La atribución visible se mantiene.
+### Variables de Supabase en Vercel (2026-09-17)
+
+- El despliegue del commit `368684d` se detuvo correctamente porque el entorno de Vercel no proporcionó una URL HTTPS y una clave pública de Supabase válidas al build.
+- La validación de Vite mantiene el bloqueo de seguridad y ahora distingue entre URL ausente o inválida y clave pública ausente o inválida. No se permite `service_role` ni ninguna clave `sb_secret_` en variables expuestas al navegador.
+- Vercel debe definir `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` y `VITE_SITE_URL` para Production y Preview si se despliegan ramas; cambiar variables requiere un nuevo deployment.
+- La integración existente de Vercel ya proporciona `SUPABASE_URL` y `SUPABASE_ANON_KEY`. El build y el cliente aceptan ahora esos dos nombres además de los alias `VITE_*`; `envPrefix` enumera únicamente ambas variables públicas y nunca expone el prefijo completo `SUPABASE_`, la contraseña Postgres, `service_role` ni secretos.
