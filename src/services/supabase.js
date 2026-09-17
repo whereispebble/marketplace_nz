@@ -6,11 +6,13 @@
  * datos son las politicas RLS, no la clave. La clave de servicio NUNCA debe
  * aparecer en este proyecto.
  *
- * Si faltan las variables se devuelve un cliente simulado para que la
- * aplicacion arranque igualmente con los datos de ejemplo, en vez de romperse.
+ * Missing configuration returns explicit operation errors, never fake success.
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { isDevSessionActive } from './devAuth'
+import { createDataFetch } from './dataTransport'
+import { isPublicSupabaseKey, isSecureServiceUrl } from './runtimeConfig'
 
 const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseUrl = rawSupabaseUrl?.replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '')
@@ -18,7 +20,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
   || import.meta.env.VITE_SUPABASE_ANON_KEY
   || import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const hasSupabaseConfig = Boolean(supabaseUrl && supabaseKey)
+const hasSupabaseConfig = isSecureServiceUrl(supabaseUrl, import.meta.env.DEV) && isPublicSupabaseKey(supabaseKey)
 const connectionErrorMessage = 'Could not connect to Supabase. Check that the Supabase URL is correct, the Supabase project is active, and the site URL is allowed in Supabase Auth settings.'
 
 /**
@@ -36,12 +38,15 @@ export function getAuthRedirectUrl() {
 }
 
 function createMockQuery() {
-  const result = { data: null, error: null }
+  const result = { data: null, error: { message: 'Service unavailable. Please try again later.' } }
   const query = {
     select: () => query,
     order: () => query,
     eq: () => query,
     ilike: () => query,
+    in: () => query,
+    or: () => query,
+    neq: () => query,
     limit: () => query,
     insert: () => query,
     upsert: () => query,
@@ -58,7 +63,11 @@ function createMockQuery() {
 function createMockSupabase() {
   return {
     from: () => createMockQuery(),
+    rpc: async () => ({ data: null, error: { message: 'Service unavailable. Please try again later.' } }),
     auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      resetPasswordForEmail: async () => ({ error: { message: 'Service unavailable.' } }),
+      updateUser: async () => ({ error: { message: 'Service unavailable.' } }),
       signInWithPassword: async () => ({ data: null, error: { message: 'Supabase is not configured.' } }),
       signUp: async () => ({ data: { user: null }, error: { message: 'Supabase is not configured.' } }),
       signInWithOAuth: async () => ({ data: null, error: { message: 'Supabase OAuth is not configured.' } }),
@@ -75,11 +84,13 @@ function createMockSupabase() {
 }
 
 if (!hasSupabaseConfig) {
-  console.warn('Supabase env vars are missing. The app will render with local mock data.')
+  console.warn('Supabase configuration is missing. Real data operations are unavailable.')
 }
 
 export const supabase = hasSupabaseConfig
-  ? createClient(supabaseUrl, supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey, {
+    global: { fetch: createDataFetch(isDevSessionActive) },
+  })
   : createMockSupabase()
 
 export function getAuthErrorMessage(error) {

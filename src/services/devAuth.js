@@ -1,33 +1,5 @@
-/**
- * Sesion de prueba para desarrollo.
- *
- * Permite entrar en las pantallas privadas (perfil, guardados, publicar,
- * mensajes) sin registrar una cuenta cada vez que se reinicia el proyecto.
- *
- * ---------------------------------------------------------------------------
- * POR QUE ESTO NO ES UN AGUJERO DE SEGURIDAD
- * ---------------------------------------------------------------------------
- * 1. Esta disponible tanto en desarrollo como en el despliegue para facilitar
- *    las demostraciones. Se puede apagar con VITE_DEV_LOGIN=false.
- * 2. NO es una cuenta de Supabase: el usuario falso no recibe ningun token.
- * 3. NO da acceso a datos reales. El usuario de prueba no existe en Supabase,
- *    asi que no tiene token: cualquier consulta a la base de datos sigue siendo
- *    una peticion anonima y las politicas RLS la tratan como tal. Esto engana a
- *    la interfaz, no al servidor. Es justo lo que se quiere para maquetar.
- *
- * Cuando se pase a datos reales, define VITE_DEV_LOGIN=false en Vercel.
- */
-
-/**
- * Activo en desarrollo salvo que se apague a mano con VITE_DEV_LOGIN=false.
- *
- * Es "apagar" en vez de "encender" a proposito: asi quien clone el repositorio
- * tiene la sesion de prueba disponible sin tener que anadir nada a su .env, que
- * es un fichero que no viaja con el proyecto.
- */
-// Se mantiene activo tambien en el despliegue de Vercel. Puede apagarse en
-// cualquier entorno definiendo VITE_DEV_LOGIN=false.
-export const DEV_LOGIN_ENABLED = import.meta.env.VITE_DEV_LOGIN !== 'false'
+/** Test sessions are available only in the local development build. */
+export const DEV_LOGIN_ENABLED = import.meta.env.DEV && import.meta.env.VITE_DEV_LOGIN !== 'false'
 
 /** Clave de sesion del navegador; se borra al cerrar la pestana. */
 const DEV_SESSION_KEY = 'swapy:dev-session'

@@ -94,6 +94,13 @@
   background: var(--blue);
 }
 
+.badge-draft,
+.badge-paused {
+  color: var(--ink);
+  border: 1px solid rgba(33, 28, 20, 0.12);
+  background: #f1ede5;
+}
+
 .product-card.is-unavailable .product-image img {
   filter: saturate(0.55);
   opacity: 0.72;

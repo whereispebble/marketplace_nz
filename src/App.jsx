@@ -7,20 +7,22 @@
  * Supabase; esto solo evita que alguien aterrice en una pantalla vacia.
  */
 
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import DevToolbar from './components/DevToolbar'
+import LoadingScreen from './components/LoadingScreen'
 import Home from './pages/Home'
 import Login from './pages/Login'
-import Register from './pages/Register'
-import ProductDetail from './pages/ProductDetail'
-import NewProduct from './pages/NewProduct'
-import Profile from './pages/Profile'
-import Favorites from './pages/Favorites'
-import Chat from './pages/Chat'
-import HowItWorks from './pages/HowItWorks'
-import Legal from './pages/Legal'
+const PasswordRecovery = lazy(() => import('./pages/PasswordRecovery'))
+const Register = lazy(() => import('./pages/Register'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const NewProduct = lazy(() => import('./pages/NewProduct'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Favorites = lazy(() => import('./pages/Favorites'))
+const Chat = lazy(() => import('./pages/Chat'))
+const HowItWorks = lazy(() => import('./pages/HowItWorks'))
+const Legal = lazy(() => import('./pages/Legal'))
 
 /**
  * Mientras se desarrolla, la aplicacion arranca en el login: entrar en "/" sin
@@ -35,6 +37,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <Suspense fallback={<LoadingScreen fullPage label="Loading page" />}>
       <Routes>
         {/* Portada. Con REQUIRE_LOGIN_TO_BROWSE exige sesion, asi que entrar
             en la aplicacion lleva directamente al login. */}
@@ -46,6 +49,8 @@ function App() {
         {/* Publicas: cualquiera puede verlas, con o sin cuenta. */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<PasswordRecovery />} />
+        <Route path="/reset-password" element={<PasswordRecovery reset />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/privacy" element={<Legal document="privacy" />} />
@@ -59,9 +64,10 @@ function App() {
         <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
         <Route path="/favorites" element={<RequireAuth><Favorites /></RequireAuth>} />
         <Route path="/chats" element={<RequireAuth><Chat /></RequireAuth>} />
-        <Route path="/chats/user/:sellerId" element={<RequireAuth><Chat /></RequireAuth>} />
         <Route path="/chats/:chatId" element={<RequireAuth><Chat /></RequireAuth>} />
+        <Route path="*" element={<main className="container page-section"><h1>Page not found</h1><Link to="/">Browse vehicles</Link></main>} />
       </Routes>
+      </Suspense>
 
       {/* Panel de desarrollo. Devuelve null salvo en local con
           VITE_DEV_LOGIN=true, y no llega al paquete de produccion. */}

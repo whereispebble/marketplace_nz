@@ -68,7 +68,6 @@ export function fuzzyIncludes(haystack, query) {
   ))
 }
 
-// eslint-disable-next-line no-unused-vars
 export function parsePriceCeiling(value) {
   const cleanValue = normalise(value)
   if (!cleanValue || cleanValue === 'all' || cleanValue === 'any') return null
@@ -227,15 +226,6 @@ export function vehicleYear(vehicle) {
   return fromTitle ? Number(fromTitle[0]) : null
 }
 
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[char]))
-}
 
 // Clave estable para comparar dos conjuntos de filtros sin depender del orden
 // en el que se escribieron las propiedades.

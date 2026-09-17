@@ -12,12 +12,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FiCamera, FiEdit3, FiFlag, FiLogOut, FiMapPin, FiMessageCircle, FiMoreHorizontal, FiPackage, FiStar, FiTrash2 } from 'react-icons/fi'
+import { FiCamera, FiEdit3, FiFlag, FiLogOut, FiMapPin, FiMoreHorizontal, FiPackage, FiStar, FiTrash2 } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import { getCurrentUser, signOut } from '../services/session'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
+import LoadingScreen from '../components/LoadingScreen'
 import { getFavoriteProducts } from '../services/favorites'
 import { PUBLIC_LISTING_STATUSES } from '../constants/listingStatus'
 import { DEV_PROFILE, isDevSessionActive } from '../services/devAuth'
@@ -56,6 +57,7 @@ export default function Profile() {
   const [listings, setListings] = useState([])
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState('')
+  const [actionError, setActionError] = useState('')
 
   // Pestana visible y estado del formulario de edicion.
   const [activeTab, setActiveTab] = useState('listings')
@@ -64,6 +66,7 @@ export default function Profile() {
   // Guardados: solo se cargan en el perfil propio y nunca en uno ajeno.
   const [saved, setSaved] = useState([])
   const [savedLoading, setSavedLoading] = useState(false)
+  const [reviews, setReviews] = useState([])
 
   // Menu de los tres puntos y formulario de denuncia de un perfil ajeno.
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
@@ -77,6 +80,13 @@ export default function Profile() {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+
+  // Estas cifras proceden de los anuncios que realmente pertenecen al perfil.
+  // Evitamos usar total_sales como contador de anuncios: es un campo heredado
+  // que puede quedarse desactualizado y nunca representó el total de listings.
+  const salesCount = listings.filter(listing => listing.status === 'sold').length
 
   const avatarInputRef = useRef(null)
   const avatarMenuRef = useRef(null)
@@ -94,21 +104,59 @@ export default function Profile() {
   useEffect(() => {
     let ignore = false
 
+    // Clear private state immediately when switching profile routes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfile(EMPTY_PROFILE)
     setForm(EMPTY_PROFILE)
     setListings([])
     setSaved([])
+    setReviews([])
     setActiveTab('listings')
     setEditing(false)
     setProfileError('')
     setProfileLoading(true)
 
     async function loadProfile() {
+      async function loadReviewsFor(profileId) {
+        const { data: reviewRows, error: reviewError } = await supabase
+          .from('public_reviews')
+          .select('*')
+          .eq('reviewed_user_id', profileId)
+          .order('created_at', { ascending: false })
+        if (reviewError || !reviewRows?.length) { setReviews([]); return }
+        const reviewerIds = [...new Set(reviewRows.map(review => review.reviewer_id))]
+        const { data: reviewers } = await supabase.from('public_profiles').select('id,username,avatar_url').in('id', reviewerIds)
+        const byId = new Map((reviewers || []).map(reviewer => [String(reviewer.id), reviewer]))
+        setReviews(reviewRows.map(review => ({ ...review, reviewer: byId.get(String(review.reviewer_id)) })))
+      }
       // --- Perfil ajeno: vista publica, sin email ni telefono --------------
+      if (isPublicProfile && isDevSessionActive()) {
+        const devListings = await loadDevListings()
+        if (ignore) return
+        const sellerListing = devListings.find(listing => String(listing.seller?.id) === String(sellerId))
+        if (String(sellerId) === String(DEV_PROFILE.id)) {
+          setProfile({ ...DEV_PROFILE, email: '', phone: '' })
+          setListings(devListings)
+        } else if (sellerListing?.seller) {
+          setProfile({
+            ...EMPTY_PROFILE,
+            username: sellerListing.seller.name || 'Seller',
+            rating: sellerListing.seller.rating || 0,
+            total_sales: sellerListing.seller.sales || 0,
+            joined: sellerListing.seller.joined || '',
+          })
+          setListings(devListings.filter(listing => String(listing.seller?.id) === String(sellerId)))
+        } else {
+          setProfileError('This profile is not available.')
+        }
+        setProfileLoading(false)
+        return
+      }
+
       if (isPublicProfile) {
         const { data: publicProfile, error } = await supabase
           .from('public_profiles')
-          .select('*')
+          .select('id, username, location, bio, avatar_url, rating, total_sales, joined, created_at')
           .eq('id', sellerId)
           .maybeSingle()
 
@@ -132,6 +180,7 @@ export default function Profile() {
         if (ignore) return
         setProfile({ ...EMPTY_PROFILE, ...publicProfile })
         setListings(sellerListings || [])
+        await loadReviewsFor(sellerId)
         setProfileLoading(false)
         return
       }
@@ -161,7 +210,7 @@ export default function Profile() {
         return
       }
 
-      const { data: ownProfile } = await supabase
+      const { data: ownProfile, error: ownError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -169,6 +218,7 @@ export default function Profile() {
 
       if (ignore) return
 
+      if (ownError || !ownProfile) throw new Error('Profile unavailable')
       // Si el perfil aun no existe se usa el correo de la sesion como base.
       const resolvedProfile = { ...EMPTY_PROFILE, email: user.email || '', ...(ownProfile || {}) }
       setProfile(resolvedProfile)
@@ -183,10 +233,11 @@ export default function Profile() {
 
       if (ignore) return
       setListings(ownListings || [])
+      await loadReviewsFor(user.id)
       setProfileLoading(false)
     }
 
-    loadProfile()
+    loadProfile().catch(() => { if (!ignore) { setProfileError('Could not load this profile. Please try again.'); setProfileLoading(false) } })
     return () => { ignore = true }
   }, [isPublicProfile, sellerId, navigate])
 
@@ -243,7 +294,7 @@ export default function Profile() {
       setSavedLoading(false)
     }
 
-    loadSaved()
+    loadSaved().catch(() => { if (!ignore) { setSavedLoading(false); setActionError('Could not load saved vehicles. Please try again.') } })
     return () => { ignore = true }
   }, [activeTab, isPublicProfile])
 
@@ -273,7 +324,41 @@ export default function Profile() {
       .update({ status })
       .eq('id', listingId)
       .eq('user_id', user.id)
-    if (error) setListings(previousListings)
+    if (error) { setListings(previousListings); setActionError('Could not change the listing status. Please try again.') }
+  }
+
+  const handleDeleteListing = async () => {
+    if (!deleteTarget) return
+    setDeleteBusy(true)
+    setActionError('')
+    const listingId = deleteTarget.id
+
+    if (isDevSessionActive()) {
+      saveDevListing(listingId, { deleted: true })
+      setListings(current => current.filter(item => item.id !== listingId))
+      setDeleteTarget(null)
+      setDeleteBusy(false)
+      return
+    }
+
+    const user = await getCurrentUser()
+    if (!user) { setDeleteBusy(false); navigate('/login', { replace: true }); return }
+    const { data: deletedListing, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', listingId)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle()
+    if (error || !deletedListing) {
+      setActionError('Could not delete the listing. Please try again.')
+      setDeleteBusy(false)
+      return
+    }
+
+    setListings(current => current.filter(item => item.id !== listingId))
+    setDeleteTarget(null)
+    setDeleteBusy(false)
   }
 
   /**
@@ -291,7 +376,14 @@ export default function Profile() {
       return
     }
 
-    await supabase.from('user_reports').insert({
+    // Las acciones de la sesion DEV nunca escriben en tablas reales.
+    if (isDevSessionActive()) {
+      setReportBusy(false)
+      setReportSent(true)
+      return
+    }
+
+    const { error } = await supabase.from('user_reports').insert({
       reported_user_id: sellerId,
       reporter_id: user.id,
       reason: reportReason,
@@ -299,6 +391,7 @@ export default function Profile() {
     })
 
     setReportBusy(false)
+    if (error) { setActionError('Report could not be sent. Please try again.'); return }
     setReportSent(true)
   }
 
@@ -321,6 +414,12 @@ export default function Profile() {
       return false
     }
 
+    if (isDevSessionActive()) {
+      setProfile(current => ({ ...current, avatar_url: avatarUrl }))
+      setForm(current => ({ ...current, avatar_url: avatarUrl }))
+      return true
+    }
+
     const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', user.id)
     if (error) {
       setAvatarError(error.message)
@@ -341,7 +440,7 @@ export default function Profile() {
 
     setAvatarError('')
 
-    if (!file.type.startsWith('image/')) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       setAvatarError('Choose an image file.')
       return
     }
@@ -358,7 +457,13 @@ export default function Profile() {
       return
     }
 
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    if (isDevSessionActive()) {
+      await persistAvatar(URL.createObjectURL(file))
+      setAvatarBusy(false)
+      setAvatarMenuOpen(false)
+      return
+    }
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[file.type]
     const path = `${user.id}/${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
 
@@ -388,6 +493,7 @@ export default function Profile() {
    * numero de ventas los calcula el sistema, no el navegador.
    */
   const handleSave = async () => {
+    if (isDevSessionActive()) { setProfile(current => ({ ...current, ...form })); setEditing(false); return }
     const user = await getCurrentUser()
     if (!user) {
       navigate('/login', { replace: true })
@@ -405,7 +511,7 @@ export default function Profile() {
       .eq('id', user.id)
 
     if (error) {
-      setProfileError(error.message)
+      setActionError('Could not save your profile. The username may already be taken. Please try again.')
       return
     }
 
@@ -418,20 +524,16 @@ export default function Profile() {
    * navegador, para que no los herede quien use el equipo despues.
    */
   const handleLogout = async () => {
-    await signOut()
-    navigate('/login', { replace: true })
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } catch { setActionError('Could not sign out. Please try again.') }
   }
 
   // Mientras llegan los datos no se pinta el perfil: si no, se vería un
   // esqueleto con los campos vacíos que parece una cuenta sin rellenar.
   if (profileLoading) {
-    return (
-      <div className="app-shell">
-        <Navbar compact />
-        <div className="loading-state"><div><div className="spinner" />Loading profile...</div></div>
-        <Footer />
-      </div>
-    )
+    return <LoadingScreen fullPage label="Loading profile" />
   }
 
   // Perfil inexistente o sin permiso para verlo.
@@ -458,6 +560,7 @@ export default function Profile() {
       <Navbar compact />
 
       <main className="container page-section" style={{ maxWidth: 960 }}>
+        {actionError && <p role="alert">{actionError}</p>}
         <section className="panel panel-pad profile-layout">
           <div className="profile-head">
             {isPublicProfile ? (
@@ -536,10 +639,6 @@ export default function Profile() {
             </div>
             {isPublicProfile && (
               <div className="profile-public-actions">
-                <Link className="btn btn-secondary btn-compact" to={`/chats/user/${sellerId}`}>
-                  <FiMessageCircle />
-                  Message
-                </Link>
                 <div className="more-menu" ref={moreMenuRef}>
                   <button
                     className="icon-btn"
@@ -582,7 +681,7 @@ export default function Profile() {
 
           <div className="stats-grid">
             <div className="stat-box"><strong><FiStar /> {profile.rating || '-'}</strong><span>Rating</span></div>
-            <div className="stat-box"><strong>{profile.total_sales || 0}</strong><span>Listings</span></div>
+            <div className="stat-box"><strong>{salesCount}</strong><span>Sales</span></div>
             <div className="stat-box"><strong>{profile.joined || '-'}</strong><span>Joined</span></div>
           </div>
         </section>
@@ -606,6 +705,7 @@ export default function Profile() {
                   product={item}
                   owned={!isPublicProfile}
                   onStatusChange={status => handleListingStatus(item.id, status)}
+                  onDelete={() => setDeleteTarget(item)}
                 />
               ))}
             </div>
@@ -614,7 +714,7 @@ export default function Profile() {
 
         {currentTab === 'saved' && !isPublicProfile && (
           savedLoading ? (
-            <div className="loading-state"><div><div className="spinner" />Loading saved vehicles...</div></div>
+            <LoadingScreen label="Loading saved vehicles" />
           ) : saved.length === 0 ? (
             <Empty title="No saved vehicles yet" action="Browse vehicles" to="/" />
           ) : (
@@ -623,7 +723,28 @@ export default function Profile() {
             </div>
           )
         )}
-        {currentTab === 'reviews' && <Empty title="No reviews yet" />}
+        {currentTab === 'reviews' && (
+          reviews.length === 0 ? <Empty title="No reviews yet" /> : (
+            <div className="review-list">
+              {reviews.map(review => (
+                <article className="panel panel-pad profile-review" key={review.id}>
+                  <div className="profile-review-head">
+                    <div className="avatar">
+                      {review.reviewer?.avatar_url ? <img src={review.reviewer.avatar_url} alt="" /> : review.reviewer?.username?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div>
+                      <strong>{review.reviewer?.username || 'Swapy user'}</strong>
+                      <span className="profile-review-stars" aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
+                    </div>
+                    <time dateTime={review.created_at}>{new Date(review.created_at).toLocaleDateString('en-NZ')}</time>
+                  </div>
+                  {review.comment && <p>{review.comment}</p>}
+                  {review.product_id && <Link to={`/product/${review.product_id}`}>View related listing</Link>}
+                </article>
+              ))}
+            </div>
+          )
+        )}
       </main>
 
       {reportOpen && (
@@ -665,6 +786,21 @@ export default function Profile() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-listing-title" onClick={() => { if (!deleteBusy) setDeleteTarget(null) }}>
+          <div className="panel panel-pad modal-card" onClick={event => event.stopPropagation()}>
+            <h2 id="delete-listing-title" className="section-title" style={{ fontSize: '1.2rem' }}>Delete listing?</h2>
+            <p className="section-subtitle">“{deleteTarget.title}” will be permanently deleted. This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" type="button" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn btn-danger" type="button" disabled={deleteBusy} onClick={handleDeleteListing}>
+                {deleteBusy ? 'Deleting...' : 'Delete listing'}
+              </button>
+            </div>
           </div>
         </div>
       )}

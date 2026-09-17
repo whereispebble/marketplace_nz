@@ -1,3 +1,5 @@
+import { supabase } from '../services/supabase'
+import { getCurrentUser } from '../services/session'
 /**
  * Pagina "Como funciona".
  * Contenido estatico: pasos para comprar y vender, preguntas frecuentes y un
@@ -85,7 +87,7 @@ export default function HowItWorks() {
     setForm(current => ({ ...current, [name]: value }))
   }
 
-  const handleSubmit = event => {
+  const handleSubmit = async event => {
     event.preventDefault()
 
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
@@ -98,15 +100,15 @@ export default function HowItWorks() {
       return
     }
 
-    // Todavia no hay backend de soporte: la peticion se guarda en el navegador
-    // para no perderla y se confirma al usuario.
     try {
-      const stored = JSON.parse(localStorage.getItem('swapy:requests') || '[]')
-      stored.unshift({ ...form, sentAt: new Date().toISOString() })
-      localStorage.setItem('swapy:requests', JSON.stringify(stored.slice(0, 50)))
-    } catch {
-      // almacenamiento no disponible: se ignora, el mensaje ya se ha confirmado
-    }
+      const user = await getCurrentUser()
+      if (!user) { setError('Please sign in before sending a support request.'); return }
+      if (user.isDevUser) { setError('Test mode: support requests are not sent.'); return }
+      const { error } = await supabase.from('support_requests').insert({
+        user_id: user.id, name: form.name.trim(), email: form.email.trim(), topic: form.topic, message: form.message.trim(),
+      })
+      if (error) throw error
+    } catch { setError('Your request could not be sent. Please try again.'); return }
 
     setError('')
     setSent(true)

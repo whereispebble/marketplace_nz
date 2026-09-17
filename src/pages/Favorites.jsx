@@ -11,11 +11,13 @@ import { FiHeart } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
-import { getFavoriteProducts } from '../services/favorites'
+import LoadingScreen from '../components/LoadingScreen'
+import { FAVORITES_UPDATED_EVENT, getFavoriteProducts } from '../services/favorites'
 
 export default function Favorites() {
   const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let ignore = false
@@ -27,18 +29,25 @@ export default function Favorites() {
       if (!ignore) setLoading(false)
     }
 
-    loadFavorites()
-
+    const refresh = () => loadFavorites().catch(() => { if (!ignore) { setError('Could not load saved vehicles. Please try again.'); setLoading(false) } })
+    refresh()
+    window.addEventListener(FAVORITES_UPDATED_EVENT, refresh)
     return () => {
+      window.removeEventListener(FAVORITES_UPDATED_EVENT, refresh)
       ignore = true
     }
   }, [])
+
+  if (loading) {
+    return <LoadingScreen fullPage label="Loading saved vehicles" />
+  }
 
   return (
     <div className="app-shell">
       <Navbar compact />
 
       <main className="container page-section">
+        {error && <p role="alert">{error}</p>}
         <div className="section-header">
           <div>
             <h1 className="page-title">Saved vehicles</h1>
@@ -47,9 +56,7 @@ export default function Favorites() {
           <span className="badge badge-accent"><FiHeart />{favorites.length}</span>
         </div>
 
-        {loading ? (
-          <div className="loading-state"><div><div className="spinner" />Loading saved vehicles...</div></div>
-        ) : favorites.length === 0 ? (
+        {favorites.length === 0 ? (
           <div className="empty-state panel">
             <div>
               <FiHeart size={44} />

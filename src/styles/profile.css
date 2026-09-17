@@ -258,6 +258,15 @@
   margin-top: 18px;
 }
 
+.review-list { display: grid; gap: 12px; }
+.profile-review { display: grid; gap: 12px; }
+.profile-review-head { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.profile-review-head strong, .profile-review-stars { display: block; }
+.profile-review-stars { margin-top: 3px; color: #f3ac16; letter-spacing: 1px; }
+.profile-review-head time { color: var(--muted); font-size: 0.76rem; }
+.profile-review p { margin: 0; color: var(--muted); }
+.profile-review > a { color: var(--accent-dark); font-size: 0.82rem; font-weight: 800; }
+
 .avatar-status {
   position: absolute;
   top: calc(100% + 6px);

@@ -1,28 +1,4 @@
-/**
- * Datos de ejemplo: cuando se usan y como se cargan.
- *
- * Regla: los anuncios de prueba pertenecen a la SESION DE PRUEBA, no al modo
- * desarrollo en general. Es decir:
- *
- *   - Sesion de prueba activa  -> se ven los anuncios de ejemplo.
- *   - Cuenta real (o sin sesion) -> solo lo que haya en Supabase, aunque este
- *     vacio. Una portada vacia es informacion correcta; una portada llena de
- *     vehiculos que no existen es una mentira.
- *
- * Asi se puede trabajar contra la base de datos real y contra los datos de
- * prueba en la misma sesion del navegador, cambiando con el panel DEV.
- *
- * ---------------------------------------------------------------------------
- * DISPONIBILIDAD EN EL DESPLIEGUE
- * ---------------------------------------------------------------------------
- * Los datos se cargan tambien en Vercel, pero exclusivamente despues de
- * activar la sesion de prueba. Define VITE_DEV_LOGIN=false para ocultar por
- * completo este modo en cualquier entorno.
- *
- * La carga es dinamica para que los datos no se descarguen hasta que hagan
- * falta.
- */
-
+/** DEV data lives only in the current test session and never falls back to Supabase. */
 import { DEV_USER, isDevSessionActive } from './devAuth'
 
 // Cambios hechos sobre anuncios de prueba. sessionStorage hace que duren durante
@@ -39,7 +15,9 @@ function readDevListingOverrides() {
 
 function applyDevListingOverrides(vehicles) {
   const overrides = readDevListingOverrides()
-  return vehicles.map(vehicle => ({ ...vehicle, ...(overrides[String(vehicle.id)] || {}) }))
+  return vehicles
+    .map(vehicle => ({ ...vehicle, ...(overrides[String(vehicle.id)] || {}) }))
+    .filter(vehicle => !vehicle.deleted)
 }
 
 /** Guarda cambios de una ficha de prueba únicamente en la sesión actual. */
@@ -74,10 +52,12 @@ export function isMockDataEnabled() {
  * @returns {Promise<object[]>}
  */
 export async function loadMockVehicles() {
-  if (!isMockDataEnabled()) return []
+  if (!import.meta.env.DEV || !isMockDataEnabled()) return []
 
   const { MOCK_VEHICLES } = await import('../data/mockVehicles')
-  return applyDevListingOverrides(MOCK_VEHICLES)
+  const vehicles = applyDevListingOverrides(MOCK_VEHICLES)
+  const known = new Set(vehicles.map(vehicle => String(vehicle.id)))
+  return [...vehicles, ...Object.entries(readDevListingOverrides()).filter(([id, value]) => !known.has(id) && !value.deleted).map(([id, value]) => ({ ...value, id }))]
 }
 
 /**
@@ -93,24 +73,12 @@ export async function findMockVehicle(id) {
   return vehicles.find(vehicle => String(vehicle.id) === String(id)) || null
 }
 
-/**
- * Mezcla los anuncios reales con los de ejemplo sin repetir ninguno.
- *
- * Los reales van primero y mandan: si un anuncio de ejemplo comparte id con uno
- * real, se descarta el de ejemplo. Sin sesion de prueba devuelve la lista real
- * tal cual, sin tocar nada.
- *
- * @param {object[]} products anuncios que vienen de Supabase
- * @returns {Promise<object[]>}
- */
+/** Choose exactly one data source; never concatenate real and test listings. */
 export async function withMockVehicles(products = []) {
   const realProducts = products.filter(Boolean)
   if (!isMockDataEnabled()) return realProducts
 
-  const mockVehicles = await loadMockVehicles()
-  const realIds = new Set(realProducts.map(product => String(product.id)))
-
-  return [...realProducts, ...mockVehicles.filter(vehicle => !realIds.has(String(vehicle.id)))]
+  return loadMockVehicles()
 }
 
 /**
@@ -123,7 +91,7 @@ export async function loadDevListings() {
   const vehicles = await loadMockVehicles()
   const overrides = readDevListingOverrides()
 
-  return vehicles.slice(0, 4).map((vehicle, index) => ({
+  return vehicles.filter((vehicle, index) => index < 4 || vehicle.user_id === DEV_USER.id).map((vehicle, index) => ({
     ...vehicle,
     user_id: DEV_USER.id,
     status: index === 3 ? 'sold' : index === 2 ? 'reserved' : 'available',

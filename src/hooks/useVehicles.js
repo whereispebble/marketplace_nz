@@ -9,8 +9,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../services/supabase'
-import { DEV_SESSION_EVENT } from '../services/devAuth'
-import { withMockVehicles } from '../services/devData'
+import { DEV_SESSION_EVENT, isDevSessionActive } from '../services/devAuth'
+import { loadMockVehicles } from '../services/devData'
 
 /**
  * @returns {{vehicles: object[], loading: boolean, error: string}}
@@ -32,29 +32,48 @@ export function useVehicles() {
   useEffect(() => {
     // ignore evita escribir en el estado si el componente ya se desmonto.
     let ignore = false
+    // Discard the previous data source before fetching the next one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
+    setVehicles([])
 
     async function loadVehicles() {
+      // Una sesión DEV no consulta ni mezcla anuncios reales.
+      if (isDevSessionActive()) {
+        setError('')
+        const mocks = await loadMockVehicles()
+        if (ignore) return
+        setVehicles(mocks)
+        setLoading(false)
+        return
+      }
+
       const { data, error: queryError } = await supabase
         .from('products')
         .select('*')
+        .in('status', ['available', 'reserved', 'sold'])
         .order('created_at', { ascending: false })
 
       if (ignore) return
 
       if (queryError) {
         setError('Vehicles could not be loaded right now.')
-        setVehicles(await withMockVehicles([]))
+        setVehicles([])
         setLoading(false)
         return
       }
 
       setError('')
-      setVehicles(await withMockVehicles(data || []))
+      setVehicles(data || [])
       setLoading(false)
     }
 
-    loadVehicles()
+    loadVehicles().catch(() => {
+      if (ignore) return
+      setVehicles([])
+      setError('Vehicles could not be loaded right now. Please reload to try again.')
+      setLoading(false)
+    })
     return () => { ignore = true }
   }, [reloadToken])
 

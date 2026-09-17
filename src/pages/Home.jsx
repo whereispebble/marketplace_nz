@@ -40,7 +40,11 @@ import {
   vehicleYear,
 } from '../services/vehicleFilters'
 import { NZ_VEHICLE_CATALOG } from '../data/nzVehicleCatalog'
+import { useSession } from '../services/session'
+import { supabase } from '../services/supabase'
+import { getSavedSearchesError, SAVED_SEARCHES_UNAVAILABLE } from '../services/savedSearches'
 import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
+import LoadingScreen from '../components/LoadingScreen'
 
 /** Clave del navegador donde se guardan las busquedas que el usuario archiva. */
 const SAVED_SEARCHES_KEY = 'swapy:saved-searches'
@@ -48,18 +52,19 @@ const SAVED_SEARCHES_KEY = 'swapy:saved-searches'
 /** Clave donde se recuerda el estado de la portada al navegar y volver. */
 const HOME_STATE_KEY = 'swapy:home-state'
 
-function readSavedSearches() {
+function readSavedSearches(dev) {
+  if (!dev) return []
   try {
-    const saved = JSON.parse(localStorage.getItem(SAVED_SEARCHES_KEY) || '[]')
+    const saved = JSON.parse(sessionStorage.getItem(SAVED_SEARCHES_KEY + ':dev') || '[]')
     return Array.isArray(saved) ? saved : []
   } catch {
     return []
   }
 }
 
-function readHomeState() {
+function readHomeState(scope) {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(HOME_STATE_KEY) || '{}')
+    const saved = JSON.parse(sessionStorage.getItem(HOME_STATE_KEY + scope) || '{}')
     return saved && typeof saved === 'object' ? saved : {}
   } catch {
     return {}
@@ -67,9 +72,16 @@ function readHomeState() {
 }
 
 export default function Home() {
-  const restoredHomeState = useMemo(() => readHomeState(), [])
+  const { user, loading } = useSession()
+  if (loading) return <LoadingScreen fullPage label="Loading marketplace" />
+  return <HomeContent key={user?.id || 'guest'} user={user} />
+}
+
+function HomeContent({ user }) {
+  const scope = ':' + (user?.id || 'guest')
+  const restoredHomeState = useMemo(() => readHomeState(scope), [scope])
   // Anuncios visibles y estado de carga: lo resuelve el hook.
-  const { vehicles, loading } = useVehicles()
+  const { vehicles, loading, error: vehiclesError } = useVehicles()
   const resultsRef = useRef(null)
   const restoredDraft = { ...DEFAULT_FILTERS, ...(restoredHomeState.draftFilters || {}) }
   const restoredApplied = { ...DEFAULT_FILTERS, ...(restoredHomeState.appliedFilters || {}) }
@@ -121,7 +133,26 @@ export default function Home() {
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [viewMode, setViewMode] = useState(restoredHomeState.viewMode || 'grid')
   const [currentPage, setCurrentPage] = useState(restoredHomeState.currentPage || 1)
-  const [savedSearches, setSavedSearches] = useState(readSavedSearches)
+  const [savedSearches, setSavedSearches] = useState(() => readSavedSearches(user?.isDevUser))
+  const [searchesReady, setSearchesReady] = useState(Boolean(user?.isDevUser || !user))
+  const [searchError, setSearchError] = useState('')
+  const lastPersistedSearches = useRef(savedSearches)
+  const searchWrites = useRef(Promise.resolve())
+  useEffect(() => {
+    if (!user || user.isDevUser) return
+    let ignore = false
+    supabase.from('saved_searches').select('searches').eq('user_id', user.id).maybeSingle().then(({ data, error }) => {
+      if (ignore) return
+      // Saved searches are optional on page load. A missing service must not
+      // make healthy listing results look broken; explain it only on save.
+      if (error) { setSearchesReady(false); return }
+      const searches = Array.isArray(data?.searches) ? data.searches : []
+      lastPersistedSearches.current = searches
+      setSavedSearches(searches)
+      setSearchesReady(true)
+    }).catch(() => { if (!ignore) setSearchesReady(false) })
+    return () => { ignore = true }
+  }, [user])
 
   // Catalogo de Trade Me como base, mas cualquier marca que aparezca en los
   // anuncios y no este en la lista.
@@ -232,18 +263,30 @@ export default function Home() {
   const appliedChips = useMemo(() => activeFilterChips(appliedFilters), [appliedFilters])
 
   useEffect(() => {
-    localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(savedSearches))
-  }, [savedSearches])
+    if (!searchesReady || lastPersistedSearches.current === savedSearches) return
+    lastPersistedSearches.current = savedSearches
+    if (user?.isDevUser) {
+      try { sessionStorage.setItem(SAVED_SEARCHES_KEY + ':dev', JSON.stringify(savedSearches)) } catch { /* optional local cache */ }
+      return
+    }
+    if (!user) return
+    let ignore = false
+    searchWrites.current = searchWrites.current.catch(() => {}).then(async () => {
+      const { error } = await supabase.from('saved_searches').upsert({ user_id: user.id, searches: savedSearches })
+      if (!ignore) setSearchError(error ? getSavedSearchesError(error, 'save') : '')
+    }).catch(error => { if (!ignore) setSearchError(getSavedSearchesError(error, 'save')) })
+    return () => { ignore = true }
+  }, [savedSearches, searchesReady, user])
 
   useEffect(() => {
-    sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify({
+    try { sessionStorage.setItem(HOME_STATE_KEY + scope, JSON.stringify({
       draftFilters,
       appliedFilters,
       hasSearched,
       viewMode,
       currentPage,
-    }))
-  }, [draftFilters, appliedFilters, hasSearched, viewMode, currentPage])
+    })) } catch { /* Navigation state is optional when storage is blocked. */ }
+  }, [draftFilters, appliedFilters, hasSearched, viewMode, currentPage, scope])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const activePage = Math.min(currentPage, totalPages)
@@ -506,6 +549,8 @@ export default function Home() {
   const isDraftSaved = savedSearches.some(item => filtersKey(item.filters) === draftKey)
 
   const saveSearch = filters => {
+    if (!user) { setSearchError('Sign in to save this search.'); return }
+    if (!searchesReady) { setSearchError(SAVED_SEARCHES_UNAVAILABLE); return }
     const key = filtersKey(filters)
     const entryName = describeSearch(filters)
 
@@ -698,6 +743,7 @@ export default function Home() {
       />
 
       <main className="container page-section">
+        {searchError && <p role="alert">{searchError}</p>}
         <ActiveFilterBar
           chips={appliedChips}
           onRemove={removeFilter}
@@ -719,6 +765,7 @@ export default function Home() {
 
         <ResultsView
           loading={loading}
+          error={vehiclesError}
           vehicles={filtered}
           pageVehicles={pageVehicles}
           viewMode={viewMode}

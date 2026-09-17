@@ -46,11 +46,13 @@ const MENU_SECTIONS = [
 ]
 
 export default function Navbar({ compact = false, title }) {
-  const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
+  const [openPath, setOpenPath] = useState(null)
+  const menuOpen = openPath === pathname
+  const setMenuOpen = value => setOpenPath((typeof value === 'function' ? value(menuOpen) : value) ? pathname : null)
 
   // Cerrar al navegar, para que el panel no quede abierto sobre la pagina nueva.
-  useEffect(() => setMenuOpen(false), [pathname])
+
 
   // Con el panel abierto la pagina de detras no debe poder desplazarse.
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function Navbar({ compact = false, title }) {
     document.body.style.overflow = 'hidden'
 
     const handleKeyDown = event => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key === 'Escape') setOpenPath(null)
     }
     window.addEventListener('keydown', handleKeyDown)
 
