@@ -345,3 +345,22 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - `Messages` y `Saved vehicles` muestran ahora el loader de Swapy a página completa mientras cargan sus datos iniciales, igual que `Profile`.
 - La cabecera, los contadores vacíos y los paneles del Inbox solo aparecen cuando la consulta ha terminado, evitando saltos visuales y estados vacíos momentáneos.
 - La página de `Messages` incluye el Footer global debajo del Inbox una vez cargado, igual que el resto de las páginas principales.
+### Teselas del mapa bloqueadas en Vercel (2026-09-17)
+
+- OpenStreetMap devolvía imágenes 403 porque `vercel.json` enviaba `Referrer-Policy: no-referrer`; el servidor de teselas exige un referente válido para identificar sitios web.
+- La política pasa a `strict-origin-when-cross-origin`: las teselas reciben únicamente el origen público de Swapy, mientras las rutas y parámetros de navegación continúan ocultos a dominios externos.
+- Como el dominio desplegado continuó recibiendo 403 después de corregir el referente, la home deja de solicitar teselas a los servidores comunitarios de OSM. Leaflet usa CARTO Positron (`basemaps.cartocdn.com`) como mapa base para los marcadores y conserva atribuciones visibles a OpenStreetMap y CARTO.
+### Variables de Supabase en Vercel (2026-09-17)
+
+- El despliegue del commit `368684d` se detuvo correctamente porque el entorno de Vercel no proporcionó una URL HTTPS y una clave pública de Supabase válidas al build.
+- La validación de Vite mantiene el bloqueo de seguridad y ahora distingue entre URL ausente o inválida y clave pública ausente o inválida. No se permite `service_role` ni ninguna clave `sb_secret_` en variables expuestas al navegador.
+- Vercel debe definir `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` y `VITE_SITE_URL` para Production y Preview si se despliegan ramas; cambiar variables requiere un nuevo deployment.
+- La integración existente de Vercel ya proporciona `SUPABASE_URL` y `SUPABASE_ANON_KEY`. El build y el cliente aceptan ahora esos dos nombres además de los alias `VITE_*`; `envPrefix` enumera únicamente ambas variables públicas y nunca expone el prefijo completo `SUPABASE_`, la contraseña Postgres, `service_role` ni secretos.
+- Se recupera el comportamiento anterior para ramas Preview sin base enlazada: la ausencia total de Supabase no bloquea la compilación y el cliente muestra servicio no disponible. Si aparece cualquiera de las dos variables, el build exige el par completo, HTTPS y una clave pública válida; Production sigue usando las variables de su integración.
+
+## 2026-09-18 — Fondo de mapa configurable
+
+- Sustituido CARTO sin clave por OpenFreeMap Positron mediante MapLibre y su adaptador Leaflet, cargados bajo demanda. Se conservan precios, fichas y coordenadas.
+- VITE_MAP_STYLE_URL permite cambiar a otro estilo compatible; los dominios nuevos deben autorizarse en CSP. Worker empaquetado localmente. Guía: docs/maps.md.
+- Añadidos aviso de fallo, reintento y ajuste al tamaño del contenedor. OpenFreeMap no ofrece SLA ni se ha configurado failover. Photon sigue siendo independiente y requiere evaluación antes de escalar.
+- Validación local: build y lint correctos, 27 pruebas pasan; mapa con 78 anuncios mock, zoom y popup comprobados en navegador. No desplegado ni sometido a prueba de carga.

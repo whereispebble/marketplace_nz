@@ -39,13 +39,18 @@ export default function VehicleMap({ vehicles, focusPoint }) {
   const markerLayerRef = useRef(null)
   const [mapError, setMapError] = useState('')
   const [mapReady, setMapReady] = useState(false)
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     let ignore = false
+    let loadTimer
+    let resizeObserver
 
     async function setupMap() {
       try {
-        const L = await loadLeaflet()
+        const [L, { addBasemap }] = await Promise.all([
+          loadLeaflet(), import('../../services/mapBasemap'),
+        ])
         if (ignore || !mapRef.current || leafletMapRef.current) return
 
         const map = L.map(mapRef.current, {
@@ -53,12 +58,15 @@ export default function VehicleMap({ vehicles, focusPoint }) {
           zoom: 5,
           minZoom: 5,
           maxZoom: 19,
+          maxBounds: [[-85, -Infinity], [85, Infinity]],
+          maxBoundsViscosity: 1,
           // La rueda hace scroll de la pagina, no zoom del mapa: encadenaba
           // cargas de tiles hasta bloquear el render. Se usan los botones +/-,
           // el pinch en movil o ctrl + rueda.
           scrollWheelZoom: false,
           zoomControl: true,
         })
+        leafletMapRef.current = map
 
         map.getContainer().addEventListener('wheel', event => {
           if (!event.ctrlKey && !event.metaKey) return
@@ -66,10 +74,19 @@ export default function VehicleMap({ vehicles, focusPoint }) {
           map.setZoom(map.getZoom() + (event.deltaY < 0 ? 1 : -1))
         }, { passive: false })
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(map)
+        const basemap = addBasemap(map)
+        const showError = () => {
+          if (!ignore) setMapError('Map unavailable. Retry or use the list view to browse vehicles.')
+        }
+        loadTimer = setTimeout(showError, 20000)
+        basemap.on('error', showError)
+        basemap.on('idle', () => {
+          clearTimeout(loadTimer)
+          if (!ignore && basemap.areTilesLoaded()) setMapError('')
+        })
+        basemap.on('webglcontextlost', showError)
+        resizeObserver = new ResizeObserver(() => map.invalidateSize())
+        resizeObserver.observe(mapRef.current)
 
         markerLayerRef.current = L.layerGroup().addTo(map)
         leafletMapRef.current = map
@@ -84,12 +101,14 @@ export default function VehicleMap({ vehicles, focusPoint }) {
 
     return () => {
       ignore = true
+      clearTimeout(loadTimer)
+      resizeObserver?.disconnect()
       leafletMapRef.current?.remove()
       leafletMapRef.current = null
       markerLayerRef.current = null
       setMapReady(false)
     }
-  }, [])
+  }, [retry])
 
   const focusLat = Number(focusPoint?.lat)
   const focusLng = Number(focusPoint?.lng)
@@ -177,7 +196,10 @@ export default function VehicleMap({ vehicles, focusPoint }) {
     <section className="map-layout">
       <div className="street-map panel">
         <div className="street-map-canvas" ref={mapRef} aria-label="Interactive New Zealand vehicle map" />
-        {mapError && <div className="map-error">{mapError}</div>}
+        {mapError && <div className="map-error" role="status">
+          {mapError}
+          <button type="button" onClick={() => { setMapError(''); setRetry(value => value + 1) }}>Retry map</button>
+        </div>}
       </div>
     </section>
   )
