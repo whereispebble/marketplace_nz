@@ -364,3 +364,73 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - VITE_MAP_STYLE_URL permite cambiar a otro estilo compatible; los dominios nuevos deben autorizarse en CSP. Worker empaquetado localmente. Guía: docs/maps.md.
 - Añadidos aviso de fallo, reintento y ajuste al tamaño del contenedor. OpenFreeMap no ofrece SLA ni se ha configurado failover. Photon sigue siendo independiente y requiere evaluación antes de escalar.
 - Validación local: build y lint correctos, 27 pruebas pasan; mapa con 78 anuncios mock, zoom y popup comprobados en navegador. No desplegado ni sometido a prueba de carga.
+
+### Navegación del header y posición de resultados
+
+- Header sticky: se oculta al bajar y reaparece tras subir 8 px; corregido overflow de los contenedores que impedía sticky. Respeta reducción de movimiento y foco de teclado.
+- Buscar, aplicar filtros y avanzar/retroceder página sitúan el inicio de resultados a 60 px del borde superior, dejando visible una franja del hero.
+- El logo elimina el estado de búsqueda del usuario y vuelve a home con filtros iniciales, vista grid y página 1, también desde la propia home.
+- Validado en navegador: búsqueda Toyota Hiace, reaparición del header, reinicio por logo y Next a página 2 con el mismo margen. Build y lint correctos. Cambios locales, no publicados.
+
+### Carga inicial de home y búsquedas
+
+- La primera carga de anuncios usa LoadingScreen a pantalla completa, igual que las otras páginas, hasta terminar o recibir un error.
+- Las actualizaciones posteriores mantienen la home visible. Aplicar filtros usa una transición de React y muestra el indicador únicamente en ResultsView mientras se preparan los resultados, sin retrasos artificiales.
+- Archivos: src/hooks/useVehicles.js y src/pages/Home.jsx. Build y lint verificados; cambios locales.
+
+### Destino después del login
+
+- El inicio de sesión por email, OAuth o sesión DEV abre siempre la home (`/`), aunque el login se hubiese abierto al intentar acceder antes a `/profile` u otra ruta privada.
+- Archivo: `src/pages/Login.jsx`. Build, lint y 27 pruebas verificados; cambio local.
+
+### Visibilidad temporal de anuncios vendidos
+
+- Los anuncios vendidos aparecen en la lista y el mapa durante las 24 horas posteriores a `sold_at`; después quedan fuera de la consulta y del filtrado local. La ficha directa y el historial del propietario se conservan.
+- Marcar como vendido desde perfil, chat o DEV registra la fecha. La migración `supabase/2026-09-18-sold-listing-visibility.sql` añade y mantiene `products.sold_at`; debe aplicarse a Supabase antes de desplegar el frontend.
+- Añadida prueba del límite exacto de 24 horas. Build, lint y 28 pruebas correctos; cambios locales.
+
+### Búsqueda tolerante a errores
+
+- La búsqueda libre admite letras intercambiadas, omitidas o equivocadas por palabra, incluyendo `totoya`, `toyta hiace` y `toyota haic` para Toyota Hiace.
+- En **Best match**, las coincidencias más cercanas aparecen primero. Los criterios siguen siendo suficientemente estrictos para no mezclar modelos sin relación y los sinónimos vuelven a funcionar correctamente.
+- Archivos: `src/services/vehicleFilters.js` y `tests/fuzzy-search.test.mjs`. Build, lint y pruebas verificados; cambio local.
+
+### Contadores de visitas y guardados
+
+- La esquina inferior derecha de la foto principal muestra usuarios únicos que han visto el anuncio y el total de cuentas que lo han guardado. Se eliminó el contador duplicado del panel lateral.
+- Las recargas de una misma cuenta no aumentan visitas y el propietario no cuenta como visitante. Solo se exponen totales agregados; la tabla de visitas no puede consultarse desde el cliente.
+- La migración `supabase/2026-09-18-product-engagement.sql` crea `product_views` y la función agregada; debe aplicarse antes del despliegue. Validado visualmente y con pruebas de privacidad/unicidad. Build, lint y 32 pruebas correctos; cambios locales.
+
+### Branding juvenil, moderno y profesional
+
+- Propuesta de marca y guía en `public/branding/BRAND-GUIDE.md`: identidad, paleta, tipografía, tono, mensajes en inglés y recomendaciones de uso.
+- Tres imágenes originales generadas con image_gen en `public/branding/`: `swapy-coast-hero.png`, `swapy-community-banner.png` y `swapy-mint-background.png`. Revisadas visualmente; banners sin textos incrustados y fondo con espacio para contenido.
+- Se conserva el logo existente. Entrega de recursos y dirección visual; todavía no se han integrado en las páginas. Originales PNG; optimizar y adaptar recortes antes de producción. Los prompts están documentados en la guía.
+
+### Integración de imágenes de marca
+
+- Login: frase bajo Welcome back simplificada a “Buy and sell campervans in New Zealand.”; recuperación de contraseña y registro separados en dos filas con espacio vertical.
+
+- Refinamiento de Login: tarjeta de hasta 480px con padding 28px y espacios más amplios; retiradas las reducciones de tamaño en pantallas bajas, manteniendo scroll natural. Google/Facebook vuelven a botones blancos neutros con borde fino; se conserva foco accesible, fondo fijo y footer.
+
+- Login adaptado a pantallas bajas con menos padding/márgenes y ocultación de las tres insignias decorativas bajo 740px de alto; sin altura fija ni recorte del formulario. Google resaltado en azul claro, Facebook en azul sólido, con foco visible. Footer y fondo fijo conservados.
+
+- Login: fotografía en una capa `position: fixed` independiente del contenido para mantenerla inmóvil durante el scroll, también en móvil. Añadido el Footer compartido después del main; tarjeta blanca opaca conservada.
+
+- Aclaración de opacidad: aplicada al contenedor completo `.login-photo-shell .auth-card`, con fondo blanco sólido y opacidad 1; no se modifican fondos de campos ni botones internos.
+
+- Home: fondo del hero con `background-attachment: fixed` también en la regla móvil; contenido de resultados envuelto en `.home-content` con fondo opaco `var(--bg)` a todo el ancho. Se conserva el contenedor interior y el destino del scroll de búsquedas.
+
+- Selección final del usuario: recuperada la foto original `new-zealand-sea.webp.jpg` y el tratamiento original del banner Home (texto blanco, capa oscura y buscador glass). La misma foto se aplica al fondo de Login con tarjeta legible. HowItWorks mantiene `swapy-community-banner.webp`. Publicación vuelve a su foto original y registro/recuperación dejan el fondo menta de prueba. Todos los recursos generados se conservan.
+
+- Corrección tras aclaración del usuario: nueva imagen `swapy-soft-background-v3.webp` generada con formas realmente más sencillas, escasas y tonos pastel. Integrada en Home; retirada la capa blanca del 48%, encuadre inferior para mostrar las curvas y efecto glass conservado. PNG y versiones anteriores conservados.
+
+- Ajuste de sutileza: capa blanco cálido al 48% sobre el banner ocean para suavizar azules y turquesas, conservando la imagen original y el buscador glass.
+
+- Nueva prueba azul/verde/turquesa/blanco: Home usa `public/branding/swapy-ocean-background-v2.webp` (105 KB), con original PNG conservado. Buscador glass recuperado mediante transparencia y desenfoque; revisión visual local correcta. Generación solicitada a 3840×2160, pero el generador devolvió 1672×941 incluso tras reintentar: no es 4K nativo. Se mantienen todas las imágenes anteriores.
+
+- Prueba posterior solicitada: el banner de Home usa ahora la tercera imagen, `swapy-mint-background.webp`, con título oscuro y buscador verde bosque para mantener contraste sobre el fondo claro. Revisado visualmente en la vista previa. La imagen costera y todas las anteriores siguen guardadas.
+
+- Integradas versiones WebP de costa en Home, comunidad en HowItWorks/NewProduct y fondo menta en los formularios de acceso, registro y recuperación. Se conservan las fotografías anteriores en `src/assets` y los PNG originales.
+- Ajustado el encuadre del hero en escritorio y móvil y eliminado su fondo fijo para mantener un recorte predecible. Se conserva la capa oscura para legibilidad.
+- Build y lint correctos; revisión visual local de home en escritorio/móvil y login. Cambios locales, sin despliegue. Las tres imágenes WebP suman aproximadamente 607 KB frente a 7,8 MB de PNG.

@@ -11,13 +11,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../services/supabase'
 import { DEV_SESSION_EVENT, isDevSessionActive } from '../services/devAuth'
 import { loadMockVehicles } from '../services/devData'
+import { SOLD_LISTING_VISIBILITY_MS } from '../services/listingVisibility'
 
 /**
- * @returns {{vehicles: object[], loading: boolean, error: string}}
+ * @returns {{vehicles: object[], loading: boolean, initialLoading: boolean, error: string}}
  */
 export function useVehicles() {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState('')
   // Cambia al entrar o salir de la sesion de prueba y fuerza recargar la lista,
   // porque con ella entran o salen los anuncios de ejemplo.
@@ -48,10 +50,12 @@ export function useVehicles() {
         return
       }
 
+      const soldCutoff = new Date(Date.now() - SOLD_LISTING_VISIBILITY_MS).toISOString()
       const { data, error: queryError } = await supabase
         .from('products')
         .select('*')
         .in('status', ['available', 'reserved', 'sold'])
+        .or(`status.neq.sold,sold_at.gte.${soldCutoff}`)
         .order('created_at', { ascending: false })
 
       if (ignore) return
@@ -73,9 +77,11 @@ export function useVehicles() {
       setVehicles([])
       setError('Vehicles could not be loaded right now. Please reload to try again.')
       setLoading(false)
+    }).finally(() => {
+      if (!ignore) setInitialLoading(false)
     })
     return () => { ignore = true }
   }, [reloadToken])
 
-  return { vehicles, loading, error }
+  return { vehicles, loading, initialLoading, error }
 }

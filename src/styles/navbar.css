@@ -16,6 +16,21 @@
   background: white;
   border-bottom: 1px solid rgba(232, 226, 215, 0.9);
   box-shadow: 0 10px 30px rgba(33, 28, 20, 0.06);
+  transition: transform 180ms ease;
+}
+
+.topbar.topbar-hidden {
+  transform: translateY(-110%);
+  pointer-events: none;
+}
+
+.topbar.topbar-hidden:has(:focus-visible) {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar { transition: none; }
 }
 
 /* El modo compacto conserva las tres columnas: los enlaces de seccion siguen

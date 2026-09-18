@@ -41,10 +41,24 @@ test('database isolation, conversation integrity and atomic image updates', asyn
  ('${A}','buyer@local.test','{"username":"buyer"}'),('${B}','seller@local.test','{"username":"seller"}'),('${C}','outsider@local.test','{"username":"outsider"}');
  insert into public.products(id,user_id,title,status,price,make,model,location,lat,lng,image,images,location_confirmed,location_source)
  values ('${P}','${B}','Test vehicle','available',15000,'Toyota','Hiace','Auckland',-36.85,174.76,'https://example.test/one.jpg','["https://example.test/one.jpg"]',true,'map');`)
+ await db.exec(await readFile(new URL('../supabase/2026-09-18-product-engagement.sql', import.meta.url), 'utf8'))
  async function asUser(id, fn) {
    await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${id}', false)`)
    try { return await fn() } finally { await db.exec('reset role') }
  }
+ await t.test('engagement counts unique viewers without exposing identities', async () => {
+   await asUser(A, async () => {
+     await db.query(`select * from public.get_product_engagement('${P}',true)`)
+     const metrics = (await db.query(`select * from public.get_product_engagement('${P}',true)`)).rows[0]
+     assert.equal(metrics.view_count,1)
+     assert.equal(metrics.favorite_count,0)
+     await assert.rejects(db.query('select * from public.product_views'))
+   })
+   await asUser(B, async () => {
+     const metrics = (await db.query(`select * from public.get_product_engagement('${P}',true)`)).rows[0]
+     assert.equal(metrics.view_count,1)
+   })
+ })
  await t.test('public profiles exclude private contact fields', async () => {
    await db.exec('set role anon')
    try {

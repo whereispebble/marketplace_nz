@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { FiFileText, FiHeart, FiHome, FiMail, FiMenu, FiPlus, FiShield, FiUser, FiX } from 'react-icons/fi'
 import logo from '../assets/swapy-logo.svg'
+import { useSession } from '../services/session'
 
 // mobileHidden: en movil solo se dejan Buy y Sell en la cabecera; el resto
 // sigue estando en el panel lateral.
@@ -47,9 +48,40 @@ const MENU_SECTIONS = [
 
 export default function Navbar({ compact = false, title }) {
   const { pathname } = useLocation()
+  const { user } = useSession()
+  const [hidden, setHidden] = useState(false)
   const [openPath, setOpenPath] = useState(null)
   const menuOpen = openPath === pathname
   const setMenuOpen = value => setOpenPath((typeof value === 'function' ? value(menuOpen) : value) ? pathname : null)
+
+  useEffect(() => {
+    let anchor = Math.max(0, window.scrollY)
+    const onScroll = () => {
+      const y = Math.max(0, window.scrollY)
+      if (y < 60) setHidden(false)
+      else if (Math.abs(y - anchor) >= 8) setHidden(y > anchor)
+      else return
+      anchor = y
+    }
+    const onResultsScroll = () => {
+      anchor = Math.max(0, window.scrollY)
+      setHidden(anchor >= 60)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('swapy:results-scroll', onResultsScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('swapy:results-scroll', onResultsScroll)
+    }
+  }, [pathname])
+
+  const resetHome = event => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    try { sessionStorage.removeItem('swapy:home-state:' + (user?.id || 'guest')) } catch { /* optional cache */ }
+    setHidden(false)
+    setOpenPath(null)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
 
   // Cerrar al navegar, para que el panel no quede abierto sobre la pagina nueva.
 
@@ -73,8 +105,8 @@ export default function Navbar({ compact = false, title }) {
 
   return (
     <>
-      <nav className={`topbar ${compact && !title ? 'topbar-compact' : ''}`}>
-        <Link to="/" className="brand" aria-label="Swapy home">
+      <nav className={`topbar ${compact && !title ? 'topbar-compact' : ''} ${hidden && !menuOpen ? 'topbar-hidden' : ''}`}>
+        <Link to="/" state={{ resetHome: true }} onClick={resetHome} className="brand" aria-label="Swapy home">
           <img src={logo} alt="Swapy" />
         </Link>
 

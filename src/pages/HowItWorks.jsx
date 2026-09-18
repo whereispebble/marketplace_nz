@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom'
 import { FiArrowRight, FiCheck, FiChevronDown, FiMail, FiSearch, FiShield, FiTag, FiTruck } from 'react-icons/fi'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import howItWorksBackground from '../assets/nz-mount-cook.webp'
+const howItWorksBackground = '/branding/swapy-community-banner.webp'
 
 const BUYER_STEPS = [
   {

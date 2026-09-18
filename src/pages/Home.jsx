@@ -19,7 +19,8 @@
  * la propia base de datos con sus politicas de seguridad.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import HeroSearch from '../components/home/HeroSearch'
@@ -43,7 +44,7 @@ import { NZ_VEHICLE_CATALOG } from '../data/nzVehicleCatalog'
 import { useSession } from '../services/session'
 import { supabase } from '../services/supabase'
 import { getSavedSearchesError, SAVED_SEARCHES_UNAVAILABLE } from '../services/savedSearches'
-import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
+import heroBrandImage from '../assets/new-zealand-sea.webp.jpg'
 import LoadingScreen from '../components/LoadingScreen'
 
 /** Clave del navegador donde se guardan las busquedas que el usuario archiva. */
@@ -73,15 +74,17 @@ function readHomeState(scope) {
 
 export default function Home() {
   const { user, loading } = useSession()
+  const location = useLocation()
   if (loading) return <LoadingScreen fullPage label="Loading marketplace" />
-  return <HomeContent key={user?.id || 'guest'} user={user} />
+  return <HomeContent key={`${user?.id || 'guest'}:${location.state?.resetHome ? location.key : ''}`} user={user} />
 }
 
 function HomeContent({ user }) {
   const scope = ':' + (user?.id || 'guest')
   const restoredHomeState = useMemo(() => readHomeState(scope), [scope])
   // Anuncios visibles y estado de carga: lo resuelve el hook.
-  const { vehicles, loading, error: vehiclesError } = useVehicles()
+  const { vehicles, loading, initialLoading, error: vehiclesError } = useVehicles()
+  const [isSearching, startSearch] = useTransition()
   const resultsRef = useRef(null)
   const restoredDraft = { ...DEFAULT_FILTERS, ...(restoredHomeState.draftFilters || {}) }
   const restoredApplied = { ...DEFAULT_FILTERS, ...(restoredHomeState.appliedFilters || {}) }
@@ -125,10 +128,13 @@ function HomeContent({ user }) {
   const [locationPoint, setLocationPoint] = useState(restoredDraft.locationPoint || null)
   const [amenities, setAmenities] = useState({ ...DEFAULT_FILTERS.amenities, ...(restoredDraft.amenities || {}) })
   const [sortBy, setSortBy] = useState(restoredDraft.sortBy)
-  const [appliedFilters, setAppliedFilters] = useState({
+  const [appliedFilters, updateAppliedFilters] = useState({
     ...restoredApplied,
     amenities: { ...DEFAULT_FILTERS.amenities, ...(restoredApplied.amenities || {}) },
   })
+  // Keep the page available while React prepares the filtered results.
+  // No artificial delay: cached/local searches can complete immediately.
+  const setAppliedFilters = next => startSearch(() => updateAppliedFilters(next))
   const [hasSearched, setHasSearched] = useState(Boolean(restoredHomeState.hasSearched))
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [viewMode, setViewMode] = useState(restoredHomeState.viewMode || 'grid')
@@ -312,7 +318,11 @@ function HomeContent({ user }) {
 
   const scrollToResults = () => {
     window.requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (!resultsRef.current) return
+      // Keep a strip of the hero visible above filters, as on the reference.
+      const top = resultsRef.current.getBoundingClientRect().top + window.scrollY - 60
+      window.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
+      window.dispatchEvent(new Event('swapy:results-scroll'))
     })
   }
 
@@ -727,12 +737,14 @@ function HomeContent({ user }) {
     onRemoveSaved: removeSavedSearch,
   }
 
+  if (initialLoading) return <LoadingScreen fullPage label="Loading marketplace" />
+
   return (
     <div className={`app-shell ${hasSearched ? 'has-searched' : 'is-pre-search'}`}>
       <Navbar />
 
       <HeroSearch
-        backgroundImage={heroSeaImage}
+        backgroundImage={heroBrandImage}
         search={search}
         isSearchSaved={isCurrentSearchSaved}
         onSearchChange={handleSearchChange}
@@ -742,7 +754,8 @@ function HomeContent({ user }) {
         onOpenFilters={showAdvancedFilters}
       />
 
-      <main className="container page-section">
+      <div className="home-content">
+      <main className="container page-section" ref={resultsRef}>
         {searchError && <p role="alert">{searchError}</p>}
         <ActiveFilterBar
           chips={appliedChips}
@@ -754,7 +767,6 @@ function HomeContent({ user }) {
           total={filtered.length}
           sortBy={sortBy}
           viewMode={viewMode}
-          resultsRef={resultsRef}
           onSortChange={setSortBy}
           onViewModeChange={mode => {
             setViewMode(mode)
@@ -764,7 +776,7 @@ function HomeContent({ user }) {
         />
 
         <ResultsView
-          loading={loading}
+          loading={loading || isSearching}
           error={vehiclesError}
           vehicles={filtered}
           pageVehicles={pageVehicles}
@@ -772,8 +784,8 @@ function HomeContent({ user }) {
           focusPoint={locationPoint}
           currentPage={activePage}
           totalPages={totalPages}
-          onPreviousPage={() => setCurrentPage(page => Math.max(1, page - 1))}
-          onNextPage={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+          onPreviousPage={() => { setCurrentPage(Math.max(1, activePage - 1)); scrollToResults() }}
+          onNextPage={() => { setCurrentPage(Math.min(totalPages, activePage + 1)); scrollToResults() }}
           onClearFilters={clearFilters}
         />
 
@@ -783,6 +795,7 @@ function HomeContent({ user }) {
           open={advancedFiltersOpen}
         />
       </main>
+      </div>
 
       <Footer />
     </div>

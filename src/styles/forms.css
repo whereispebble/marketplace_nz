@@ -15,10 +15,101 @@
   width: min(440px, 100%);
 }
 
+.login-photo-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+}
+
+.login-photo-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(7, 22, 20, 0.26), rgba(7, 22, 20, 0.42)),
+    url('../assets/new-zealand-sea.webp.jpg') center / cover no-repeat;
+}
+
+.login-photo-shell .auth-card {
+  background: var(--surface);
+  opacity: 1;
+}
+
 .social-auth-grid {
   display: grid;
   gap: 10px;
   margin-bottom: 18px;
+}
+
+.login-photo-shell .form-shell {
+  min-height: 100dvh;
+  padding: 24px 16px;
+}
+
+.login-photo-shell .auth-card {
+  width: min(480px, 100%);
+  padding: 28px;
+}
+
+.login-heading {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.login-heading .section-title {
+  margin-top: 14px;
+}
+
+.login-heading .section-subtitle {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.login-trust {
+  margin: 20px 0;
+}
+
+.login-account-links {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.login-account-links p {
+  margin: 0;
+}
+
+.login-account-links p a {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-account-links a:hover {
+  text-decoration: underline;
+}
+
+.login-photo-shell .form-grid {
+  gap: 16px;
+}
+
+.login-photo-shell .social-auth-btn:focus-visible {
+  outline: 3px solid #1f7a8c;
+  outline-offset: 3px;
+}
+
+@media (max-height: 740px) {
+  .login-photo-shell .login-trust { display: none; }
+}
+
+@media (max-width: 480px) {
+  .login-photo-shell .auth-card { padding: 24px 20px; }
 }
 
 .social-auth-btn {

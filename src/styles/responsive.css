@@ -261,8 +261,7 @@
     min-height: clamp(240px, calc(100vh - var(--hero-reveal)), 560px);
     min-height: clamp(240px, calc(100dvh - var(--hero-reveal)), 560px);
     background-position: center center;
-    /* fixed no funciona bien en iOS/Android: se deja scroll en mobile */
-    background-attachment: scroll;
+    background-attachment: fixed;
   }
 
 

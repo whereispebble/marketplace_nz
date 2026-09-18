@@ -31,7 +31,6 @@
   background: linear-gradient(180deg, rgba(12, 20, 18, 0.42) 0%, rgba(12, 20, 18, 0.55) 45%, rgba(12, 20, 18, 0.68) 100%);
 }
 
-.photo-shell .topbar,
 .photo-shell .container {
   position: relative;
   z-index: 1;

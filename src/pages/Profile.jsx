@@ -313,9 +313,10 @@ export default function Profile() {
     if (!user) return
 
     const previousListings = listings
-    setListings(current => current.map(item => (item.id === listingId ? { ...item, status } : item)))
+    const soldAt = status === 'sold' ? new Date().toISOString() : null
+    setListings(current => current.map(item => (item.id === listingId ? { ...item, status, sold_at: soldAt } : item)))
     if (isDevSessionActive()) {
-      saveDevListing(listingId, { status })
+      saveDevListing(listingId, { status, sold_at: soldAt })
       return
     }
 

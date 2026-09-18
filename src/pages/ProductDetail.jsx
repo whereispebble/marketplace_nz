@@ -20,6 +20,7 @@ import { LISTING_STATUS, listingStatusBadge } from '../constants/listingStatus'
 import { useSession } from '../services/session'
 import { isDevSessionActive } from '../services/devAuth'
 import { isUuid } from '../services/validation'
+import { getProductEngagement } from '../services/productEngagement'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -34,6 +35,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [relatedProducts, setRelatedProducts] = useState([])
+  const [engagement, setEngagement] = useState({ views: 0, saves: 0 })
   // Los anuncios reales usan user_id como propietario. seller_id solo existe
   // en algunos datos antiguos/mock.
   const sellerId = product?.user_id || product?.seller_id || product?.seller?.id || 'seller'
@@ -104,6 +106,15 @@ export default function ProductDetail() {
     }
 
     loadRelatedProducts().catch(() => { if (!ignore) setRelatedProducts([]) })
+    return () => { ignore = true }
+  }, [product])
+
+  useEffect(() => {
+    if (!product) return undefined
+    let ignore = false
+    getProductEngagement(product, true)
+      .then(metrics => { if (!ignore) setEngagement(metrics) })
+      .catch(() => { if (!ignore) setEngagement({ views: Number(product.views || 0), saves: 0 }) })
     return () => { ignore = true }
   }, [product])
 
@@ -261,6 +272,10 @@ export default function ProductDetail() {
               {images.length > 1 && (
                 <span className="media-viewer-count">{selectedImage + 1} / {images.length}</span>
               )}
+              <span className="media-viewer-engagement" aria-label={`${engagement.views} users viewed, ${engagement.saves} users saved`}>
+                <span><FiEye />{engagement.views}</span>
+                <span><FiHeart fill={liked ? 'currentColor' : 'none'} />{engagement.saves}</span>
+              </span>
             </button>
             {images.length > 1 && (
               <div className="thumb-row">
@@ -327,7 +342,6 @@ export default function ProductDetail() {
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, margin: '16px 0 22px' }}>
                 <span className="muted-row"><FiMapPin />{product.location || 'Location pending'}</span>
-                <span className="muted-row"><FiEye />{product.views || 0} views</span>
               </div>
 
               <div className="vehicle-spec-grid">
@@ -356,7 +370,11 @@ export default function ProductDetail() {
                   setSavingFavorite(true)
                   try {
                     setFavoriteError('')
-                    setLiked(await toggleFavorite(product))
+                    const saved = await toggleFavorite(product)
+                    setLiked(saved)
+                    if (user || isDevSessionActive()) {
+                      setEngagement(current => ({ ...current, saves: Math.max(0, current.saves + (saved ? 1 : -1)) }))
+                    }
                   } catch {
                     setFavoriteError('Could not update saved vehicles. Please try again.')
                   } finally { setSavingFavorite(false) }
