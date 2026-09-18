@@ -46,6 +46,16 @@
   font-weight: 800;
 }
 
+.map-error button {
+  margin-left: 12px;
+  padding: 6px 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  cursor: pointer;
+}
+
 /* Punto de la ubicacion elegida en el filtro: late suavemente para que se
    distinga de los marcadores de anuncio. */
 .swapy-map-focus {
