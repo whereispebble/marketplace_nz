@@ -4,6 +4,11 @@
    selector de orden, barra de filtros activos, parrilla y paginacion.
    ========================================================================== */
 
+.home-content {
+  position: relative;
+  background: var(--bg);
+}
+
 .hero {
   position: relative;
   overflow: hidden;
@@ -21,8 +26,7 @@
   inset: 0;
   z-index: 1;
   content: "";
-  background:
-    linear-gradient(180deg, rgba(7, 22, 20, 0.38) 0%, rgba(7, 22, 20, 0.44) 45%, rgba(7, 22, 20, 0.58) 100%);
+  background: linear-gradient(180deg, rgba(7, 22, 20, 0.38) 0%, rgba(7, 22, 20, 0.44) 45%, rgba(7, 22, 20, 0.58) 100%);
 }
 
 .hero-inner {
@@ -97,6 +101,7 @@
     0 10px 30px rgba(0, 0, 0, 0.14);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   text-align: left;
 }

@@ -44,7 +44,7 @@ import { NZ_VEHICLE_CATALOG } from '../data/nzVehicleCatalog'
 import { useSession } from '../services/session'
 import { supabase } from '../services/supabase'
 import { getSavedSearchesError, SAVED_SEARCHES_UNAVAILABLE } from '../services/savedSearches'
-import heroSeaImage from '../assets/new-zealand-sea.webp.jpg'
+import heroBrandImage from '../assets/new-zealand-sea.webp.jpg'
 import LoadingScreen from '../components/LoadingScreen'
 
 /** Clave del navegador donde se guardan las busquedas que el usuario archiva. */
@@ -744,7 +744,7 @@ function HomeContent({ user }) {
       <Navbar />
 
       <HeroSearch
-        backgroundImage={heroSeaImage}
+        backgroundImage={heroBrandImage}
         search={search}
         isSearchSaved={isCurrentSearchSaved}
         onSearchChange={handleSearchChange}
@@ -754,6 +754,7 @@ function HomeContent({ user }) {
         onOpenFilters={showAdvancedFilters}
       />
 
+      <div className="home-content">
       <main className="container page-section" ref={resultsRef}>
         {searchError && <p role="alert">{searchError}</p>}
         <ActiveFilterBar
@@ -794,6 +795,7 @@ function HomeContent({ user }) {
           open={advancedFiltersOpen}
         />
       </main>
+      </div>
 
       <Footer />
     </div>

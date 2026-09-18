@@ -13,6 +13,7 @@ import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
+import Footer from '../components/Footer'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -81,24 +82,25 @@ export default function Login() {
   }
 
   return (
+    <div className="login-photo-shell">
     <main className="form-shell">
       <section className="panel panel-pad auth-card">
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div className="login-heading">
           <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
             <img src={logo} alt="Swapy" />
           </Link>
-          <h1 className="section-title" style={{ marginTop: 18 }}>Welcome back</h1>
-          <p className="section-subtitle">Sign in to save vehicles, contact sellers and list your campervan.</p>
+          <h1 className="section-title">Welcome back</h1>
+          <p className="section-subtitle">Buy and sell campervans in New Zealand.</p>
         </div>
 
         {error && <div className="alert">{error}</div>}
 
         <div className="social-auth-grid">
-          <button className="social-auth-btn" type="button" disabled={loading} onClick={() => handleOAuthLogin('google')}>
+          <button className="social-auth-btn social-auth-google" type="button" disabled={loading} onClick={() => handleOAuthLogin('google')}>
             <FaGoogle />
             Continue with Google
           </button>
-          <button className="social-auth-btn" type="button" disabled={loading} onClick={() => handleOAuthLogin('facebook')}>
+          <button className="social-auth-btn social-auth-facebook" type="button" disabled={loading} onClick={() => handleOAuthLogin('facebook')}>
             <FaFacebookF />
             Continue with Facebook
           </button>
@@ -138,17 +140,19 @@ export default function Login() {
           </button>
         </div>
 
-        <div className="stats-grid" style={{ margin: '22px 0' }}>
+        <div className="stats-grid login-trust">
           <div className="stat-box"><FiMail /><span>Email access</span></div>
           <div className="stat-box"><FiLock /><span>Secure login</span></div>
           <div className="stat-box"><strong>NZ</strong><span>Camper market</span></div>
         </div>
 
-        <p className="section-subtitle" style={{ textAlign: 'center' }}>
-          New here? <Link to="/forgot-password">Forgot your password?</Link>
-            <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Create an account</Link>
-        </p>
+        <div className="login-account-links">
+          <Link to="/forgot-password">Forgot your password?</Link>
+          <p>New here? <Link to="/register">Create an account</Link></p>
+        </div>
       </section>
     </main>
+    <Footer />
+    </div>
   )
 }
