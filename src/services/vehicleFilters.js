@@ -9,7 +9,8 @@
  * dejado ver: de otros usuarios solo llegan los publicados, nunca borradores.
  */
 
-import { AMENITY_FILTERS, DEFAULT_FILTERS, DRIVETRAIN_FILTERS, TOILET_FILTERS, VALIDITY_FILTERS } from '../constants/filters'
+import { AMENITY_FILTERS, DEFAULT_FILTERS, DRIVETRAIN_FILTERS, TOILET_FILTERS, VALIDITY_FILTERS } from '../constants/filters.js'
+import { isMarketplaceListingVisible } from './listingVisibility.js'
 
 const SEARCH_SYNONYMS = {
   camper: ['campervan', 'motorhome', 'rv', 'vanlife', 'selfcontained', 'self-contained'],
@@ -43,29 +44,46 @@ function levenshtein(a, b) {
         rows[row][column - 1] + 1,
         rows[row - 1][column - 1] + cost,
       )
+      // Adjacent letters are commonly typed in the wrong order ("totoya").
+      if (row > 1 && column > 1 && a[row - 1] === b[column - 2] && a[row - 2] === b[column - 1]) {
+        rows[row][column] = Math.min(rows[row][column], rows[row - 2][column - 2] + 1)
+      }
     }
   }
   return rows[a.length][b.length]
 }
 
-export function fuzzyIncludes(haystack, query) {
+function wordMatchScore(queryWord, candidate) {
+  if (candidate === queryWord) return 0
+  if (candidate.startsWith(queryWord) || queryWord.startsWith(candidate)) return 0.15
+  const longest = Math.max(queryWord.length, candidate.length)
+  const tolerance = longest <= 2 ? 0 : longest <= 4 ? 1 : longest <= 7 ? 2 : 3
+  const distance = levenshtein(candidate, queryWord)
+  return distance <= tolerance && distance / longest <= 0.4 ? distance / longest : Infinity
+}
+
+export function fuzzyMatchScore(haystack, query) {
   const cleanQuery = normalise(query)
-  if (!cleanQuery) return true
+  if (!cleanQuery) return 0
 
   const haystackText = normalise(haystack)
-  if (haystackText.includes(cleanQuery)) return true
+  if (haystackText.includes(cleanQuery)) return -1
 
-  const queryWords = cleanQuery.split(' ')
-  const haystackWords = haystackText.split(' ')
-  const expandedWords = queryWords.flatMap(word => [word, ...(SEARCH_SYNONYMS[word] || [])])
+  const queryWords = cleanQuery.split(' ').filter(Boolean)
+  const haystackWords = haystackText.split(' ').filter(Boolean)
+  let total = 0
 
-  return expandedWords.every(queryWord => (
-    haystackWords.some(word => {
-      if (word.includes(queryWord) || queryWord.includes(word)) return true
-      const tolerance = queryWord.length > 6 ? 2 : 1
-      return levenshtein(word, queryWord) <= tolerance
-    })
-  ))
+  for (const queryWord of queryWords) {
+    const alternatives = [queryWord, ...(SEARCH_SYNONYMS[queryWord] || [])].map(normalise)
+    const best = Math.min(...alternatives.flatMap(alternative => haystackWords.map(word => wordMatchScore(alternative, word))))
+    if (!Number.isFinite(best)) return Infinity
+    total += best
+  }
+  return total / queryWords.length
+}
+
+export function fuzzyIncludes(haystack, query) {
+  return Number.isFinite(fuzzyMatchScore(haystack, query))
 }
 
 export function parsePriceCeiling(value) {
@@ -269,6 +287,7 @@ export function filterVehicles(vehicles, filters) {
   const selectedAmenities = AMENITY_FILTERS.filter(amenity => filters.amenities?.[amenity.id])
 
   return vehicles
+    .filter(vehicle => isMarketplaceListingVisible(vehicle))
     .filter(vehicle => filters.vehicleType === 'all' || vehicle.vehicleType === filters.vehicleType)
     .filter(vehicle => fuzzyIncludes(vehicleMake(vehicle), filters.make))
     .filter(vehicle => fuzzyIncludes(`${vehicle.model} ${vehicle.title}`, filters.model))
@@ -315,6 +334,10 @@ export function filterVehicles(vehicles, filters) {
     .filter(vehicle => selectedAmenities.every(amenity => vehicleHasAmenity(vehicle, amenity)))
     .filter(vehicle => fuzzyIncludes(vehicleSearchText(vehicle), filters.search))
     .sort((a, b) => {
+      if (filters.search && filters.sortBy === 'recent') {
+        const relevance = fuzzyMatchScore(vehicleSearchText(a), filters.search) - fuzzyMatchScore(vehicleSearchText(b), filters.search)
+        if (relevance !== 0) return relevance
+      }
       const sorter = SORTERS[filters.sortBy]
       if (sorter) return sorter(a, b)
       // Best match: de mas cerca a mas lejos si hay una ubicacion de

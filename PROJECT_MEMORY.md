@@ -364,3 +364,39 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - VITE_MAP_STYLE_URL permite cambiar a otro estilo compatible; los dominios nuevos deben autorizarse en CSP. Worker empaquetado localmente. Guía: docs/maps.md.
 - Añadidos aviso de fallo, reintento y ajuste al tamaño del contenedor. OpenFreeMap no ofrece SLA ni se ha configurado failover. Photon sigue siendo independiente y requiere evaluación antes de escalar.
 - Validación local: build y lint correctos, 27 pruebas pasan; mapa con 78 anuncios mock, zoom y popup comprobados en navegador. No desplegado ni sometido a prueba de carga.
+
+### Navegación del header y posición de resultados
+
+- Header sticky: se oculta al bajar y reaparece tras subir 8 px; corregido overflow de los contenedores que impedía sticky. Respeta reducción de movimiento y foco de teclado.
+- Buscar, aplicar filtros y avanzar/retroceder página sitúan el inicio de resultados a 60 px del borde superior, dejando visible una franja del hero.
+- El logo elimina el estado de búsqueda del usuario y vuelve a home con filtros iniciales, vista grid y página 1, también desde la propia home.
+- Validado en navegador: búsqueda Toyota Hiace, reaparición del header, reinicio por logo y Next a página 2 con el mismo margen. Build y lint correctos. Cambios locales, no publicados.
+
+### Carga inicial de home y búsquedas
+
+- La primera carga de anuncios usa LoadingScreen a pantalla completa, igual que las otras páginas, hasta terminar o recibir un error.
+- Las actualizaciones posteriores mantienen la home visible. Aplicar filtros usa una transición de React y muestra el indicador únicamente en ResultsView mientras se preparan los resultados, sin retrasos artificiales.
+- Archivos: src/hooks/useVehicles.js y src/pages/Home.jsx. Build y lint verificados; cambios locales.
+
+### Destino después del login
+
+- El inicio de sesión por email, OAuth o sesión DEV abre siempre la home (`/`), aunque el login se hubiese abierto al intentar acceder antes a `/profile` u otra ruta privada.
+- Archivo: `src/pages/Login.jsx`. Build, lint y 27 pruebas verificados; cambio local.
+
+### Visibilidad temporal de anuncios vendidos
+
+- Los anuncios vendidos aparecen en la lista y el mapa durante las 24 horas posteriores a `sold_at`; después quedan fuera de la consulta y del filtrado local. La ficha directa y el historial del propietario se conservan.
+- Marcar como vendido desde perfil, chat o DEV registra la fecha. La migración `supabase/2026-09-18-sold-listing-visibility.sql` añade y mantiene `products.sold_at`; debe aplicarse a Supabase antes de desplegar el frontend.
+- Añadida prueba del límite exacto de 24 horas. Build, lint y 28 pruebas correctos; cambios locales.
+
+### Búsqueda tolerante a errores
+
+- La búsqueda libre admite letras intercambiadas, omitidas o equivocadas por palabra, incluyendo `totoya`, `toyta hiace` y `toyota haic` para Toyota Hiace.
+- En **Best match**, las coincidencias más cercanas aparecen primero. Los criterios siguen siendo suficientemente estrictos para no mezclar modelos sin relación y los sinónimos vuelven a funcionar correctamente.
+- Archivos: `src/services/vehicleFilters.js` y `tests/fuzzy-search.test.mjs`. Build, lint y pruebas verificados; cambio local.
+
+### Contadores de visitas y guardados
+
+- La esquina inferior derecha de la foto principal muestra usuarios únicos que han visto el anuncio y el total de cuentas que lo han guardado. Se eliminó el contador duplicado del panel lateral.
+- Las recargas de una misma cuenta no aumentan visitas y el propietario no cuenta como visitante. Solo se exponen totales agregados; la tabla de visitas no puede consultarse desde el cliente.
+- La migración `supabase/2026-09-18-product-engagement.sql` crea `product_views` y la función agregada; debe aplicarse antes del despliegue. Validado visualmente y con pruebas de privacidad/unicidad. Build, lint y 32 pruebas correctos; cambios locales.

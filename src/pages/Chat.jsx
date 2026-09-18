@@ -13,7 +13,7 @@ import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import LoadingScreen from '../components/LoadingScreen'
-import { loadMockVehicles } from '../services/devData'
+import { loadMockVehicles, saveDevListing } from '../services/devData'
 import { isDevSessionActive } from '../services/devAuth'
 import { isUuid } from '../services/validation'
 
@@ -327,6 +327,7 @@ export default function Chat() {
     if (!selectedChat || !isSeller) return
     if (isDevSessionActive()) {
       const soldAt = new Date().toISOString()
+      saveDevListing(selectedChat.product?.id, { status: 'sold', sold_at: soldAt })
       setChats(current => current.map(chat => chat.id === selectedChat.id ? { ...chat, sold_at: soldAt, product: { ...chat.product, status: 'sold' } } : chat))
       return
     }

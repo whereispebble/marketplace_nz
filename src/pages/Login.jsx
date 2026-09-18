@@ -7,20 +7,15 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import logo from '../assets/swapy-logo.svg'
-import { safeInternalPath } from '../services/validation'
 
 export default function Login() {
   const navigate = useNavigate()
-  const location = useLocation()
-  // Pagina a la que queria entrar el usuario antes de que RequireAuth lo
-  // mandara aqui. Sin eso, tras identificarse acabaria siempre en la portada.
-  const redirectTo = safeInternalPath(location.state?.from)
   const { user, loading: sessionLoading } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,8 +31,8 @@ export default function Login() {
    */
   useEffect(() => {
     if (sessionLoading || !user) return
-    navigate(redirectTo, { replace: true })
-  }, [user, sessionLoading, navigate, redirectTo])
+    navigate('/', { replace: true })
+  }, [user, sessionLoading, navigate])
 
   /**
    * Identifica al usuario con email y contrasena.
@@ -60,7 +55,7 @@ export default function Login() {
       setLoading(false)
       return
     }
-    navigate(redirectTo, { replace: true })
+    navigate('/', { replace: true })
   }
 
   /**

@@ -62,6 +62,32 @@
   backdrop-filter: blur(6px);
 }
 
+.media-viewer-engagement {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  gap: 10px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: white;
+  background: rgba(15, 20, 18, 0.68);
+  font-size: 0.8rem;
+  font-weight: 850;
+  backdrop-filter: blur(8px);
+}
+
+.media-viewer-engagement span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.media-viewer-engagement svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* En movil no hay hover: la lupa se deja siempre visible. */
 @media (hover: none) {
   .media-viewer-zoom {

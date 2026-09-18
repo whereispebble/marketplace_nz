@@ -308,9 +308,12 @@ function withMockCreatedAt(vehicles) {
   const now = Date.now()
 
   return vehicles.map((vehicle, index) => {
-    if (vehicle.created_at) return vehicle
     const daysAgo = index % 5 === 0 ? index % 6 : 9 + (index % 60)
-    return { ...vehicle, created_at: new Date(now - daysAgo * DAY_MS).toISOString() }
+    return {
+      ...vehicle,
+      created_at: vehicle.created_at || new Date(now - daysAgo * DAY_MS).toISOString(),
+      ...(vehicle.status === 'sold' ? { sold_at: new Date(now - (index % 20) * 60 * 60 * 1000).toISOString() } : {}),
+    }
   })
 }
 
@@ -352,6 +355,7 @@ function withMockSpecs(vehicles) {
       greyWaterL: certified ? 40 + ((index % 8) * 10) : (index % 3) * 10,
       batteryAh: certified ? 80 + ((index % 7) * 20) : (index % 4) * 25,
       solarW: certified ? 100 + ((index % 6) * 60) : (index % 5) * 40,
+      favoriteCount: 3 + ((index * 7) % 46),
       toiletType: certified ? 'fixed' : (index % 3 === 0 ? 'portable' : 'none'),
       scExpiry: certified ? isoDateInMonths(index % 11 === 0 ? -3 : 6 + (index % 30)) : null,
       ...vehicle,
