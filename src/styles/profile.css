@@ -224,6 +224,22 @@
   right: 0;
 }
 
+.profile-account-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-settings-btn {
+  width: 48px;
+  padding-inline: 0;
+}
+
+.profile-settings-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
 /* Anuncios del perfil con las mismas tarjetas que en la busqueda. */
 .profile-products-grid {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

@@ -260,7 +260,8 @@ export default function ProductDetail() {
 
         {favoriteError && <p role="alert">{favoriteError}</p>}
         <section className="detail-grid">
-          <div>
+          <div className="detail-main">
+            <div className="detail-media">
             <button
               className="media-viewer media-viewer-button"
               type="button"
@@ -293,8 +294,9 @@ export default function ProductDetail() {
                 ))}
               </div>
             )}
+            </div>
 
-            <article className="panel panel-pad" style={{ marginTop: 18 }}>
+            <article className="panel panel-pad detail-description" style={{ marginTop: 18 }}>
               <h2 className="section-title" style={{ fontSize: '1.35rem' }}>Description</h2>
               <p className="section-subtitle">{product.description || 'The seller has not added a description yet.'}</p>
               {highlights.length > 0 && (
@@ -305,7 +307,7 @@ export default function ProductDetail() {
             </article>
 
             {specGroups.length > 0 && (
-              <article className="panel panel-pad" style={{ marginTop: 18 }}>
+              <article className="panel panel-pad detail-vehicle-details" style={{ marginTop: 18 }}>
                 <h2 className="section-title" style={{ fontSize: '1.35rem' }}>Vehicle details</h2>
                 <div className="spec-sheet">
                   {specGroups.map(group => (
@@ -330,7 +332,7 @@ export default function ProductDetail() {
           </div>
 
           <aside className="sidebar-stack detail-sidebar">
-            <section className="panel panel-pad">
+            <section className="panel panel-pad detail-price-card">
               {statusBadge && (
                 <div className="detail-status-row">
                   <span className={`badge ${statusBadge.className}`}>{statusBadge.label}</span>
@@ -398,7 +400,7 @@ export default function ProductDetail() {
                   <span className="muted-row" style={{ display: 'flex', marginTop: 4 }}><FiStar />{product.seller?.rating || 'New seller'} rating</span>
                 </div>
               </Link>
-              <div className="stats-grid" style={{ marginTop: 16 }}>
+              <div className="stats-grid seller-stats" style={{ marginTop: 16 }}>
                 <div className="stat-box"><strong>{product.seller?.sales || 0}</strong><span>Sales</span></div>
                 <div className="stat-box"><strong>{product.seller?.rating || '-'}</strong><span>Rating</span></div>
                 <div className="stat-box"><strong>{product.seller?.joined || '-'}</strong><span>Joined</span></div>

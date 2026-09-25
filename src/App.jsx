@@ -24,27 +24,14 @@ const Chat = lazy(() => import('./pages/Chat'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks'))
 const Legal = lazy(() => import('./pages/Legal'))
 
-/**
- * Mientras se desarrolla, la aplicacion arranca en el login: entrar en "/" sin
- * sesion lleva a identificarse, y despues se vuelve a la portada.
- *
- * Poner a false para recuperar una portada publica que cualquiera pueda ver sin
- * cuenta, que es lo normal en un marketplace cuando salga a produccion.
- */
-const REQUIRE_LOGIN_TO_BROWSE = true
-
 function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
       <Suspense fallback={<LoadingScreen fullPage label="Loading page" />}>
       <Routes>
-        {/* Portada. Con REQUIRE_LOGIN_TO_BROWSE exige sesion, asi que entrar
-            en la aplicacion lleva directamente al login. */}
-        <Route
-          path="/"
-          element={REQUIRE_LOGIN_TO_BROWSE ? <RequireAuth><Home /></RequireAuth> : <Home />}
-        />
+        {/* Portada publica: se puede explorar y abrir anuncios sin cuenta. */}
+        <Route path="/" element={<Home />} />
 
         {/* Publicas: cualquiera puede verlas, con o sin cuenta. */}
         <Route path="/login" element={<Login />} />

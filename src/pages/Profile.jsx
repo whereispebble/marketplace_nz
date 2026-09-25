@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FiCamera, FiEdit3, FiFlag, FiLogOut, FiMapPin, FiMoreHorizontal, FiPackage, FiStar, FiTrash2 } from 'react-icons/fi'
+import { FiCamera, FiEdit3, FiFlag, FiLogOut, FiMapPin, FiMoreHorizontal, FiPackage, FiSettings, FiStar, FiTrash2 } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import { getCurrentUser, signOut } from '../services/session'
 import Navbar from '../components/Navbar'
@@ -82,6 +82,9 @@ export default function Profile() {
   const [avatarError, setAvatarError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false)
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
+  const [deleteAccountBusy, setDeleteAccountBusy] = useState(false)
 
   // Estas cifras proceden de los anuncios que realmente pertenecen al perfil.
   // Evitamos usar total_sales como contador de anuncios: es un campo heredado
@@ -91,6 +94,7 @@ export default function Profile() {
   const avatarInputRef = useRef(null)
   const avatarMenuRef = useRef(null)
   const moreMenuRef = useRef(null)
+  const settingsMenuRef = useRef(null)
 
   /**
    * Carga el perfil que toca segun la ruta.
@@ -280,6 +284,26 @@ export default function Profile() {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [moreMenuOpen])
+
+  // Las opciones de la cuenta se cierran al pulsar fuera o con Escape.
+  useEffect(() => {
+    if (!settingsMenuOpen) return undefined
+
+    const handleClickOutside = event => {
+      if (!settingsMenuRef.current?.contains(event.target)) setSettingsMenuOpen(false)
+    }
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setSettingsMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [settingsMenuOpen])
 
   // Los guardados son privados: solo se cargan en el perfil propio.
   useEffect(() => {
@@ -531,6 +555,36 @@ export default function Profile() {
     } catch { setActionError('Could not sign out. Please try again.') }
   }
 
+  const handleDeleteAccount = async () => {
+    setDeleteAccountBusy(true)
+    setActionError('')
+
+    if (isDevSessionActive()) {
+      await signOut()
+      navigate('/', { replace: true })
+      return
+    }
+
+    const user = await getCurrentUser()
+    if (!user) {
+      setDeleteAccountBusy(false)
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const { error } = await supabase.rpc('delete_own_account')
+    if (error) {
+      setDeleteAccountBusy(false)
+      setActionError('Could not delete your account. Please try again or contact support.')
+      return
+    }
+
+    // La cuenta ya no existe en el servidor; limpiamos la sesion local y
+    // devolvemos al visitante a la portada publica.
+    await signOut().catch(() => {})
+    navigate('/', { replace: true })
+  }
+
   // Mientras llegan los datos no se pinta el perfil: si no, se vería un
   // esqueleto con los campos vacíos que parece una cuenta sin rellenar.
   if (profileLoading) {
@@ -667,14 +721,37 @@ export default function Profile() {
                 </div>
               </div>
             )}
-            {!isPublicProfile && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!isPublicProfile && <div className="profile-account-actions">
               {editing ? (
                 <>
                   <button className="btn btn-primary" type="button" onClick={handleSave}>Save</button>
                   <button className="btn btn-secondary" type="button" onClick={() => setEditing(false)}>Cancel</button>
                 </>
               ) : (
-                <button className="btn btn-secondary" type="button" onClick={() => setEditing(true)}><FiEdit3 />Edit</button>
+                <div className="more-menu" ref={settingsMenuRef}>
+                  <button
+                    className="btn btn-secondary profile-settings-btn"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={settingsMenuOpen}
+                    aria-label="Account settings"
+                    onClick={() => setSettingsMenuOpen(current => !current)}
+                  >
+                    <FiSettings />
+                  </button>
+                  {settingsMenuOpen && (
+                    <div className="avatar-menu more-menu-list" role="menu">
+                      <button type="button" role="menuitem" onClick={() => { setSettingsMenuOpen(false); setEditing(true) }}>
+                        <FiEdit3 />
+                        Edit profile
+                      </button>
+                      <button type="button" role="menuitem" className="is-danger" onClick={() => { setSettingsMenuOpen(false); setDeleteAccountOpen(true) }}>
+                        <FiTrash2 />
+                        Delete account
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <button className="btn btn-ghost" type="button" onClick={handleLogout}><FiLogOut />Log out</button>
             </div>}
@@ -800,6 +877,21 @@ export default function Profile() {
               <button className="btn btn-secondary" type="button" disabled={deleteBusy} onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button className="btn btn-danger" type="button" disabled={deleteBusy} onClick={handleDeleteListing}>
                 {deleteBusy ? 'Deleting...' : 'Delete listing'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteAccountOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-account-title" onClick={() => { if (!deleteAccountBusy) setDeleteAccountOpen(false) }}>
+          <div className="panel panel-pad modal-card" onClick={event => event.stopPropagation()}>
+            <h2 id="delete-account-title" className="section-title" style={{ fontSize: '1.2rem' }}>Delete your account?</h2>
+            <p className="section-subtitle">Your profile, listings, saved vehicles and messages will be permanently deleted. This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" type="button" disabled={deleteAccountBusy} onClick={() => setDeleteAccountOpen(false)}>Cancel</button>
+              <button className="btn btn-danger" type="button" disabled={deleteAccountBusy} onClick={handleDeleteAccount}>
+                {deleteAccountBusy ? 'Deleting...' : 'Delete account'}
               </button>
             </div>
           </div>

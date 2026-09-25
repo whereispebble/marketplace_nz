@@ -28,7 +28,7 @@
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(rgba(7, 22, 20, 0.26), rgba(7, 22, 20, 0.42)),
-    url('../assets/new-zealand-sea.webp.jpg') center / cover no-repeat;
+    url('../assets/nz-coastal-hills-background.jpg') center / cover no-repeat;
 }
 
 .login-photo-shell .auth-card {

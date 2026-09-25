@@ -27,7 +27,7 @@ import { hasCoordinates } from '../services/validation'
 import { isNewZealandCoordinate } from '../services/geocoding'
 import { assertPublicationSchema, getPublicationErrorMessage } from '../services/publicationSchema'
 // Misma foto que el hero de la home, asi que ya viene de cache al navegar
-import sellBackground from '../assets/new-zealand-sea.webp.jpg'
+import sellBackground from '../assets/nz-coastal-hills-background.jpg'
 
 // Los bloques de camper solo tienen sentido en un vehiculo habitable.
 const CAMPER_TYPES = ['campervan', 'motorhome', 'van', 'car-camper']

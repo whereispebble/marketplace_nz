@@ -44,7 +44,7 @@ import { NZ_VEHICLE_CATALOG } from '../data/nzVehicleCatalog'
 import { useSession } from '../services/session'
 import { supabase } from '../services/supabase'
 import { getSavedSearchesError, SAVED_SEARCHES_UNAVAILABLE } from '../services/savedSearches'
-import heroBrandImage from '../assets/new-zealand-sea.webp.jpg'
+import heroBrandImage from '../assets/nz-coastal-hills-background.jpg'
 import LoadingScreen from '../components/LoadingScreen'
 
 /** Clave del navegador donde se guardan las busquedas que el usuario archiva. */

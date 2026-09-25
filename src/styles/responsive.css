@@ -53,6 +53,31 @@
     height: auto;
   }
 
+  /* En movil: fotos, precio, descripcion y detalles del vehiculo. */
+  .detail-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-main,
+  .detail-sidebar {
+    display: contents;
+  }
+
+  .detail-media { order: 1; }
+  .detail-price-card { order: 2; }
+  .detail-description { order: 3; }
+  .detail-vehicle-details { order: 4; }
+
+  .detail-sidebar > :not(.detail-price-card) {
+    order: 5;
+  }
+
+  .detail-description,
+  .detail-vehicle-details {
+    margin-top: 0 !important;
+  }
+
   .products-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -460,6 +485,22 @@
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-grid.seller-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .seller-stats .stat-box {
+    min-width: 0;
+    padding: 10px 4px;
+    border-radius: 12px;
+  }
+
+  .seller-stats .stat-box strong,
+  .seller-stats .stat-box span {
+    overflow-wrap: anywhere;
   }
 
   .filter-grid,
