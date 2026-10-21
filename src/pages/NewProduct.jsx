@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMove, FiX } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMove, FiTrash2, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -27,7 +27,7 @@ import { hasCoordinates } from '../services/validation'
 import { isNewZealandCoordinate } from '../services/geocoding'
 import { assertPublicationSchema, getPublicationErrorMessage } from '../services/publicationSchema'
 // Misma foto que el hero de la home, asi que ya viene de cache al navegar
-import sellBackground from '../assets/new-zealand-sea.webp.jpg'
+import sellBackground from '../assets/nz-coastal-hills-background.jpg'
 
 // Los bloques de camper solo tienen sentido en un vehiculo habitable.
 const CAMPER_TYPES = ['campervan', 'motorhome', 'van', 'car-camper']
@@ -127,6 +127,8 @@ export default function NewProduct() {
   const [step, setStep] = useState(1)
   const [openEditSection, setOpenEditSection] = useState('basics')
   const [draggedImageId, setDraggedImageId] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const imagesRef = useRef(images)
   const pendingListingId = useRef(null)
   const submitLock = useRef(false)
@@ -562,6 +564,42 @@ export default function NewProduct() {
     }
   }
 
+  const handleDeleteListing = async () => {
+    if (!isEditing || deleteBusy) return
+    setDeleteBusy(true)
+    setGeneralError('')
+
+    if (isDevSessionActive()) {
+      saveDevListing(editingId, { deleted: true })
+      navigate('/profile', { replace: true })
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setDeleteBusy(false)
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const { data: deletedListing, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', editingId)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle()
+
+    if (error || !deletedListing) {
+      setDeleteBusy(false)
+      setDeleteOpen(false)
+      setGeneralError('Could not delete the listing. Please try again.')
+      return
+    }
+
+    navigate('/profile', { replace: true })
+  }
+
   if (loadingListing) {
     return (
       <div className="app-shell">
@@ -954,9 +992,15 @@ export default function NewProduct() {
 
           <div className={`publish-actions ${isEditing ? 'edit-listing-actions' : ''}`}>
             {isEditing ? (
-              <button className="btn btn-secondary" type="button" disabled={loading} onClick={() => navigate(`/product/${editingId}`)}>
-                Cancel
-              </button>
+              <div className="publish-actions-left">
+                <button className="btn btn-danger" type="button" disabled={loading || deleteBusy} onClick={() => setDeleteOpen(true)}>
+                  <FiTrash2 />
+                  Delete listing
+                </button>
+                <button className="btn btn-secondary" type="button" disabled={loading || deleteBusy} onClick={() => navigate(`/product/${editingId}`)}>
+                  Cancel
+                </button>
+              </div>
             ) : step > 1 ? (
               <button className="btn btn-secondary" type="button" onClick={() => { setStep(step - 1); setGeneralError('') }}>
                 <FiArrowLeft />Back
@@ -984,6 +1028,21 @@ export default function NewProduct() {
           </div>
         </section>
       </main>
+
+      {deleteOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manage-delete-listing-title" onClick={() => { if (!deleteBusy) setDeleteOpen(false) }}>
+          <div className="panel panel-pad modal-card" onClick={event => event.stopPropagation()}>
+            <h2 id="manage-delete-listing-title" className="section-title" style={{ fontSize: '1.2rem' }}>Delete listing?</h2>
+            <p className="section-subtitle">“{form.title || 'This listing'}” will be permanently deleted. This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" type="button" disabled={deleteBusy} onClick={() => setDeleteOpen(false)}>Cancel</button>
+              <button className="btn btn-danger" type="button" disabled={deleteBusy} onClick={handleDeleteListing}>
+                {deleteBusy ? 'Deleting...' : 'Delete listing'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

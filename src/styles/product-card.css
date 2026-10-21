@@ -56,7 +56,7 @@
   color: var(--ink);
   background: #f1ede5;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
@@ -172,7 +172,7 @@
   margin: 0;
   color: var(--blue);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -180,7 +180,7 @@
 .product-price {
   margin: 0;
   font-size: 1.02rem;
-  font-weight: 950;
+  font-weight: 800;
   letter-spacing: -0.015em;
   overflow-wrap: anywhere;
 }

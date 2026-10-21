@@ -28,7 +28,7 @@
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(rgba(7, 22, 20, 0.26), rgba(7, 22, 20, 0.42)),
-    url('../assets/new-zealand-sea.webp.jpg') center / cover no-repeat;
+    url('../assets/nz-coastal-hills-background.jpg') center / cover no-repeat;
 }
 
 .login-photo-shell .auth-card {
@@ -57,8 +57,20 @@
   margin-bottom: 22px;
 }
 
+.login-heading .brand {
+  max-width: 100%;
+}
+
+.login-heading .brand img {
+  width: clamp(200px, 60vw, 240px);
+  height: auto;
+  max-width: 100%;
+}
+
 .login-heading .section-title {
   margin-top: 14px;
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .login-heading .section-subtitle {
@@ -124,7 +136,7 @@
   border-radius: 14px;
   color: var(--ink);
   background: white;
-  font-weight: 850;
+  font-weight: 700;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -147,7 +159,7 @@
   margin: 0 0 18px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .auth-divider::before,
@@ -171,7 +183,7 @@
 .field-group label {
   color: var(--ink);
   font-size: 0.88rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .field {
@@ -259,7 +271,7 @@ textarea.field {
 .empty-state h2 {
   margin: 8px 0;
   font-size: 1.45rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .empty-state p,
@@ -295,31 +307,30 @@ textarea.field {
 .brand-loader-full {
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--surface-soft);
+  background: var(--bg);
 }
 
 .brand-loader-mark,
-.brand-loader-mark svg {
+.brand-loader-moon {
   width: 64px;
   height: 64px;
 }
 
-.brand-loader-arrows {
-  transform-origin: 24px 24px;
-  animation: swapy-arrows-spin 1.15s cubic-bezier(.55,.08,.45,.92) infinite;
+.brand-loader-moon {
+  display: block;
+  transform-origin: center;
+  animation: moonwalk-moon-spin 1.2s cubic-bezier(.55,.08,.45,.92) infinite;
 }
 
-.brand-loader strong {
-  font-size: 1.55rem;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-@keyframes swapy-arrows-spin {
+@keyframes moonwalk-moon-spin {
   to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-loader-arrows { animation: swapy-arrows-pulse 1.4s ease-in-out infinite alternate; }
-  @keyframes swapy-arrows-pulse { to { opacity: 0.55; } }
+  .brand-loader-moon { animation: none; }
+}
+.publish-actions-left {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }

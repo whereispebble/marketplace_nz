@@ -45,7 +45,7 @@
   background: #f0a500;
   color: #1b1400;
   font-size: 0.68rem;
-  font-weight: 950;
+  font-weight: 800;
   letter-spacing: 0.06em;
 }
 
@@ -72,7 +72,7 @@
   color: white;
   background: var(--ink);
   font: inherit;
-  font-weight: 850;
+  font-weight: 700;
   cursor: pointer;
 }
 

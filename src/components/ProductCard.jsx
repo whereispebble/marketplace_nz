@@ -187,7 +187,7 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
       <Link to={preview ? '#' : `/product/${product.id}`} onClick={event => { if (preview) event.preventDefault() }} tabIndex={preview ? -1 : undefined} className="product-link">
         <div className="product-image">
           <img
-            src={product.image || 'https://placehold.co/640x480/f1ede5/171717?text=Swapy'}
+            src={product.image || 'https://placehold.co/640x480/f1ede5/171717?text=Moonwalk'}
             alt={product.title}
           />
         </div>

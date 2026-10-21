@@ -44,14 +44,24 @@
   justify-self: start;
   min-width: 0;
   text-decoration: none;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .brand img {
   width: auto;
-  height: 26px;
-  max-width: 130px;
+  height: 28px;
+  max-width: 174px;
   object-fit: contain;
+}
+
+.topbar .brand img {
+  height: 24px;
+  max-width: 148px;
+}
+
+.brand picture {
+  display: block;
+  line-height: 0;
 }
 
 
@@ -158,5 +168,5 @@
 
 .nav-link.is-active {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }

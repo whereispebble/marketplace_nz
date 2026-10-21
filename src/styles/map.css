@@ -91,7 +91,7 @@
   background: var(--accent);
   box-shadow: 0 12px 24px rgba(10, 143, 93, 0.28);
   font-size: 0.78rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .leaflet-popup-content {
@@ -106,7 +106,7 @@
 
 .leaflet-popup-content a {
   color: var(--accent-dark);
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .map-popup-image {
@@ -127,7 +127,7 @@
 .map-popup-price {
   margin: 4px 0 0 !important;
   color: var(--ink) !important;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .map-popup-meta {

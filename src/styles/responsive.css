@@ -10,8 +10,13 @@
   }
 
   .brand img {
-    height: 30px;
-    max-width: 124px;
+    height: 28px;
+    max-width: 154px;
+  }
+
+  .topbar .brand img {
+    height: 22px;
+    max-width: 134px;
   }
 
   .icon-btn,
@@ -51,6 +56,31 @@
   .publish-preview-layout {
     grid-template-columns: 1fr;
     height: auto;
+  }
+
+  /* En movil: fotos, precio, descripcion y detalles del vehiculo. */
+  .detail-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-main,
+  .detail-sidebar {
+    display: contents;
+  }
+
+  .detail-media { order: 1; }
+  .detail-price-card { order: 2; }
+  .detail-description { order: 3; }
+  .detail-vehicle-details { order: 4; }
+
+  .detail-sidebar > :not(.detail-price-card) {
+    order: 5;
+  }
+
+  .detail-description,
+  .detail-vehicle-details {
+    margin-top: 0 !important;
   }
 
   .products-grid {
@@ -178,14 +208,14 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
-  .brand img {
-    width: 30px;
-    height: 30px;
-    max-width: 30px;
+  .topbar .brand img {
+    width: 26px;
+    height: 26px;
+    max-width: 26px;
     padding: 0;
     border-radius: 12px;
     background: transparent;
-    object-fit: cover;
+    object-fit: contain;
     object-position: left center;
   }
 
@@ -260,8 +290,11 @@
     --hero-reveal: calc(var(--hero-chrome) + var(--hero-card-image) + var(--hero-card-body) + var(--hero-reveal-extra));
     min-height: clamp(240px, calc(100vh - var(--hero-reveal)), 560px);
     min-height: clamp(240px, calc(100dvh - var(--hero-reveal)), 560px);
-    background-position: center center;
-    background-attachment: fixed;
+    background-position: center calc(100% + var(--hero-scroll-y, 0px));
+    /* Amplia la zona inferior; 57vw mantiene cubierta la anchura de la foto
+       2048x1166 incluso en moviles apaisados. */
+    background-size: auto max(calc(140% + 16px), calc(57vw + 16px));
+    background-attachment: scroll;
   }
 
 
@@ -407,7 +440,7 @@
     color: var(--ink);
     background: white;
     font-size: 0.82rem;
-    font-weight: 850;
+    font-weight: 700;
   }
 
   .results-sort-caret {
@@ -418,7 +451,7 @@
   .results-sort-label {
     color: var(--ink);
     font-size: 0.82rem;
-    font-weight: 850;
+    font-weight: 700;
   }
 
   .results-sort-value {
@@ -460,6 +493,22 @@
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-grid.seller-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .seller-stats .stat-box {
+    min-width: 0;
+    padding: 10px 4px;
+    border-radius: 12px;
+  }
+
+  .seller-stats .stat-box strong,
+  .seller-stats .stat-box span {
+    overflow-wrap: anywhere;
   }
 
   .filter-grid,
@@ -581,10 +630,10 @@
     height: 34px;
   }
 
-  .brand img {
-    width: 30px;
-    height: 30px;
-    max-width: 30px;
+  .topbar .brand img {
+    width: 26px;
+    height: 26px;
+    max-width: 26px;
   }
 
   .nav-actions .nav-icon,
@@ -600,10 +649,10 @@
     padding: 0 8px;
   }
 
-  .brand img {
-    width: 30px;
-    height: 30px;
-    max-width: 30px;
+  .topbar .brand img {
+    width: 26px;
+    height: 26px;
+    max-width: 26px;
   }
 
   .nav-actions {
