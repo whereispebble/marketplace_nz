@@ -23,14 +23,14 @@ const LAST_UPDATED = '29 July 2026'
 const PRIVACY = {
   slug: 'privacy',
   title: 'Privacy Policy',
-  intro: `This policy explains how ${LEGAL_ENTITY.company} ("Swapy", "we", "us") collects, uses, stores and discloses personal information. We are an agency under the Privacy Act 2020 and we handle personal information in line with the 13 information privacy principles (IPPs), including IPP3A, which took effect on 1 May 2026 and covers information we collect about you from a source other than you.`,
+  intro: `This policy explains how ${LEGAL_ENTITY.company} ("Moonwalk", "we", "us") collects, uses, stores and discloses personal information. We are an agency under the Privacy Act 2020 and we handle personal information in line with the 13 information privacy principles (IPPs), including IPP3A, which took effect on 1 May 2026 and covers information we collect about you from a source other than you.`,
   sections: [
     {
       heading: '1. What we collect',
       body: [
         'Account information: your name, email address, password (stored as a hash, never in plain text), and any phone number, location or profile details you choose to add.',
         'Listing information: everything you publish about a vehicle, including photos, price, odometer reading, WOF status, self-contained certification and the city you select for the map.',
-        'Messages and offers: the content of conversations and offers you exchange with other users through Swapy.',
+        'Messages and offers: the content of conversations and offers you exchange with other users through Moonwalk.',
         'Saved searches and favourites: the filters you save and the vehicles you save, so we can show them back to you.',
         'Technical information: IP address, browser type, device type, pages viewed and approximate location derived from your IP address. This is collected automatically when you use the site.',
       ],
@@ -55,13 +55,13 @@ const PRIVACY = {
     {
       heading: '4. Public information',
       body: [
-        'Anything you publish in a listing or on your public profile is visible to anyone who visits Swapy, including search engines. Do not put your home address, identity documents, bank details or anything else you would not want to be public in a listing, a photo or a message.',
+        'Anything you publish in a listing or on your public profile is visible to anyone who visits Moonwalk, including search engines. Do not put your home address, identity documents, bank details or anything else you would not want to be public in a listing, a photo or a message.',
       ],
     },
     {
       heading: '5. How we store and protect it (IPP5)',
       body: [
-        'Your data is held in our database provider (Supabase) with access controls, and traffic between your browser and Swapy is encrypted in transit.',
+        'Your data is held in our database provider (Supabase) with access controls, and traffic between your browser and Moonwalk is encrypted in transit.',
         'Only people who need access to run the service can see personal information.',
         'No system is completely secure. If we suffer a privacy breach that has caused, or is likely to cause, serious harm, we will notify the Office of the Privacy Commissioner and the people affected as soon as practicable, as required by the Privacy Act 2020.',
       ],
@@ -70,7 +70,7 @@ const PRIVACY = {
       heading: '6. Who we share it with (IPP11)',
       body: [
         'Other users, but only the information you choose to publish or send them.',
-        'Service providers who help us run Swapy: hosting, database, email delivery, error monitoring and, where applicable, payment processing. They may only use the information to provide their service to us.',
+        'Service providers who help us run Moonwalk: hosting, database, email delivery, error monitoring and, where applicable, payment processing. They may only use the information to provide their service to us.',
         'Law enforcement or regulators, where we are required or permitted by law to disclose it.',
         'We do not sell your personal information, and we do not share it with advertisers for their own marketing.',
       ],
@@ -99,7 +99,7 @@ const PRIVACY = {
     {
       heading: '10. Cookies and analytics',
       body: [
-        'Swapy uses browser storage to keep you signed in and to remember your saved searches, favourites and filter preferences. These are necessary for the site to work.',
+        'Moonwalk uses browser storage to keep you signed in and to remember your saved searches, favourites and filter preferences. These are necessary for the site to work.',
         'If we add analytics or marketing cookies, we will update this policy and ask for your consent before setting them.',
       ],
     },
@@ -119,7 +119,7 @@ const PRIVACY = {
     {
       heading: '13. Changes to this policy',
       body: [
-        'We may update this policy as Swapy changes. The date at the top shows when it was last updated. If a change materially affects how we use your personal information, we will tell you before it takes effect.',
+        'We may update this policy as Moonwalk changes. The date at the top shows when it was last updated. If a change materially affects how we use your personal information, we will tell you before it takes effect.',
       ],
     },
   ],
@@ -128,13 +128,13 @@ const PRIVACY = {
 const TERMS = {
   slug: 'terms',
   title: 'Terms of Use',
-  intro: `These terms are a contract between you and ${LEGAL_ENTITY.company} ("Swapy"). By using Swapy you accept them. If you do not accept them, do not use the site.`,
+  intro: `These terms are a contract between you and ${LEGAL_ENTITY.company} ("Moonwalk"). By using Moonwalk you accept them. If you do not accept them, do not use the site.`,
   sections: [
     {
-      heading: '1. What Swapy is, and what it is not',
+      heading: '1. What Moonwalk is, and what it is not',
       body: [
-        'Swapy is an online marketplace that lets people advertise campervans, motorhomes, van conversions and other vehicles in New Zealand, and lets buyers contact sellers.',
-        'Swapy is not a party to any sale. We do not own, inspect, verify, store, deliver or guarantee any vehicle, we do not hold funds, and we are not an agent for either the buyer or the seller. The contract of sale is between the buyer and the seller.',
+        'Moonwalk is an online marketplace that lets people advertise cars, campervans, motorhomes, van conversions and other vehicles in New Zealand, and lets buyers contact sellers.',
+        'Moonwalk is not a party to any sale. We do not own, inspect, verify, store, deliver or guarantee any vehicle, we do not hold funds, and we are not an agent for either the buyer or the seller. The contract of sale is between the buyer and the seller.',
       ],
     },
     {
@@ -159,7 +159,7 @@ const TERMS = {
     {
       heading: '4. Private sellers and motor vehicle traders',
       body: [
-        'If you are in the business of selling motor vehicles, you have extra obligations and you must comply with them yourself. Swapy does not do it for you.',
+        'If you are in the business of selling motor vehicles, you have extra obligations and you must comply with them yourself. Moonwalk does not do it for you.',
         'Under the Motor Vehicle Sales Act 2003 you generally must be a registered motor vehicle trader if you sell more than six vehicles, or import more than three vehicles, in any 12-month period, or if you are otherwise in the business of motor vehicle trading.',
         'Registered traders advertising a used vehicle online must display a Consumer Information Notice (CIN) with the advertisement, under the Consumer Information Standards (Used Motor Vehicles) Regulations 2008. Failing to do so is an infringement offence under the Fair Trading Act 1986.',
         'Traders also owe buyers the guarantees in the Consumer Guarantees Act 1993. Those guarantees generally do not apply to a genuine private sale between individuals.',
@@ -171,7 +171,7 @@ const TERMS = {
       body: [
         'Do your own checks before you pay. View the vehicle in person, confirm the seller is who they say they are, check the WOF, the odometer, the registration and the PPSR, and consider a pre-purchase inspection.',
         'Never pay a deposit for a vehicle you have not seen, and be cautious with anyone who refuses to meet in person or pushes you to pay quickly.',
-        'An offer made through Swapy is an indication of interest between you and the seller. Swapy is not a party to it and does not enforce it.',
+        'An offer made through Moonwalk is an indication of interest between you and the seller. Moonwalk is not a party to it and does not enforce it.',
       ],
     },
     {
@@ -179,14 +179,14 @@ const TERMS = {
       body: [
         'Do not post content that is unlawful, misleading, abusive, harassing, discriminatory or that breaches the Harmful Digital Communications Act 2015.',
         'Do not infringe anyone’s intellectual property, including by using photos or text that are not yours.',
-        'Do not scrape, copy or harvest listings or user data, and do not use Swapy to send spam.',
+        'Do not scrape, copy or harvest listings or user data, and do not use Moonwalk to send spam.',
         'Do not attempt to interfere with the security or operation of the site.',
       ],
     },
     {
       heading: '7. Content you post',
       body: [
-        'You keep ownership of the content you post. You give Swapy a non-exclusive, royalty-free licence to host, display and reproduce it for the purpose of operating and promoting the marketplace.',
+        'You keep ownership of the content you post. You give Moonwalk a non-exclusive, royalty-free licence to host, display and reproduce it for the purpose of operating and promoting the marketplace.',
         'You are responsible for your content and confirm you have the right to post it.',
       ],
     },
@@ -200,15 +200,15 @@ const TERMS = {
     {
       heading: '9. Fees',
       body: [
-        'Listing on Swapy is free while the platform is in its early stage. If we introduce fees we will publish them and give notice before they take effect. Any price we display to consumers will include GST where GST applies.',
+        'Listing on Moonwalk is free while the platform is in its early stage. If we introduce fees we will publish them and give notice before they take effect. Any price we display to consumers will include GST where GST applies.',
       ],
     },
     {
       heading: '10. Liability',
       body: [
         'Nothing in these terms limits your rights under the Consumer Guarantees Act 1993 or the Fair Trading Act 1986 where those rights cannot lawfully be excluded.',
-        'Where the law allows us to limit liability, Swapy is not liable for the acts or omissions of other users, for the condition, legality or description of any vehicle, or for any indirect or consequential loss.',
-        'If you use Swapy for the purposes of a business, you agree that the Consumer Guarantees Act 1993 does not apply, to the extent permitted by section 43 of the Consumer Guarantees Act.',
+        'Where the law allows us to limit liability, Moonwalk is not liable for the acts or omissions of other users, for the condition, legality or description of any vehicle, or for any indirect or consequential loss.',
+        'If you use Moonwalk for the purposes of a business, you agree that the Consumer Guarantees Act 1993 does not apply, to the extent permitted by section 43 of the Consumer Guarantees Act.',
       ],
     },
     {
@@ -221,7 +221,7 @@ const TERMS = {
     {
       heading: '12. Changes and termination',
       body: [
-        'We may change these terms. If a change is material we will give notice before it takes effect, and continuing to use Swapy after that means you accept the change.',
+        'We may change these terms. If a change is material we will give notice before it takes effect, and continuing to use Moonwalk after that means you accept the change.',
         'You can close your account at any time. We may close or suspend an account under clause 8.',
       ],
     },

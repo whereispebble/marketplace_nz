@@ -20,7 +20,7 @@
 
 .stat-box strong {
   display: block;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .stat-box span {
@@ -47,7 +47,7 @@
   gap: 6px;
   color: var(--muted);
   font-size: 0.76rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .vehicle-spec strong {
@@ -85,7 +85,7 @@
 .spec-sheet-group h3 {
   margin: 0 0 8px;
   font-size: 0.78rem;
-  font-weight: 850;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
@@ -124,7 +124,7 @@
 .spec-flag {
   font-style: normal;
   font-size: 0.7rem;
-  font-weight: 850;
+  font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   padding: 3px 8px;

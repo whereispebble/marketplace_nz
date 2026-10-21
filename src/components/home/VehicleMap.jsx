@@ -134,7 +134,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
         }),
       }).addTo(layer)
 
-      const image = vehicle.image || 'https://placehold.co/640x480/f1ede5/171717?text=Swapy'
+      const image = vehicle.image || 'https://placehold.co/640x480/f1ede5/171717?text=Moonwalk'
       const price = Number(vehicle.price || 0).toLocaleString('en-NZ')
       const meta = [vehicle.location || 'New Zealand', vehicle.model].filter(Boolean).join(' · ')
 

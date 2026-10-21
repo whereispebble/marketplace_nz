@@ -14,10 +14,13 @@
   overflow: hidden;
   min-height: clamp(30px, 40px, 640px);
   color: white;
-  background-position: center 50%;
-  background-size: cover;
+  /* Compensar el scroll fija visualmente la foto sin cambiar su encuadre al
+     viewport, como haria background-attachment: fixed. Se sube solo 8px. */
+  background-position: center calc(80% + var(--hero-scroll-y, 0px) - 8px);
+  /* El margen extra evita huecos al subir ligeramente la foto. */
+  background-size: auto max(calc(100% + 40px), 57vw);
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 
@@ -46,7 +49,7 @@
 .hero h1,
 .page-title {
   margin: 0;
-  font-weight: 950;
+  font-weight: 800;
   line-height: 0.98;
   letter-spacing: 0;
 }
@@ -359,7 +362,7 @@
   color: white;
   background: var(--ink);
   font-size: 0.72rem;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
 }
@@ -425,7 +428,7 @@
 .section-title {
   margin: 0;
   font-size: clamp(1.35rem, 3vw, 2.1rem);
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .section-subtitle {
@@ -504,7 +507,7 @@
   display: block;
   color: var(--muted);
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .pagination-nav {

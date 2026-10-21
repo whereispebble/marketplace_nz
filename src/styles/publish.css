@@ -42,7 +42,7 @@
 
 .stepper-compact-text strong {
   font-size: 0.95rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .stepper-progress {
@@ -123,12 +123,12 @@
   margin: 0 0 3px;
   color: var(--accent-dark);
   font-size: 0.72rem;
-  font-weight: 950;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.edit-listing-summary strong { font-weight: 950; }
+.edit-listing-summary strong { font-weight: 800; }
 .edit-listing-summary span { margin-top: 3px; color: var(--muted); font-size: 0.85rem; font-weight: 750; }
 
 .edit-form-section {
@@ -158,7 +158,7 @@
   display: block;
 }
 
-.edit-form-section-head strong { font-size: 1rem; font-weight: 950; }
+.edit-form-section-head strong { font-size: 1rem; font-weight: 800; }
 .edit-form-section-head small { margin-top: 4px; color: var(--muted); font-size: 0.82rem; font-weight: 650; }
 .edit-form-section-head svg { flex: 0 0 auto; transition: transform 0.2s ease; }
 .edit-form-section.is-open .edit-form-section-head svg { transform: rotate(180deg); }
@@ -186,7 +186,7 @@
 .field-group > span {
   color: var(--ink);
   font-size: clamp(0.79rem, 1.9vh, 0.88rem);
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1.3;
 }
 
@@ -234,7 +234,7 @@
 .publish-section-head h3 {
   margin: 0;
   font-size: 0.98rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .publish-section-note {
@@ -249,7 +249,7 @@
   margin-left: 3px;
   color: var(--rose);
   font-style: normal;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .publish-toggle {
@@ -296,7 +296,7 @@
 
 .geo-card strong {
   font-size: 0.92rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .geo-card span {
@@ -326,7 +326,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface-soft);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .toggle-row input {
@@ -406,7 +406,7 @@
   color: white;
   background: rgba(23, 23, 23, 0.78);
   font-size: 0.7rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .drag-handle {
@@ -471,12 +471,12 @@
 
 .preview-summary-row span {
   color: var(--muted);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .preview-summary-row strong {
   min-width: 0;
-  font-weight: 950;
+  font-weight: 800;
   overflow-wrap: anywhere;
 }
 

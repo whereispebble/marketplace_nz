@@ -258,7 +258,7 @@
 
 .advanced-filter-group > strong {
   font-size: 0.94rem;
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .location-autocomplete {
@@ -367,7 +367,7 @@
   border-radius: 12px;
   background: var(--surface-soft);
   font-size: 0.84rem;
-  font-weight: 850;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -491,7 +491,7 @@
   border-radius: 999px;
   color: var(--ink);
   background: white;
-  font-weight: 850;
+  font-weight: 700;
   cursor: pointer;
 }
 

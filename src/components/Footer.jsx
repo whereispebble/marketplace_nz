@@ -5,7 +5,8 @@
 
 import { Link } from 'react-router-dom'
 import { FiHeart, FiMail, FiMessageCircle } from 'react-icons/fi'
-import logo from '../assets/swapy-logo.svg'
+
+const logo = '/branding/moonwalk-logo.svg'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -14,9 +15,9 @@ export default function Footer() {
     <footer className="site-footer">
       <div className="container site-footer-inner">
         <div className="site-footer-brand">
-          <img src={logo} alt="Swapy" />
+          <img src={logo} alt="Moonwalk" />
           <p>
-            The New Zealand marketplace for campervans, motorhomes and van conversions. Every listing shows the
+            Cars &amp; campers. The New Zealand marketplace for cars, campervans, motorhomes and van conversions. Every listing shows the
             details that actually decide a purchase: WOF, self-contained certification, odometer and location.
           </p>
         </div>
@@ -53,9 +54,9 @@ export default function Footer() {
       </div>
 
       <div className="container site-footer-bottom">
-        <span>© {year} Swapy. Built in Aotearoa New Zealand.</span>
+        <span>© {year} Moonwalk. Built in Aotearoa New Zealand.</span>
         <span>
-          Swapy is a marketplace. Sellers are responsible for their own listings, so always view a vehicle
+          Moonwalk is a marketplace. Sellers are responsible for their own listings, so always view a vehicle
           in person before paying.
         </span>
       </div>

@@ -9,8 +9,9 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { FiFileText, FiHeart, FiHome, FiMail, FiMenu, FiPlus, FiShield, FiUser, FiX } from 'react-icons/fi'
-import logo from '../assets/swapy-logo.svg'
 import { useSession } from '../services/session'
+
+const logo = '/branding/moonwalk-logo.svg'
 
 // mobileHidden: en movil solo se dejan Buy y Sell en la cabecera; el resto
 // sigue estando en el panel lateral.
@@ -106,8 +107,11 @@ export default function Navbar({ compact = false, title }) {
   return (
     <>
       <nav className={`topbar ${compact && !title ? 'topbar-compact' : ''} ${hidden && !menuOpen ? 'topbar-hidden' : ''}`}>
-        <Link to="/" state={{ resetHome: true }} onClick={resetHome} className="brand" aria-label="Swapy home">
-          <img src={logo} alt="Swapy" />
+        <Link to="/" state={{ resetHome: true }} onClick={resetHome} className="brand" aria-label="Moonwalk home">
+          <picture>
+            <source media="(max-width: 640px)" srcSet="/branding/moonwalk-moon.svg" />
+            <img src={logo} alt="Moonwalk" />
+          </picture>
         </Link>
 
         {title ? (
@@ -157,7 +161,7 @@ export default function Navbar({ compact = false, title }) {
             onClick={event => event.stopPropagation()}
           >
             <header className="mobile-menu-head">
-              <img src={logo} alt="Swapy" />
+              <img src={logo} alt="Moonwalk" />
               <button className="icon-btn" type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
                 <FiX />
               </button>

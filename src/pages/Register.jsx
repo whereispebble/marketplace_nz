@@ -15,7 +15,8 @@ import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
-import logo from '../assets/swapy-logo.svg'
+
+const logo = '/branding/moonwalk-logo.svg'
 
 /**
  * Comprueba los campos del formulario antes de mandarlos.
@@ -150,10 +151,10 @@ export default function Register() {
       <section className="panel panel-pad auth-card">
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
-            <img src={logo} alt="Swapy" />
+            <img src={logo} alt="Moonwalk" />
           </Link>
           <h1 className="section-title" style={{ marginTop: 18 }}>Create account</h1>
-          <p className="section-subtitle">Save campervans, message sellers and list your NZ vehicle.</p>
+          <p className="section-subtitle">Save cars &amp; campers, message sellers and list your NZ vehicle.</p>
         </div>
 
         {error && <div className="alert">{error}</div>}
@@ -219,7 +220,7 @@ export default function Register() {
         </div>
 
         <p className="section-subtitle" style={{ textAlign: 'center' }}>
-          Already registered? <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Sign in</Link>
+          Already registered? <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
         </p>
       </section>
     </main>

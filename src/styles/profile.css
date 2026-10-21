@@ -40,7 +40,7 @@
   border-radius: 18px;
   color: white;
   background: linear-gradient(135deg, var(--ink), var(--accent));
-  font-weight: 950;
+  font-weight: 800;
 }
 
 .avatar img {

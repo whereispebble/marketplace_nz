@@ -6,6 +6,7 @@
  * tarjetas, asi que conviene no anadir elementos aqui sin revisar home.css.
  */
 
+import { useEffect, useRef } from 'react'
 import { FiBookmark, FiSettings } from 'react-icons/fi'
 import { QUICK_SEARCHES } from '../../constants/filters'
 
@@ -30,8 +31,35 @@ export default function HeroSearch({
   onToggleSaveSearch,
   onOpenFilters,
 }) {
+  const heroRef = useRef(null)
+
+  useEffect(() => {
+    const hero = heroRef.current
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let frame = null
+
+    const updateBackground = () => {
+      frame = null
+      const offset = reducedMotion.matches ? 0 : window.scrollY
+      hero.style.setProperty('--hero-scroll-y', `${offset}px`)
+    }
+    const queueUpdate = () => {
+      if (frame === null) frame = window.requestAnimationFrame(updateBackground)
+    }
+
+    updateBackground()
+    window.addEventListener('scroll', queueUpdate, { passive: true })
+    reducedMotion.addEventListener('change', queueUpdate)
+
+    return () => {
+      window.removeEventListener('scroll', queueUpdate)
+      reducedMotion.removeEventListener('change', queueUpdate)
+      if (frame !== null) window.cancelAnimationFrame(frame)
+    }
+  }, [])
+
   return (
-    <header className="hero" style={{ backgroundImage: `url(${backgroundImage})` }}>
+    <header ref={heroRef} className="hero" style={{ backgroundImage: `url(${backgroundImage})` }}>
       <div className="hero-inner">
         <h1>What are you looking for?</h1>
 

@@ -12,8 +12,9 @@ import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
-import logo from '../assets/swapy-logo.svg'
 import Footer from '../components/Footer'
+
+const logo = '/branding/moonwalk-logo.svg'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -87,10 +88,10 @@ export default function Login() {
       <section className="panel panel-pad auth-card">
         <div className="login-heading">
           <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
-            <img src={logo} alt="Swapy" />
+            <img src={logo} alt="Moonwalk" />
           </Link>
           <h1 className="section-title">Welcome back</h1>
-          <p className="section-subtitle">Buy and sell campervans in New Zealand.</p>
+          <p className="section-subtitle">Buy and sell cars &amp; campers in New Zealand.</p>
         </div>
 
         {error && <div className="alert">{error}</div>}
@@ -143,7 +144,7 @@ export default function Login() {
         <div className="stats-grid login-trust">
           <div className="stat-box"><FiMail /><span>Email access</span></div>
           <div className="stat-box"><FiLock /><span>Secure login</span></div>
-          <div className="stat-box"><strong>NZ</strong><span>Camper market</span></div>
+          <div className="stat-box"><strong>NZ</strong><span>Cars &amp; campers</span></div>
         </div>
 
         <div className="login-account-links">

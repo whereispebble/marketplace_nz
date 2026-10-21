@@ -215,7 +215,7 @@ export default function ProductDetail() {
   const images = useMemo(() => {
     if (product?.images?.length) return product.images
     if (product?.image) return [product.image]
-    return ['https://placehold.co/640x480/f1ede5/171717?text=Swapy']
+    return ['https://placehold.co/640x480/f1ede5/171717?text=Moonwalk']
   }, [product])
 
   // Las flechas dan la vuelta al llegar al final para que no haya callejon sin
@@ -253,7 +253,7 @@ export default function ProductDetail() {
 
       <main className="container page-section">
         <div className="muted-row" style={{ marginBottom: 18 }}>
-          <Link to="/" style={{ color: 'var(--accent)', fontWeight: 900, textDecoration: 'none' }}>Home</Link>
+          <Link to="/" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Home</Link>
           <span>/</span>
           <span>{product.vehicleType || 'Vehicle'}</span>
         </div>
@@ -413,7 +413,7 @@ export default function ProductDetail() {
                 <div className="related-listings-list">
                   {relatedProducts.map(item => (
                     <Link className="related-listing" to={`/product/${item.id}`} key={item.id}>
-                      <img src={item.image || item.images?.[0] || 'https://placehold.co/240x180/f1ede5/171717?text=Swapy'} alt="" />
+                      <img src={item.image || item.images?.[0] || 'https://placehold.co/240x180/f1ede5/171717?text=Moonwalk'} alt="" />
                       <span className="related-listing-copy">
                         <strong>{item.title}</strong>
                         <span>{vehicleTypeName(item.vehicleType)}{item.model ? ` · ${item.model}` : ''}</span>

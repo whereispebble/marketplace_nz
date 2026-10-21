@@ -117,7 +117,7 @@
 
 .chat-profile-link {
   color: var(--ink);
-  font-weight: 850;
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -283,7 +283,7 @@
 
 .message-receipt {
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: -3px;
   padding-right: 3px;
 }
@@ -399,7 +399,7 @@
   gap: 6px;
   color: var(--accent-dark);
   font-size: 0.8rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .sale-review-card {

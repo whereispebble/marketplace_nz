@@ -811,7 +811,7 @@ export default function Profile() {
                       {review.reviewer?.avatar_url ? <img src={review.reviewer.avatar_url} alt="" /> : review.reviewer?.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div>
-                      <strong>{review.reviewer?.username || 'Swapy user'}</strong>
+                      <strong>{review.reviewer?.username || 'Moonwalk user'}</strong>
                       <span className="profile-review-stars" aria-label={`${review.rating} out of 5 stars`}>{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</span>
                     </div>
                     <time dateTime={review.created_at}>{new Date(review.created_at).toLocaleDateString('en-NZ')}</time>
