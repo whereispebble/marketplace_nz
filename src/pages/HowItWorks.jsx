@@ -143,7 +143,7 @@ export default function HowItWorks() {
               </article>
             ))}
           </div>
-          <Link className="btn btn-primary" to="/">
+          <Link className="btn how-action" to="/">
             Browse vehicles
             <FiArrowRight />
           </Link>
@@ -160,7 +160,7 @@ export default function HowItWorks() {
               </article>
             ))}
           </div>
-          <Link className="btn btn-primary" to="/new-product">
+          <Link className="btn how-action" to="/new-product">
             List a vehicle
             <FiArrowRight />
           </Link>
@@ -199,7 +199,7 @@ export default function HowItWorks() {
                 <strong>Request received</strong>
                 <p>Thanks for writing. We will reply to the email address you gave us.</p>
               </div>
-              <button className="btn btn-secondary" type="button" onClick={() => setSent(false)}>
+              <button className="btn how-action" type="button" onClick={() => setSent(false)}>
                 Send another
               </button>
             </div>
@@ -234,7 +234,7 @@ export default function HowItWorks() {
 
               {error && <p className="request-error">{error}</p>}
 
-              <button className="btn btn-primary" type="submit">
+              <button className="btn how-action" type="submit">
                 Send request
                 <FiArrowRight />
               </button>

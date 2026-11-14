@@ -8,5 +8,11 @@ import { mapStyleUrl } from './mapConfig'
 setWorkerUrl(workerUrl)
 
 export function addBasemap(map) {
-  return maplibreGL({ style: mapStyleUrl }).addTo(map).getMaplibreMap()
+  const basemap = maplibreGL({ style: mapStyleUrl }).addTo(map).getMaplibreMap()
+  // A provider style may contain its own camera. Leaflet owns the viewport.
+  basemap.on('style.load', () => {
+    const center = map.getCenter()
+    basemap.jumpTo({ center: [center.lng, center.lat], zoom: map.getZoom() - 1 })
+  })
+  return basemap
 }

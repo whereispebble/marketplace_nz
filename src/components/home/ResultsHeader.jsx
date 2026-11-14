@@ -8,6 +8,7 @@
 import { FiGrid, FiMap, FiSettings } from 'react-icons/fi'
 import SortMenu from './SortMenu'
 import { SORT_OPTIONS } from '../../constants/filters'
+import { preloadMap } from '../../services/mapLoader'
 
 /**
  * @param {object} props
@@ -51,6 +52,9 @@ export default function ResultsHeader({
             className={viewMode === 'map' ? 'is-active' : ''}
             type="button"
             aria-pressed={viewMode === 'map'}
+            onPointerEnter={preloadMap}
+            onFocus={preloadMap}
+            onTouchStart={preloadMap}
             onClick={() => onViewModeChange('map')}
           >
             <FiMap />

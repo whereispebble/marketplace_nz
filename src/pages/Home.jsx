@@ -44,8 +44,9 @@ import { NZ_VEHICLE_CATALOG } from '../data/nzVehicleCatalog'
 import { useSession } from '../services/session'
 import { supabase } from '../services/supabase'
 import { getSavedSearchesError, SAVED_SEARCHES_UNAVAILABLE } from '../services/savedSearches'
-import heroBrandImage from '../assets/nz-coastal-hills-background.jpg'
 import LoadingScreen from '../components/LoadingScreen'
+
+const heroBrandImage = '/branding/moonwalk-hero-calm-sea-v4.webp'
 
 /** Clave del navegador donde se guardan las busquedas que el usuario archiva. */
 const SAVED_SEARCHES_KEY = 'swapy:saved-searches'

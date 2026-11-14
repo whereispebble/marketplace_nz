@@ -8,20 +8,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { distanceKm } from '../../services/vehicleFilters'
-import { hasCoordinates } from '../../services/validation'
+import { hasNzCoordinates, NZ_BOUNDS, NZ_CENTER } from '../../services/mapViewport'
+import { loadMapModules } from '../../services/mapLoader'
 
 import 'leaflet/dist/leaflet.css'
-let leafletPromise
 let leaflet
-function loadLeaflet() {
-  if (!leafletPromise) {
-    leafletPromise = import('leaflet').then(module => {
-      leaflet = module.default
-      return leaflet
-    }).catch(error => { leafletPromise = null; throw error })
-  }
-  return leafletPromise
-}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -48,23 +39,25 @@ export default function VehicleMap({ vehicles, focusPoint }) {
 
     async function setupMap() {
       try {
-        const [L, { addBasemap }] = await Promise.all([
-          loadLeaflet(), import('../../services/mapBasemap'),
-        ])
+        const [leafletModule, { addBasemap }] = await loadMapModules()
+        const L = leafletModule.default
+        leaflet = L
         if (ignore || !mapRef.current || leafletMapRef.current) return
 
         const map = L.map(mapRef.current, {
-          center: [-41.2, 172.8],
+          center: NZ_CENTER,
           zoom: 5,
           minZoom: 5,
           maxZoom: 19,
-          maxBounds: [[-85, -Infinity], [85, Infinity]],
+          maxBounds: NZ_BOUNDS,
           maxBoundsViscosity: 1,
           // La rueda hace scroll de la pagina, no zoom del mapa: encadenaba
           // cargas de tiles hasta bloquear el render. Se usan los botones +/-,
           // el pinch en movil o ctrl + rueda.
           scrollWheelZoom: false,
           zoomControl: true,
+          zoomAnimation: false,
+          fadeAnimation: false,
         })
         leafletMapRef.current = map
 
@@ -112,7 +105,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
 
   const focusLat = Number(focusPoint?.lat)
   const focusLng = Number(focusPoint?.lng)
-  const hasFocus = hasCoordinates(focusPoint)
+  const hasFocus = hasNzCoordinates(focusPoint)
 
   useEffect(() => {
     const L = leaflet
@@ -124,7 +117,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
     const bounds = []
 
     vehicles.forEach(vehicle => {
-      if (!hasCoordinates(vehicle)) return
+      if (!hasNzCoordinates(vehicle)) return
       const marker = L.marker([vehicle.lat, vehicle.lng], {
         icon: L.divIcon({
           className: 'swapy-map-marker',
@@ -169,19 +162,21 @@ export default function VehicleMap({ vehicles, focusPoint }) {
       // El encuadre cubre la ubicacion elegida y los anuncios mas cercanos, no
       // todo el pais: asi se ve el sitio buscado y algo de oferta alrededor.
       const nearest = vehicles
-        .filter(hasCoordinates)
+        .filter(hasNzCoordinates)
         .map(vehicle => ({ vehicle, distance: distanceKm(focus, vehicle) }))
         .filter(entry => entry.distance !== null)
         .sort((first, second) => first.distance - second.distance)
         .slice(0, 5)
         .map(entry => [entry.vehicle.lat, entry.vehicle.lng])
 
-      map.fitBounds([[focusLat, focusLng], ...nearest], { padding: [40, 40], maxZoom: 11 })
+      map.fitBounds([[focusLat, focusLng], ...nearest], { padding: [40, 40], maxZoom: 11, animate: false })
       return
     }
 
     if (bounds.length) {
-      map.fitBounds(bounds, { padding: [34, 34], maxZoom: 8 })
+      map.fitBounds(bounds, { padding: [34, 34], maxZoom: 8, animate: false })
+    } else {
+      map.fitBounds(NZ_BOUNDS, { padding: [12, 12], animate: false })
     }
   }, [vehicles, mapReady, hasFocus, focusLat, focusLng, focusPoint?.label])
 

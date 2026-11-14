@@ -36,25 +36,49 @@ export default function HeroSearch({
   useEffect(() => {
     const hero = heroRef.current
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const desktop = window.matchMedia('(min-width: 641px) and (hover: hover) and (pointer: fine)')
     let frame = null
+    let lastOffset
 
     const updateBackground = () => {
       frame = null
-      const offset = reducedMotion.matches ? 0 : window.scrollY
-      hero.style.setProperty('--hero-scroll-y', `${offset}px`)
+      // The image has 40px of vertical overscan. Keep the movement within it,
+      // relative to this hero rather than the entire document's scroll position.
+      const offset = desktop.matches && !reducedMotion.matches
+        ? Math.min(32, Math.max(0, -hero.getBoundingClientRect().top) * 0.18)
+        : 0
+      const value = `${offset.toFixed(2)}px`
+      if (value !== lastOffset) {
+        hero.style.setProperty('--hero-scroll-y', value)
+        lastOffset = value
+      }
     }
     const queueUpdate = () => {
       if (frame === null) frame = window.requestAnimationFrame(updateBackground)
     }
 
-    updateBackground()
-    window.addEventListener('scroll', queueUpdate, { passive: true })
-    reducedMotion.addEventListener('change', queueUpdate)
+    const syncMotion = () => {
+      window.removeEventListener('scroll', queueUpdate)
+      window.removeEventListener('resize', queueUpdate)
+      if (frame !== null) window.cancelAnimationFrame(frame)
+      if (desktop.matches && !reducedMotion.matches) {
+        window.addEventListener('scroll', queueUpdate, { passive: true })
+        window.addEventListener('resize', queueUpdate)
+      }
+      updateBackground()
+    }
+
+    syncMotion()
+    desktop.addEventListener('change', syncMotion)
+    reducedMotion.addEventListener('change', syncMotion)
 
     return () => {
       window.removeEventListener('scroll', queueUpdate)
-      reducedMotion.removeEventListener('change', queueUpdate)
+      window.removeEventListener('resize', queueUpdate)
+      desktop.removeEventListener('change', syncMotion)
+      reducedMotion.removeEventListener('change', syncMotion)
       if (frame !== null) window.cancelAnimationFrame(frame)
+      hero.style.removeProperty('--hero-scroll-y')
     }
   }, [])
 

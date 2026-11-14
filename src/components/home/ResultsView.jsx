@@ -1,9 +1,7 @@
 /**
  * Zona de resultados.
  *
- * Decide que se ve: el indicador de carga, el aviso de "sin resultados", el
- * mapa, o la parrilla con su paginacion. Se separa de la portada porque son
- * cuatro estados excluyentes y juntos ocupaban la mitad del render.
+ * Alterna entre el mapa y las tarjetas de resultados con su paginacion.
  */
 
 import { FiArrowRight, FiSearch } from 'react-icons/fi'
@@ -48,6 +46,14 @@ export default function ResultsView({
 
   if (error) return <div className="empty-state panel" role="alert"><p>{error}</p><button className="btn btn-primary" onClick={() => window.location.reload()}>Retry</button></div>
 
+  if (viewMode === 'map') {
+    return (
+      <div className="search-results-main">
+        <VehicleMap vehicles={vehicles} focusPoint={focusPoint} />
+      </div>
+    )
+  }
+
   if (vehicles.length === 0) {
     return (
       <div className="search-results-main">
@@ -68,22 +74,16 @@ export default function ResultsView({
 
   return (
     <div className="search-results-main">
-      {viewMode === 'map' ? (
-        <VehicleMap vehicles={vehicles} focusPoint={focusPoint} />
-      ) : (
-        <>
-          <div className="products-grid">
-            {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
-          </div>
-          <PaginationBar
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={vehicles.length}
-            onPrevious={onPreviousPage}
-            onNext={onNextPage}
-          />
-        </>
-      )}
+      <div className="products-grid">
+        {pageVehicles.map(vehicle => <ProductCard key={vehicle.id} product={vehicle} />)}
+      </div>
+      <PaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={vehicles.length}
+        onPrevious={onPreviousPage}
+        onNext={onNextPage}
+      />
     </div>
   )
 }

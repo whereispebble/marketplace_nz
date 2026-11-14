@@ -178,8 +178,7 @@
     font-size: 0.78rem;
   }
 
-  /* El mapa se dimensiona para caber entre la barra superior y la navegacion
-     inferior fija, de forma que nunca queda por debajo de esta. */
+  /* Mas espacio para explorar el mapa; dvh se adapta a las barras del navegador. */
   .search-results-main .map-layout {
     margin-bottom: 24px;
     scroll-margin-top: 64px;
@@ -188,7 +187,8 @@
   .street-map,
   .street-map-canvas {
     min-height: 0;
-    height: min(58vh, 460px);
+    height: min(72vh, 620px);
+    height: min(72dvh, 620px);
   }
 
   .container,
@@ -289,11 +289,11 @@
     --hero-reveal-extra: 0px;
     --hero-reveal: calc(var(--hero-chrome) + var(--hero-card-image) + var(--hero-card-body) + var(--hero-reveal-extra));
     min-height: clamp(240px, calc(100vh - var(--hero-reveal)), 560px);
-    min-height: clamp(240px, calc(100dvh - var(--hero-reveal)), 560px);
-    background-position: center calc(100% + var(--hero-scroll-y, 0px));
-    /* Amplia la zona inferior; 57vw mantiene cubierta la anchura de la foto
-       2048x1166 incluso en moviles apaisados. */
-    background-size: auto max(calc(140% + 16px), calc(57vw + 16px));
+    /* svh mantiene el encuadre al aparecer/ocultarse las barras del navegador. */
+    min-height: clamp(240px, calc(100svh - var(--hero-reveal)), 560px);
+    background-position: center bottom;
+    /* Amplia la zona inferior sin dejar huecos al adaptar el banner 3:1. */
+    background-size: auto max(calc(140% + 16px), calc(100vw / var(--hero-image-ratio) + 16px));
     background-attachment: scroll;
   }
 
