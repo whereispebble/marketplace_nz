@@ -5,8 +5,7 @@
 
 import { Link } from 'react-router-dom'
 import { FiHeart, FiMail, FiMessageCircle } from 'react-icons/fi'
-
-const logo = '/branding/moonwalk-logo.svg'
+import BrandLogo from './BrandLogo'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -15,7 +14,7 @@ export default function Footer() {
     <footer className="site-footer">
       <div className="container site-footer-inner">
         <div className="site-footer-brand">
-          <img src={logo} alt="Moonwalk" />
+          <BrandLogo />
           <p>
             Cars &amp; campers. The New Zealand marketplace for cars, campervans, motorhomes and van conversions. Every listing shows the
             details that actually decide a purchase: WOF, self-contained certification, odometer and location.
@@ -54,9 +53,9 @@ export default function Footer() {
       </div>
 
       <div className="container site-footer-bottom">
-        <span>© {year} Moonwalk. Built in Aotearoa New Zealand.</span>
+        <span>© {year} Outsee. Built in Aotearoa New Zealand.</span>
         <span>
-          Moonwalk is a marketplace. Sellers are responsible for their own listings, so always view a vehicle
+          Outsee is a marketplace. Sellers are responsible for their own listings, so always view a vehicle
           in person before paying.
         </span>
       </div>

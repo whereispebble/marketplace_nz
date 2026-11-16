@@ -2,28 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=moonwalk" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#101815" />
-    <meta name="description" content="Find your next adventure with Moonwalk. Buy and sell cars &amp; campers in New Zealand." />
-    <link rel="preload" href="/branding/moonwalk-moon.svg" as="image" type="image/svg+xml" />
+    <title>Outsee — Cars &amp; campers in New Zealand</title>
+    <meta name="application-name" content="Outsee" />
+    <meta name="apple-mobile-web-app-title" content="Outsee" />
+    <meta name="theme-color" content="#102A24" />
+    <meta name="description" content="Your next ride is out there. Buy and sell cars and campers in New Zealand with Outsee." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Outsee" />
+    <meta property="og:title" content="Outsee — Cars &amp; campers in New Zealand" />
+    <meta property="og:description" content="Your next ride is out there. Buy and sell cars and campers in New Zealand with Outsee." />
+    <link rel="icon" type="image/png" sizes="48x48" href="/branding/outsee-favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/branding/outsee-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="preload" href="/branding/outsee-logo.webp" as="image" type="image/webp" />
+    <link rel="stylesheet" href="/branding/outsee.css" />
     <link rel="preload" href="/fonts/manrope/manrope-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
-    <title>Moonwalk — Cars &amp; campers in New Zealand</title>
-    <style>
-      /* Visible immediately, before the application bundle is ready. */
-      body { margin: 0; background: #f3f7f1; }
-      .app-boot { display: grid; min-height: 100vh; min-height: 100dvh; place-items: center; }
-      .app-boot-moon { display: block; width: 64px; height: 64px; animation: moonwalk-boot-spin 1.2s cubic-bezier(.55,.08,.45,.92) infinite; }
-      .app-boot-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-      @keyframes moonwalk-boot-spin { to { transform: rotate(360deg); } }
-      @media (prefers-reduced-motion: reduce) { .app-boot-moon { animation: none; } }
-    </style>
   </head>
   <body>
     <div id="root">
-      <div class="app-boot" role="status" aria-live="polite">
-        <img class="app-boot-moon" src="/branding/moonwalk-moon.svg" width="64" height="64" alt="" />
-        <span class="app-boot-label">Loading Moonwalk</span>
+      <div class="brand-loader brand-loader-full" role="status">
+        <span class="outsee-logo brand-loader-logo">
+          <img src="/branding/outsee-logo.webp" width="728" height="154" alt="" />
+        </span>
+        <span class="brand-loader-label">Loading Outsee</span>
       </div>
     </div>
     <script type="module" src="/src/main.jsx"></script>

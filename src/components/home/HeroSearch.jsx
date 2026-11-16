@@ -57,7 +57,7 @@ export default function HeroSearch({
         <div className="hero-image" />
       </div>
       <div className="hero-inner">
-        <h1>What are you looking for?</h1>
+        <h1>Your next ride is out there.</h1>
 
         <div className="hero-quick-filters" aria-label="Search suggestions">
           {QUICK_SEARCHES.map(suggestion => (

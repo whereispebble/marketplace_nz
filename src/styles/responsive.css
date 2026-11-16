@@ -198,26 +198,16 @@
   }
 
   .topbar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 8px;
     min-height: 54px;
     padding: 7px 10px;
-    background: white;
-  }
-
-  .topbar-compact {
-    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
-    padding: 0;
-    border-radius: 12px;
-    background: transparent;
-    object-fit: contain;
-    object-position: left center;
+    width: clamp(84px, 25vw, 114px);
+    height: auto;
+    max-width: 100%;
   }
 
 
@@ -631,12 +621,6 @@
     height: 34px;
   }
 
-  .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
-  }
-
   .nav-actions .nav-icon,
   .nav-actions .btn-primary {
     width: auto;
@@ -648,12 +632,6 @@
 @media (max-width: 360px) {
   .topbar {
     padding: 0 8px;
-  }
-
-  .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
   }
 
   .nav-actions {

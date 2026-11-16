@@ -20,7 +20,7 @@
   bottom: 0;
   width: 100%;
   max-width: 100%;
-  background: white;
+  background: var(--bg);
   animation: menu-slide-in 0.22s ease;
 }
 

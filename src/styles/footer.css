@@ -9,7 +9,7 @@
   margin-top: 40px;
   padding: 40px 0 24px;
   border-top: 1px solid var(--line);
-  background: white;
+  background: var(--bg);
 }
 
 .site-footer-inner {

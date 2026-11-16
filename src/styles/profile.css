@@ -26,8 +26,8 @@
 
 .seller-link:hover,
 .seller-link:focus-visible {
-  background: rgba(20, 188, 125, 0.08);
-  box-shadow: 0 0 0 3px rgba(20, 188, 125, 0.12);
+  background: rgba(8, 112, 68, 0.08);
+  box-shadow: 0 0 0 3px rgba(8, 112, 68, 0.12);
   outline: none;
 }
 
@@ -39,7 +39,7 @@
   place-items: center;
   border-radius: 18px;
   color: white;
-  background: linear-gradient(135deg, var(--ink), var(--accent));
+  background: linear-gradient(135deg, var(--ink), var(--accent-dark));
   font-weight: 800;
 }
 

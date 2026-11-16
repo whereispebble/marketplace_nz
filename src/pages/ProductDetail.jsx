@@ -17,6 +17,7 @@ import { VEHICLE_TYPES } from '../data/nzVehicleCatalog'
 import { findMockVehicle, loadMockVehicles } from '../services/devData'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 import { LISTING_STATUS, listingStatusBadge } from '../constants/listingStatus'
+import { VEHICLE_PLACEHOLDER } from '../constants/branding'
 import { useSession } from '../services/session'
 import { isDevSessionActive } from '../services/devAuth'
 import { isUuid } from '../services/validation'
@@ -215,7 +216,7 @@ export default function ProductDetail() {
   const images = useMemo(() => {
     if (product?.images?.length) return product.images
     if (product?.image) return [product.image]
-    return ['https://placehold.co/640x480/f1ede5/171717?text=Moonwalk']
+    return [VEHICLE_PLACEHOLDER]
   }, [product])
 
   // Las flechas dan la vuelta al llegar al final para que no haya callejon sin
@@ -413,7 +414,7 @@ export default function ProductDetail() {
                 <div className="related-listings-list">
                   {relatedProducts.map(item => (
                     <Link className="related-listing" to={`/product/${item.id}`} key={item.id}>
-                      <img src={item.image || item.images?.[0] || 'https://placehold.co/240x180/f1ede5/171717?text=Moonwalk'} alt="" />
+                      <img src={item.image || item.images?.[0] || VEHICLE_PLACEHOLDER} alt="" />
                       <span className="related-listing-copy">
                         <strong>{item.title}</strong>
                         <span>{vehicleTypeName(item.vehicleType)}{item.model ? ` · ${item.model}` : ''}</span>
@@ -427,7 +428,7 @@ export default function ProductDetail() {
 
             <section className="panel panel-pad">
               <span className="muted-row" style={{ alignItems: 'flex-start' }}>
-                <FiShield style={{ marginTop: 3, color: 'var(--mint)' }} />
+                <FiShield style={{ marginTop: 3, color: 'var(--accent-dark)' }} />
                 Check WOF, service history, self-contained certification and ownership documents before paying a deposit.
               </span>
             </section>

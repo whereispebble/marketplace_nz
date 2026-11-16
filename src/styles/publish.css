@@ -307,8 +307,8 @@
 }
 
 .geo-card.is-ready {
-  border-color: rgba(20, 188, 125, 0.36);
-  background: rgba(20, 188, 125, 0.08);
+  border-color: rgba(8, 112, 68, 0.36);
+  background: rgba(8, 112, 68, 0.08);
 }
 
 .geo-card.is-ready svg {
@@ -331,7 +331,7 @@
 .toggle-row input {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  accent-color: var(--accent-dark);
 }
 
 .upload-zone {
@@ -339,9 +339,9 @@
   min-height: 210px;
   place-items: center;
   padding: 28px;
-  border: 1.5px dashed rgba(20, 188, 125, 0.55);
+  border: 1.5px dashed rgba(8, 112, 68, 0.55);
   border-radius: 20px;
-  background: rgba(20, 188, 125, 0.07);
+  background: rgba(8, 112, 68, 0.07);
   color: var(--muted);
   text-align: center;
   cursor: pointer;

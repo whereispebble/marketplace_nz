@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 import { distanceKm } from '../../services/vehicleFilters'
 import { hasNzCoordinates, NZ_BOUNDS, NZ_CENTER } from '../../services/mapViewport'
 import { loadMapModules } from '../../services/mapLoader'
+import { VEHICLE_PLACEHOLDER } from '../../constants/branding'
 
 import 'leaflet/dist/leaflet.css'
 let leaflet
@@ -127,7 +128,7 @@ export default function VehicleMap({ vehicles, focusPoint }) {
         }),
       }).addTo(layer)
 
-      const image = vehicle.image || 'https://placehold.co/640x480/f1ede5/171717?text=Moonwalk'
+      const image = vehicle.image || VEHICLE_PLACEHOLDER
       const price = Number(vehicle.price || 0).toLocaleString('en-NZ')
       const meta = [vehicle.location || 'New Zealand', vehicle.model].filter(Boolean).join(' · ')
 
@@ -152,8 +153,8 @@ export default function VehicleMap({ vehicles, focusPoint }) {
         className: 'swapy-map-focus',
         radius: 9,
         weight: 3,
-        color: '#14bc7d',
-        fillColor: '#14bc7d',
+        color: '#065b37',
+        fillColor: '#087044',
         fillOpacity: 0.25,
       })
         .addTo(layer)
