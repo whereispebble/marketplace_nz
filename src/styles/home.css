@@ -10,24 +10,45 @@
 }
 
 .hero {
-  --hero-image-ratio: 3;
   position: relative;
   overflow: hidden;
   min-height: clamp(30px, 40px, 640px);
   color: white;
-  /* Paralaje suave en escritorio, limitado a 32px dentro del margen de 40px. */
-  background-position: center calc(80% + var(--hero-scroll-y, 0px) - 8px);
-  /* El margen extra mantiene cubierta la cabecera durante el movimiento. */
-  background-size: auto max(calc(100% + 40px), calc(100vw / var(--hero-image-ratio)));
-  background-repeat: no-repeat;
-  background-attachment: scroll;
+  background-color: #183e3b;
 }
 
-
-.hero::before {
+.hero-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  pointer-events: none;
+  background: center 80% / cover no-repeat;
+}
+
+.hero-image {
+  display: none;
+}
+
+@supports (clip-path: inset(0)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-backdrop {
+      /* Recorta la capa fija al hero sin cambiar su referencia al viewport. */
+      clip-path: inset(0);
+    }
+
+    .hero-image {
+      display: block;
+      position: fixed;
+      /* Un poco de margen cubre el rebote. La misma foto queda debajo. */
+      inset: -8px -12px auto;
+      height: calc(var(--hero-image-height) + 40px);
+      background: inherit;
+    }
+  }
+}
+
+.hero-backdrop::after {
+  position: absolute;
+  inset: 0;
   content: "";
   /* Contraste uniforme para separar los controles del detalle de la costa. */
   background: linear-gradient(180deg, rgba(7, 22, 20, 0.48) 0%, rgba(7, 22, 20, 0.44) 55%, rgba(7, 22, 20, 0.38) 100%);
@@ -35,7 +56,7 @@
 
 .hero-inner {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: grid;
   align-content: center;
   justify-items: center;

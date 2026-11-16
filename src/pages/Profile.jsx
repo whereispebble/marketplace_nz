@@ -20,6 +20,7 @@ import Footer from '../components/Footer'
 import ProductCard from '../components/ProductCard'
 import LoadingScreen from '../components/LoadingScreen'
 import { getFavoriteProducts } from '../services/favorites'
+import { hasCompleteListing } from '../services/publicationSchema'
 import { PUBLIC_LISTING_STATUSES } from '../constants/listingStatus'
 import { DEV_PROFILE, isDevSessionActive } from '../services/devAuth'
 import { loadDevListings, saveDevListing } from '../services/devData'
@@ -58,6 +59,7 @@ export default function Profile() {
   const [profileLoading, setProfileLoading] = useState(true)
   const [profileError, setProfileError] = useState('')
   const [actionError, setActionError] = useState('')
+  const [listingActionError, setListingActionError] = useState('')
 
   // Pestana visible y estado del formulario de edicion.
   const [activeTab, setActiveTab] = useState('listings')
@@ -95,6 +97,7 @@ export default function Profile() {
   const avatarMenuRef = useRef(null)
   const moreMenuRef = useRef(null)
   const settingsMenuRef = useRef(null)
+  const updatingListings = useRef(new Set())
 
   /**
    * Carga el perfil que toca segun la ruta.
@@ -333,23 +336,54 @@ export default function Profile() {
    * @param {string} status nuevo estado
    */
   const handleListingStatus = async (listingId, status) => {
-    const user = await getCurrentUser()
-    if (!user) return
+    if (updatingListings.current.has(listingId)) return
+    const listing = listings.find(item => item.id === listingId)
+    if (!listing || listing.status === status) return
 
-    const previousListings = listings
-    const soldAt = status === 'sold' ? new Date().toISOString() : null
-    setListings(current => current.map(item => (item.id === listingId ? { ...item, status, sold_at: soldAt } : item)))
-    if (isDevSessionActive()) {
-      saveDevListing(listingId, { status, sold_at: soldAt })
+    setListingActionError('')
+    const openEditor = () => navigate(`/product/${listingId}/edit`, { state: { completeToPublish: true } })
+    if (status === 'available' && !hasCompleteListing(listing)) {
+      openEditor()
       return
     }
 
-    const { error } = await supabase
-      .from('products')
-      .update({ status })
-      .eq('id', listingId)
-      .eq('user_id', user.id)
-    if (error) { setListings(previousListings); setActionError('Could not change the listing status. Please try again.') }
+    updatingListings.current.add(listingId)
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        navigate('/login', { replace: true })
+        return
+      }
+
+      if (isDevSessionActive()) {
+        const changes = { status, sold_at: status === 'sold' ? new Date().toISOString() : null }
+        saveDevListing(listingId, changes)
+        setListings(current => current.map(item => item.id === listingId ? { ...item, ...changes } : item))
+        return
+      }
+
+      const { data: updatedListing, error } = await supabase
+        .from('products')
+        .update({ status })
+        .eq('id', listingId)
+        .eq('user_id', user.id)
+        .select('*')
+        .maybeSingle()
+
+      if (status === 'available' && error?.code === '23514') {
+        openEditor()
+        return
+      }
+      if (error || updatedListing?.status !== status) {
+        setListingActionError('Could not change the listing status. Please try again.')
+        return
+      }
+      setListings(current => current.map(item => item.id === listingId ? updatedListing : item))
+    } catch {
+      setListingActionError('Could not change the listing status. Please try again.')
+    } finally {
+      updatingListings.current.delete(listingId)
+    }
   }
 
   const handleDeleteListing = async () => {
@@ -771,6 +805,10 @@ export default function Profile() {
             </button>
           ))}
         </div>
+
+        {currentTab === 'listings' && listingActionError && (
+          <p className="alert" role="alert">{listingActionError}</p>
+        )}
 
         {currentTab === 'listings' && (
           listings.length === 0 ? (

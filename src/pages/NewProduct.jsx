@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiCamera, FiCheck, FiChevronDown, FiMove, FiTrash2, FiX } from 'react-icons/fi'
 import { supabase } from '../services/supabase'
 import Navbar from '../components/Navbar'
@@ -79,6 +79,7 @@ function formatPrice(value) {
 
 export default function NewProduct() {
   const navigate = useNavigate()
+  const { state } = useLocation()
   const { id: editingId } = useParams()
   const isEditing = Boolean(editingId)
   const [locating, setLocating] = useState(false)
@@ -122,6 +123,8 @@ export default function NewProduct() {
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadingListing, setLoadingListing] = useState(Boolean(editingId))
+  const [loadedListingId, setLoadedListingId] = useState(null)
+  const canEdit = isEditing && loadedListingId === editingId
   const [generalError, setGeneralError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [step, setStep] = useState(1)
@@ -208,6 +211,7 @@ export default function NewProduct() {
 
       const storedImages = (data.images?.length ? data.images : [data.image]).filter(Boolean)
       setImages(storedImages.map((url, index) => ({ id: `stored-${index}-${url}`, file: null, preview: url, url })))
+      setLoadedListingId(editingId)
       setLoadingListing(false)
     }
 
@@ -423,13 +427,14 @@ export default function NewProduct() {
       nextErrors.images = 'Add at least one photo before publishing.'
     }
 
+    const firstError = Object.keys(nextErrors)[0]
     setFieldErrors(nextErrors)
-    setGeneralError(Object.values(nextErrors)[0] || '')
-    return Object.keys(nextErrors).length === 0
+    setGeneralError(nextErrors[firstError] || '')
+    return firstError
   }
 
   const handleNext = () => {
-    if (!validateStep(step)) return
+    if (validateStep(step)) return
     setGeneralError('')
     setStep(step + 1)
   }
@@ -475,12 +480,12 @@ export default function NewProduct() {
   }
 
   const handleSubmit = async (statusOverride = form.listingStatus) => {
-    if (submitLock.current) return
-    if (!validateStep(3, statusOverride)) {
-      if (isEditing) setOpenEditSection(!form.title.trim() || !form.price ? 'basics' : (!selectedCity ? 'details' : 'photos'))
-      if (!form.title.trim() || (statusOverride !== 'draft' && (!form.make.trim() || !form.model.trim() || !form.price))) setStep(1)
-      else if (statusOverride !== 'draft' && (!form.vehicleType || !form.condition || !form.location.trim() || !selectedCity)) setStep(2)
-      else setStep(3)
+    if (submitLock.current || deleteBusy || (isEditing && !canEdit)) return
+    const firstError = validateStep(3, statusOverride)
+    if (firstError) {
+      const stepWithError = ['title', 'make', 'model', 'price'].includes(firstError) ? 1 : firstError === 'images' ? 3 : 2
+      if (isEditing) setOpenEditSection(['basics', 'details', 'photos'][stepWithError - 1])
+      setStep(stepWithError)
       return
     }
 
@@ -565,7 +570,7 @@ export default function NewProduct() {
   }
 
   const handleDeleteListing = async () => {
-    if (!isEditing || deleteBusy) return
+    if (!canEdit || submitLock.current || deleteBusy) return
     setDeleteBusy(true)
     setGeneralError('')
 
@@ -666,7 +671,36 @@ export default function NewProduct() {
           })}
         </div>}
 
-        {generalError && <div className="alert" style={{ marginBottom: 16 }}>{generalError}</div>}
+        {generalError ? (
+          <div className="alert" role="alert" style={{ marginBottom: 16 }}>{generalError}</div>
+        ) : canEdit && state?.completeToPublish ? (
+          <p className="alert" style={{ marginBottom: 16 }}>Review the listing details, then publish the listing.</p>
+        ) : null}
+
+        {canEdit && (
+          <div className="publish-actions edit-listing-actions">
+            <div className="publish-actions-left">
+              <button className="btn btn-danger" type="button" disabled={loading || deleteBusy} onClick={() => setDeleteOpen(true)}>
+                <FiTrash2 />
+                Delete listing
+              </button>
+              <button className="btn btn-secondary" type="button" disabled={loading || deleteBusy} onClick={() => navigate(`/product/${editingId}`)}>
+                Cancel
+              </button>
+            </div>
+            <div className="publish-actions-right">
+              <button className={`btn ${form.listingStatus === 'available' ? 'btn-primary' : 'btn-secondary'}`} type="button" disabled={loading || deleteBusy} onClick={() => handleSubmit(form.listingStatus)}>
+                {loading ? 'Saving...' : 'Save changes'}
+              </button>
+              {form.listingStatus !== 'available' && (
+                <button className="btn btn-primary" type="button" disabled={loading || deleteBusy} onClick={() => handleSubmit('available')}>
+                  {form.listingStatus === 'draft' ? 'Publish listing' : 'Activate listing'}
+                  <FiCheck />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <section className="panel panel-pad">
           {(isEditing || step === 1) && (
@@ -990,42 +1024,29 @@ export default function NewProduct() {
             </EditSection>
           )}
 
-          <div className={`publish-actions ${isEditing ? 'edit-listing-actions' : ''}`}>
-            {isEditing ? (
-              <div className="publish-actions-left">
-                <button className="btn btn-danger" type="button" disabled={loading || deleteBusy} onClick={() => setDeleteOpen(true)}>
-                  <FiTrash2 />
-                  Delete listing
+          {!isEditing && (
+            <div className="publish-actions">
+              {step > 1 ? (
+                <button className="btn btn-secondary" type="button" onClick={() => { setStep(step - 1); setGeneralError('') }}>
+                  <FiArrowLeft />Back
                 </button>
-                <button className="btn btn-secondary" type="button" disabled={loading || deleteBusy} onClick={() => navigate(`/product/${editingId}`)}>
-                  Cancel
-                </button>
-              </div>
-            ) : step > 1 ? (
-              <button className="btn btn-secondary" type="button" onClick={() => { setStep(step - 1); setGeneralError('') }}>
-                <FiArrowLeft />Back
-              </button>
-            ) : <span />}
+              ) : <span />}
 
-            <div className="publish-actions-right">
-              {!isEditing && <button className="btn btn-secondary" type="button" disabled={loading || !form.title.trim()} onClick={() => handleSubmit('draft')}>
-                Save draft
-              </button>}
-              {isEditing ? (
-                <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
-                  {loading ? 'Saving...' : 'Save changes'}
-                  {loading ? null : <FiCheck />}
+              <div className="publish-actions-right">
+                <button className="btn btn-secondary" type="button" disabled={loading || !form.title.trim()} onClick={() => handleSubmit('draft')}>
+                  Save draft
                 </button>
-              ) : step < 4 ? (
-                <button className="btn btn-primary" type="button" onClick={handleNext}>Next<FiArrowRight /></button>
-              ) : (
-                <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
-                  {loading ? 'Saving...' : form.listingStatus === 'available' ? 'Publish listing' : 'Save listing'}
-                  {loading ? null : <FiCheck />}
-                </button>
-              )}
+                {step < 4 ? (
+                  <button className="btn btn-primary" type="button" onClick={handleNext}>Next<FiArrowRight /></button>
+                ) : (
+                  <button className="btn btn-primary" type="button" disabled={loading} onClick={() => handleSubmit(form.listingStatus)}>
+                    {loading ? 'Saving...' : form.listingStatus === 'available' ? 'Publish listing' : 'Save listing'}
+                    {loading ? null : <FiCheck />}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
       </main>
 

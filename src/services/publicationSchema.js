@@ -1,3 +1,15 @@
+import { hasCoordinates } from './validation.js'
+
+export function hasCompleteListing(listing) {
+  return [listing.title, listing.make, listing.model, listing.vehicleType, listing.condition, listing.location]
+    .every(value => typeof value === 'string' && value.trim().length > 0)
+    && Number(listing.price) > 0
+    && hasCoordinates(listing)
+    && Array.isArray(listing.images)
+    && listing.images.length >= 1
+    && listing.images.length <= 5
+}
+
 const locationColumns = ['lat', 'lng']
 const unavailableMessage = 'Publishing is temporarily unavailable because the service needs an update. Your form is preserved. Please try again later.'
 
