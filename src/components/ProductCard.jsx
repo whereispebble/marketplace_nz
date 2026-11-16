@@ -15,6 +15,7 @@ import { FaHeart, FaRegHeart } from 'react-icons/fa'
 import { FiCheckCircle, FiEdit3, FiMapPin, FiMoreHorizontal, FiPauseCircle, FiPlayCircle, FiShield, FiTag, FiTrash2, FiUsers } from 'react-icons/fi'
 import { FAVORITES_UPDATED_EVENT, isFavorite, toggleFavorite } from '../services/favorites'
 import { listingBadge, listingStatusBadge } from '../constants/listingStatus'
+import { VEHICLE_PLACEHOLDER } from '../constants/branding'
 
 // owned: es un anuncio propio, asi que en vez de guardarlo se gestiona.
 export default function ProductCard({ product, initiallyLiked = false, owned = false, preview = false, onStatusChange, onDelete }) {
@@ -187,7 +188,7 @@ export default function ProductCard({ product, initiallyLiked = false, owned = f
       <Link to={preview ? '#' : `/product/${product.id}`} onClick={event => { if (preview) event.preventDefault() }} tabIndex={preview ? -1 : undefined} className="product-link">
         <div className="product-image">
           <img
-            src={product.image || 'https://placehold.co/640x480/f1ede5/171717?text=Moonwalk'}
+            src={product.image || VEHICLE_PLACEHOLDER}
             alt={product.title}
           />
         </div>

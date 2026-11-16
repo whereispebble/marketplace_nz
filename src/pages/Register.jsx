@@ -15,8 +15,7 @@ import { FaFacebookF, FaGoogle } from 'react-icons/fa'
 import { FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
-
-const logo = '/branding/moonwalk-logo.svg'
+import BrandLogo from '../components/BrandLogo'
 
 /**
  * Comprueba los campos del formulario antes de mandarlos.
@@ -137,8 +136,12 @@ export default function Register() {
     return (
       <main className="form-shell">
         <section className="panel panel-pad auth-card" style={{ textAlign: 'center' }}>
-          <FiCheckCircle size={54} color="var(--mint)" />
-          <h1 className="section-title" style={{ marginTop: 16 }}>Check your email</h1>
+          <div className="login-heading">
+            <Link to="/" className="brand" aria-label="Outsee home">
+              <BrandLogo />
+            </Link>
+            <h1 className="section-title"><FiCheckCircle className="auth-confirm-icon" aria-hidden="true" /> Check your email</h1>
+          </div>
           <p className="section-subtitle">If this address can be registered, you will receive a confirmation email. If you already have an account, sign in.</p>
           <Link to="/login" className="btn btn-primary" style={{ marginTop: 18 }}>Go to login</Link>
         </section>
@@ -149,11 +152,11 @@ export default function Register() {
   return (
     <main className="form-shell">
       <section className="panel panel-pad auth-card">
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
-            <img src={logo} alt="Moonwalk" />
+        <div className="login-heading">
+          <Link to="/" className="brand" aria-label="Outsee home">
+            <BrandLogo />
           </Link>
-          <h1 className="section-title" style={{ marginTop: 18 }}>Create account</h1>
+          <h1 className="section-title">Create account</h1>
           <p className="section-subtitle">Save cars &amp; campers, message sellers and list your NZ vehicle.</p>
         </div>
 

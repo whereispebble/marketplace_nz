@@ -14,27 +14,49 @@
   overflow: hidden;
   min-height: clamp(30px, 40px, 640px);
   color: white;
-  /* Compensar el scroll fija visualmente la foto sin cambiar su encuadre al
-     viewport, como haria background-attachment: fixed. Se sube solo 8px. */
-  background-position: center calc(80% + var(--hero-scroll-y, 0px) - 8px);
-  /* El margen extra evita huecos al subir ligeramente la foto. */
-  background-size: auto max(calc(100% + 40px), 57vw);
-  background-repeat: no-repeat;
-  background-attachment: scroll;
+  background-color: var(--ink);
 }
 
-
-.hero::before {
+.hero-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  pointer-events: none;
+  background: center 80% / cover no-repeat;
+}
+
+.hero-image {
+  display: none;
+}
+
+@supports (clip-path: inset(0)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-backdrop {
+      /* Recorta la capa fija al hero sin cambiar su referencia al viewport. */
+      clip-path: inset(0);
+    }
+
+    .hero-image {
+      display: block;
+      position: fixed;
+      /* Un poco de margen cubre el rebote. La misma foto queda debajo. */
+      inset: -8px -12px auto;
+      height: calc(var(--hero-image-height) + 40px);
+      background: inherit;
+    }
+  }
+}
+
+.hero-backdrop::after {
+  position: absolute;
+  inset: 0;
   content: "";
-  background: linear-gradient(180deg, rgba(7, 22, 20, 0.38) 0%, rgba(7, 22, 20, 0.44) 45%, rgba(7, 22, 20, 0.58) 100%);
+  /* Contraste uniforme para separar los controles del detalle de la costa. */
+  background: linear-gradient(180deg, rgba(7, 22, 20, 0.48) 0%, rgba(7, 22, 20, 0.44) 55%, rgba(7, 22, 20, 0.38) 100%);
 }
 
 .hero-inner {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: grid;
   align-content: center;
   justify-items: center;
@@ -82,13 +104,13 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 3px 8px rgba(7, 22, 20, 0.18), 0 12px 28px rgba(7, 22, 20, 0.22);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .hero-quick-filters button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 4px 10px rgba(7, 22, 20, 0.2), 0 16px 32px rgba(7, 22, 20, 0.28);
 }
 
 .hero-search {
@@ -99,22 +121,12 @@
   margin: clamp(9px, 1.6vh, 14px) auto 0;
   padding: 5px 8px 5px 20px;
   border: 0;
-  box-shadow:
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.16),
-    0 10px 30px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 12px rgba(7, 22, 20, 0.18), 0 18px 40px rgba(7, 22, 20, 0.26);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.22));
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  backdrop-filter: blur(20px) saturate(1.15);
   text-align: left;
-}
-
-@media (min-resolution: 2dppx) {
-  .hero-search {
-    box-shadow:
-      inset 0 0 0 0.33px rgba(255, 255, 255, 0.15),
-      0 10px 30px rgba(0, 0, 0, 0.14);
-  }
 }
 
 .hero-search input {
@@ -125,14 +137,16 @@
   color: white;
   background: transparent;
   font-size: 0.86rem;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.2;
+  text-shadow: 0 1px 3px rgba(7, 22, 20, 0.38);
   outline: none;
 }
 
 .hero-search input::placeholder {
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 400;
+  color: white;
+  opacity: 1;
+  font-weight: 500;
 }
 
 .hero-search-save {
@@ -144,7 +158,7 @@
   height: 32px;
   border: 0;
   border-radius: 999px;
-  color: rgba(255, 255, 255, 0.92);
+  color: white;
   background: transparent;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -184,6 +198,7 @@
   background: transparent;
   font-size: 0.86rem;
   font-weight: 700;
+  text-shadow: 0 1px 3px rgba(7, 22, 20, 0.38);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -239,7 +254,7 @@
 }
 
 .results-sort-trigger:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-dark);
   outline-offset: 2px;
 }
 
@@ -406,7 +421,7 @@
   line-height: 1;
   border: 1px solid var(--line);
   border-radius: 999px;
-  color: var(--accent);
+  color: var(--accent-dark);
   background: white;
   font-size: 0.72rem;
   font-weight: 700;
@@ -415,9 +430,8 @@
 }
 
 .active-filter-clear:hover {
-  color: var(--accent-dark);
-  border-color: rgba(20, 188, 125, 0.45);
-  background: white;
+  border-color: rgba(8, 112, 68, 0.45);
+  background: var(--surface-soft);
 }
 
 .page-title {
@@ -435,6 +449,28 @@
   margin: 8px 0 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.favorites-page {
+  padding-top: clamp(24px, 3.5vh, 40px);
+}
+
+.section-header.favorites-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: clamp(36px, 4.5vh, 48px);
+}
+
+.favorites-header .page-title {
+  margin: 0;
+  font-size: clamp(1.125rem, 1.6vw, 1.3rem);
+  font-weight: 700;
+}
+
+.favorites-header .section-subtitle {
+  margin: 22px 0 0;
 }
 
 .chips {

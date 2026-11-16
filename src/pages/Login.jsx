@@ -13,8 +13,7 @@ import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi'
 import { getAuthErrorMessage, getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
 import Footer from '../components/Footer'
-
-const logo = '/branding/moonwalk-logo.svg'
+import BrandLogo from '../components/BrandLogo'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -87,8 +86,8 @@ export default function Login() {
     <main className="form-shell">
       <section className="panel panel-pad auth-card">
         <div className="login-heading">
-          <Link to="/" className="brand" style={{ justifyContent: 'center' }}>
-            <img src={logo} alt="Moonwalk" />
+          <Link to="/" className="brand" aria-label="Outsee home">
+            <BrandLogo />
           </Link>
           <h1 className="section-title">Welcome back</h1>
           <p className="section-subtitle">Buy and sell cars &amp; campers in New Zealand.</p>

@@ -46,12 +46,14 @@ export default function Favorites() {
     <div className="app-shell">
       <Navbar compact />
 
-      <main className="container page-section">
+      <main className="container page-section favorites-page">
         {error && <p role="alert">{error}</p>}
-        <div className="section-header">
+        <div className="section-header favorites-header">
           <div>
             <h1 className="page-title">Saved vehicles</h1>
-            <p className="section-subtitle">{favorites.length} vehicles saved for comparing WOF, mileage, sleeps and price.</p>
+            <p className="section-subtitle">
+              {favorites.length} {favorites.length === 1 ? 'vehicle' : 'vehicles'} saved for comparing WOF, mileage, sleeps and price.
+            </p>
           </div>
           <span className="badge badge-accent"><FiHeart />{favorites.length}</span>
         </div>

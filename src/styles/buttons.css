@@ -5,8 +5,8 @@
 
 .field:focus {
   background: white;
-  border-color: rgba(20, 188, 125, 0.72);
-  box-shadow: 0 0 0 4px rgba(20, 188, 125, 0.14);
+  border-color: var(--accent-dark);
+  box-shadow: 0 0 0 4px rgba(8, 112, 68, 0.14);
 }
 
 .btn {
@@ -37,11 +37,20 @@
 
 .btn-primary {
   color: white;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  box-shadow: 0 14px 30px rgba(20, 188, 125, 0.28);
+  border-color: var(--accent-dark);
+  background: var(--accent);
+  box-shadow: 0 12px 24px rgba(8, 112, 68, 0.2);
 }
 
+.btn-primary:hover {
+  background: var(--accent-dark);
+}
 
+.btn-primary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px white;
+}
 
 .btn-secondary {
   border-color: var(--line);

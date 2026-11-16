@@ -17,7 +17,7 @@
 
 .product-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(20, 188, 125, 0.45);
+  border-color: rgba(8, 112, 68, 0.45);
   box-shadow: var(--shadow);
 }
 
@@ -81,7 +81,7 @@
    desaparece solo, sin que nadie tenga que quitarlo a mano. */
 .badge-new {
   color: white;
-  background: var(--mint);
+  background: var(--accent);
 }
 
 .badge-sold {
@@ -149,15 +149,15 @@
 .favorite-btn:hover {
   transform: translateY(-2px) scale(1.04);
   color: var(--accent-dark);
-  border-color: rgba(20, 188, 125, 0.45);
+  border-color: rgba(8, 112, 68, 0.45);
   background: white;
   box-shadow: 0 14px 32px rgba(33, 28, 20, 0.2);
 }
 
 .favorite-btn.is-liked {
   color: white;
-  border-color: rgba(20, 188, 125, 0.72);
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  border-color: var(--accent-dark);
+  background: var(--accent);
 }
 
 .product-info {
@@ -170,7 +170,7 @@
 .product-title {
   overflow: hidden;
   margin: 0;
-  color: var(--blue);
+  color: var(--accent);
   font-size: 0.82rem;
   font-weight: 700;
   text-overflow: ellipsis;

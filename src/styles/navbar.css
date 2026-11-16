@@ -13,8 +13,8 @@
   align-items: center;
   min-height: clamp(52px, 4.2vw, 58px);
   padding: clamp(5px, 0.6vw, 8px) clamp(14px, 3vw, 40px);
-  background: white;
-  border-bottom: 1px solid rgba(232, 226, 215, 0.9);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
   box-shadow: 0 10px 30px rgba(33, 28, 20, 0.06);
   transition: transform 180ms ease;
 }
@@ -58,15 +58,6 @@
   height: 24px;
   max-width: 148px;
 }
-
-.brand picture {
-  display: block;
-  line-height: 0;
-}
-
-
-
-
 
 .nav-actions {
   display: flex;
@@ -139,7 +130,7 @@
 .icon-btn:hover,
 .nav-icon:hover {
   transform: translateY(-2px);
-  border-color: rgba(20, 188, 125, 0.55);
+  border-color: rgba(8, 112, 68, 0.55);
   box-shadow: var(--shadow-soft);
 }
 

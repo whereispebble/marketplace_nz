@@ -85,7 +85,7 @@
 }
 
 .chat-item.is-active {
-  background: rgba(20, 188, 125, 0.1);
+  background: rgba(8, 112, 68, 0.1);
 }
 
 .chat-item img,
@@ -297,7 +297,7 @@
   gap: 12px;
   width: min(460px, 100%);
   padding: 14px;
-  border: 1px solid rgba(20, 188, 125, 0.26);
+  border: 1px solid rgba(8, 112, 68, 0.26);
   border-radius: 18px;
   color: var(--ink);
   background: white;
@@ -311,7 +311,7 @@
 }
 
 .offer-card-head svg {
-  color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .offer-card-head strong {
@@ -329,8 +329,8 @@
 }
 
 .offer-accepted {
-  border-color: rgba(20, 188, 125, 0.55);
-  background: rgba(20, 188, 125, 0.08);
+  border-color: rgba(8, 112, 68, 0.55);
+  background: rgba(8, 112, 68, 0.08);
 }
 
 .offer-declined {

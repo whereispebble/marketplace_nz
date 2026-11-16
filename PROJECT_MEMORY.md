@@ -434,3 +434,10 @@ Petición posterior del usuario: eliminar el mapa y la confirmación, con una in
 - Integradas versiones WebP de costa en Home, comunidad en HowItWorks/NewProduct y fondo menta en los formularios de acceso, registro y recuperación. Se conservan las fotografías anteriores en `src/assets` y los PNG originales.
 - Ajustado el encuadre del hero en escritorio y móvil y eliminado su fondo fijo para mantener un recorte predecible. Se conserva la capa oscura para legibilidad.
 - Build y lint correctos; revisión visual local de home en escritorio/móvil y login. Cambios locales, sin despliegue. Las tres imágenes WebP suman aproximadamente 607 KB frente a 7,8 MB de PNG.
+
+## 2026-11-16 — Identidad Outsee
+
+- Outsee es la marca visible de la web. El logo aprobado, Manrope y el lema “Your next ride is out there.” se integraron sin cambiar el encuadre fijo de la portada.
+- Paleta: verde `#087044` para el símbolo, las acciones y los enlaces; `#065B37` al pasar sobre una acción; pino `#102A24` para texto; crema `#F7F5EF` para el fondo; blanco cálido `#FFFEFB` para paneles y salvia `#E8F2EB` para fondos suaves. Los iconos de acceso directo conservan la variante clara del símbolo sobre pino.
+- La pantalla inicial y las cargas de React comparten un revelado breve del logo y respetan la preferencia de movimiento reducido. Los estados de carga conservan sus textos y no se añade tiempo de espera.
+- Las rutas, los datos, las claves del navegador, la entidad legal, sus contactos y las condiciones siguen igual. Cambios locales, sin publicar.

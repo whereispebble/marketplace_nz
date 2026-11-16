@@ -8,6 +8,11 @@
   position: relative;
 }
 
+/* Evita que el rebote del scroll muestre la foto encima de la barra. */
+html:has(.how-shell) {
+  overscroll-behavior-y: none;
+}
+
 /* La foto queda fija detras del contenido, atenuada para que el texto siga
    leyendose. z-index 0 la mantiene por debajo del header (50) y del contenido. */
 .photo-background {
@@ -92,6 +97,52 @@
   margin-bottom: clamp(26px, 4.4vh, 40px);
 }
 
+.how-action {
+  min-height: 44px;
+  padding: 0 16px;
+  gap: 10px;
+  border: 1px solid rgba(27, 94, 65, 0.12);
+  border-radius: 12px;
+  color: #24543e;
+  background: #eef6f0;
+  box-shadow: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.how-section > .how-action {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.how-action:hover {
+  border-color: rgba(27, 94, 65, 0.22);
+  background: #e2efe6;
+  box-shadow: none;
+  transform: none;
+}
+
+.how-section > .how-action:hover {
+  background: #edf5ef;
+}
+
+.how-action:focus-visible {
+  outline: 2px solid #24543e;
+  outline-offset: 3px;
+}
+
+.how-section > .how-action:focus-visible {
+  outline-color: white;
+}
+
+.how-action svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+
 .how-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -143,7 +194,7 @@
 }
 
 .faq-item.is-open {
-  border-color: rgba(20, 188, 125, 0.45);
+  border-color: rgba(8, 112, 68, 0.45);
 }
 
 .faq-question {
@@ -246,7 +297,7 @@
   }
 
   .nav-profile-btn.btn-primary:hover {
-    border-color: rgba(20, 188, 125, 0.45);
+    border-color: rgba(8, 112, 68, 0.45);
     background: var(--surface-soft);
     box-shadow: none;
     transform: none;

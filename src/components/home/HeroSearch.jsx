@@ -6,7 +6,7 @@
  * tarjetas, asi que conviene no anadir elementos aqui sin revisar home.css.
  */
 
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { FiBookmark, FiSettings } from 'react-icons/fi'
 import { QUICK_SEARCHES } from '../../constants/filters'
 
@@ -33,35 +33,31 @@ export default function HeroSearch({
 }) {
   const heroRef = useRef(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const hero = heroRef.current
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let frame = null
+    const topbar = hero.parentElement?.querySelector(':scope > .topbar')
 
-    const updateBackground = () => {
-      frame = null
-      const offset = reducedMotion.matches ? 0 : window.scrollY
-      hero.style.setProperty('--hero-scroll-y', `${offset}px`)
-    }
-    const queueUpdate = () => {
-      if (frame === null) frame = window.requestAnimationFrame(updateBackground)
+    function sizeBackground() {
+      // The fixed layer starts at the viewport top so it also covers the hero
+      // when the navbar hides. Size the photo to the hero's initial bottom.
+      const bottom = Math.ceil(hero.getBoundingClientRect().bottom + window.scrollY)
+      hero.style.setProperty('--hero-image-height', `${bottom}px`)
     }
 
-    updateBackground()
-    window.addEventListener('scroll', queueUpdate, { passive: true })
-    reducedMotion.addEventListener('change', queueUpdate)
-
-    return () => {
-      window.removeEventListener('scroll', queueUpdate)
-      reducedMotion.removeEventListener('change', queueUpdate)
-      if (frame !== null) window.cancelAnimationFrame(frame)
-    }
+    sizeBackground()
+    const observer = new ResizeObserver(sizeBackground)
+    observer.observe(hero)
+    if (topbar) observer.observe(topbar)
+    return () => observer.disconnect()
   }, [])
 
   return (
-    <header ref={heroRef} className="hero" style={{ backgroundImage: `url(${backgroundImage})` }}>
+    <header ref={heroRef} className="hero">
+      <div className="hero-backdrop" aria-hidden="true" style={{ backgroundImage: `url(${backgroundImage})` }}>
+        <div className="hero-image" />
+      </div>
       <div className="hero-inner">
-        <h1>What are you looking for?</h1>
+        <h1>Your next ride is out there.</h1>
 
         <div className="hero-quick-filters" aria-label="Search suggestions">
           {QUICK_SEARCHES.map(suggestion => (

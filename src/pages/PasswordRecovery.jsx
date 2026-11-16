@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAuthRedirectUrl, supabase } from '../services/supabase'
 import { useSession } from '../services/session'
+import BrandLogo from '../components/BrandLogo'
 
 export default function PasswordRecovery({ reset = false }) {
   const { user, loading: sessionLoading } = useSession()
@@ -32,7 +33,12 @@ export default function PasswordRecovery({ reset = false }) {
     finally { setBusy(false) }
   }
   return <main className="form-shell"><section className="panel panel-pad auth-card">
-    <h1 className="section-title">{reset ? 'Set a new password' : 'Recover your account'}</h1>
+    <div className="login-heading">
+      <Link to="/" className="brand" aria-label="Outsee home">
+        <BrandLogo />
+      </Link>
+      <h1 className="section-title">{reset ? 'Set a new password' : 'Recover your account'}</h1>
+    </div>
     {done ? <p role="status">{reset ? 'Your password has been updated.' : 'If an account matches this address, you will receive a password recovery email.'}</p> :
       <form onSubmit={submit}>
         {reset ? <>

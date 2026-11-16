@@ -13,6 +13,7 @@
 
 .search-results-main .map-layout {
   display: block;
+  margin-bottom: 24px;
 }
 
 
@@ -89,7 +90,7 @@
   border-radius: 999px;
   color: white;
   background: var(--accent);
-  box-shadow: 0 12px 24px rgba(10, 143, 93, 0.28);
+  box-shadow: 0 12px 24px rgba(8, 112, 68, 0.28);
   font-size: 0.78rem;
   font-weight: 800;
 }

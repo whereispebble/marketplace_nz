@@ -50,7 +50,6 @@
     padding: 0;
   }
 
-  .detail-grid,
   .chat-layout,
   .map-layout,
   .publish-preview-layout {
@@ -62,6 +61,8 @@
   .detail-grid {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    overflow-wrap: anywhere;
   }
 
   .detail-main,
@@ -178,8 +179,7 @@
     font-size: 0.78rem;
   }
 
-  /* El mapa se dimensiona para caber entre la barra superior y la navegacion
-     inferior fija, de forma que nunca queda por debajo de esta. */
+  /* Mas espacio para explorar el mapa; dvh se adapta a las barras del navegador. */
   .search-results-main .map-layout {
     margin-bottom: 24px;
     scroll-margin-top: 64px;
@@ -188,7 +188,8 @@
   .street-map,
   .street-map-canvas {
     min-height: 0;
-    height: min(58vh, 460px);
+    height: min(72vh, 620px);
+    height: min(72dvh, 620px);
   }
 
   .container,
@@ -197,26 +198,16 @@
   }
 
   .topbar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 8px;
     min-height: 54px;
     padding: 7px 10px;
-    background: white;
-  }
-
-  .topbar-compact {
-    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
-    padding: 0;
-    border-radius: 12px;
-    background: transparent;
-    object-fit: contain;
-    object-position: left center;
+    width: clamp(84px, 25vw, 114px);
+    height: auto;
+    max-width: 100%;
   }
 
 
@@ -289,12 +280,12 @@
     --hero-reveal-extra: 0px;
     --hero-reveal: calc(var(--hero-chrome) + var(--hero-card-image) + var(--hero-card-body) + var(--hero-reveal-extra));
     min-height: clamp(240px, calc(100vh - var(--hero-reveal)), 560px);
-    min-height: clamp(240px, calc(100dvh - var(--hero-reveal)), 560px);
-    background-position: center calc(100% + var(--hero-scroll-y, 0px));
-    /* Amplia la zona inferior; 57vw mantiene cubierta la anchura de la foto
-       2048x1166 incluso en moviles apaisados. */
-    background-size: auto max(calc(140% + 16px), calc(57vw + 16px));
-    background-attachment: scroll;
+    /* svh mantiene el encuadre al aparecer/ocultarse las barras del navegador. */
+    min-height: clamp(240px, calc(100svh - var(--hero-reveal)), 560px);
+  }
+
+  .hero-backdrop {
+    background-position: center bottom;
   }
 
 
@@ -630,12 +621,6 @@
     height: 34px;
   }
 
-  .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
-  }
-
   .nav-actions .nav-icon,
   .nav-actions .btn-primary {
     width: auto;
@@ -647,12 +632,6 @@
 @media (max-width: 360px) {
   .topbar {
     padding: 0 8px;
-  }
-
-  .topbar .brand img {
-    width: 26px;
-    height: 26px;
-    max-width: 26px;
   }
 
   .nav-actions {

@@ -27,7 +27,7 @@ const BUYER_STEPS = [
   {
     icon: <FiTag />,
     title: 'Message and make an offer',
-    body: 'Talk to the seller inside Moonwalk and send an offer. Nothing is committed until you both agree on a price.',
+    body: 'Talk to the seller inside Outsee and send an offer. Nothing is committed until you both agree on a price.',
   },
 ]
 
@@ -55,16 +55,16 @@ const FAQS = [
     answer: 'A self-contained vehicle carries its own water and waste for at least three days without needing a dump station. Certified vehicles can stay overnight in many council areas where other vehicles cannot. Certification rules changed in recent years, so always check the certificate date and what standard it was issued under before you buy.',
   },
   {
-    question: 'Does Moonwalk check the vehicles?',
-    answer: 'No. Moonwalk is a marketplace: sellers write their own listings and are responsible for what they publish. Always view the vehicle in person, ask for the WOF and service history, and consider a pre-purchase inspection before paying.',
+    question: 'Does Outsee check the vehicles?',
+    answer: 'No. Outsee is a marketplace: sellers write their own listings and are responsible for what they publish. Always view the vehicle in person, ask for the WOF and service history, and consider a pre-purchase inspection before paying.',
   },
   {
     question: 'How much does it cost to list a vehicle?',
-    answer: 'Listing is free while Moonwalk is in its early stage. Pricing will be announced here before anything changes, and any listing published before that keeps its original terms.',
+    answer: 'Listing is free while Outsee is in its early stage. Pricing will be announced here before anything changes, and any listing published before that keeps its original terms.',
   },
   {
     question: 'How do payments work?',
-    answer: 'Buyer and seller arrange payment directly between themselves. Moonwalk does not hold funds. Never pay a deposit for a vehicle you have not seen, and be wary of anyone who refuses to meet in person.',
+    answer: 'Buyer and seller arrange payment directly between themselves. Outsee does not hold funds. Never pay a deposit for a vehicle you have not seen, and be wary of anyone who refuses to meet in person.',
   },
   {
     question: 'Can I sell from overseas or before I arrive in NZ?',
@@ -125,7 +125,7 @@ export default function HowItWorks() {
         <header className="how-hero">
           <h1 className="page-title">The marketplace everyone was waiting for.</h1>
           <p className="section-subtitle">
-            Moonwalk is a New Zealand marketplace for cars, campervans, motorhomes and van conversions. It exists because buying
+            Outsee is a New Zealand marketplace for cars, campervans, motorhomes and van conversions. It exists because buying
             a vehicle as a backpacker usually means trawling through Facebook groups, hostel noticeboards and listings that
             never mention whether the vehicle is certified self-contained. We put the details that actually decide a
             purchase in the same place: WOF, certification, odometer, berths, belts and where the vehicle is right now.
@@ -143,7 +143,7 @@ export default function HowItWorks() {
               </article>
             ))}
           </div>
-          <Link className="btn btn-primary" to="/">
+          <Link className="btn how-action" to="/">
             Browse vehicles
             <FiArrowRight />
           </Link>
@@ -160,7 +160,7 @@ export default function HowItWorks() {
               </article>
             ))}
           </div>
-          <Link className="btn btn-primary" to="/new-product">
+          <Link className="btn how-action" to="/new-product">
             List a vehicle
             <FiArrowRight />
           </Link>
@@ -199,7 +199,7 @@ export default function HowItWorks() {
                 <strong>Request received</strong>
                 <p>Thanks for writing. We will reply to the email address you gave us.</p>
               </div>
-              <button className="btn btn-secondary" type="button" onClick={() => setSent(false)}>
+              <button className="btn how-action" type="button" onClick={() => setSent(false)}>
                 Send another
               </button>
             </div>
@@ -234,7 +234,7 @@ export default function HowItWorks() {
 
               {error && <p className="request-error">{error}</p>}
 
-              <button className="btn btn-primary" type="submit">
+              <button className="btn how-action" type="submit">
                 Send request
                 <FiArrowRight />
               </button>
